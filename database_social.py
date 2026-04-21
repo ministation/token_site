@@ -2,7 +2,8 @@ import sqlite3
 import datetime
 from typing import Optional, List, Dict, Any
 import json
-from config import SOCIAL_DB_PATH
+import os
+SOCIAL_DB_PATH = os.getenv("SOCIAL_DB_PATH", "social.db")
 
 def get_db():
     """Возвращает соединение с SQLite"""
