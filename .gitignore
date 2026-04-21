@@ -1,0 +1,27 @@
+# Конфиденциальные файлы
+.env
+sessions.json
+*.db
+*.db-shm
+*.db-wal
+
+# Загруженные файлы
+static/uploads/*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Логи
+*.log

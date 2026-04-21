@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Профиль - SS14 Social</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="icon" type="image/png" href="/static/coin.png">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">
+                <img src="/static/coin.png" alt="Coin">
+                <h1>SS14 Social Hub</h1>
+            </div>
+            <div id="userInfo">
+                <button id="loginBtn" onclick="login()">Войти через Discord</button>
+                <div id="userPanel" style="display:none;"></div>
+            </div>
+        </div>
+        <div class="main-nav">
+            <button class="nav-btn" onclick="window.location.href='/'">← На главную</button>
+        </div>
+        <div id="profileContent"></div>
+    </div>
+    <script src="/static/script.js"></script>
+    <script>
+        // Загрузка профиля при открытии страницы
+        document.addEventListener('DOMContentLoaded', async () => {
+            await checkAuth();
+            const path = window.location.pathname;
+            const playerId = path.split('/').pop();
+            await loadProfile(playerId);
+        });
+    </script>
+</body>
+</html>
