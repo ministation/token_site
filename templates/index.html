@@ -3,36 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SS14 Token Bank & Social</title>
+    <title>Мини-станция</title>
     <link rel="stylesheet" href="/static/style.css">
     <link rel="icon" type="image/png" href="/static/coin.png">
 </head>
 <body>
     <div class="container">
-        <!-- Шапка -->
         <div class="header">
             <div class="logo">
-                <img src="/static/coin.png" alt="Coin">
-                <h1>SS14 Social Hub</h1>
+                <img src="/static/logo.png" alt="Мини-станция">
+                <h1>Мини-станция</h1>
             </div>
-            <div id="userInfo">
-                <button id="loginBtn" onclick="login()">Войти через Discord</button>
-                <div id="userPanel" style="display:none;"></div>
+            <div class="header-controls">
+                <button id="themeToggle" class="theme-btn">🌙</button>
+                <div id="userInfo">
+                    <button id="loginBtn" onclick="login()">Войти через Discord</button>
+                    <div id="userPanel" style="display:none;"></div>
+                </div>
             </div>
         </div>
 
-        <!-- Навигация -->
         <div class="main-nav">
-            <button class="nav-btn active" data-section="home">Главная</button>
-            <button class="nav-btn" data-section="wallet">Кошелёк</button>
-            <button class="nav-btn" data-section="bank">Банк</button>
-            <button class="nav-btn" data-section="lottery">Лотерея</button>
-            <button class="nav-btn" data-section="chat">Чат</button>
-            <button class="nav-btn" data-section="search">Поиск</button>
-            <button class="nav-btn" data-section="profile">Мой профиль</button>
+            <button class="nav-btn active" data-section="home">🏠 Главная</button>
+            <button class="nav-btn" data-section="wallet">💰 Кошелёк</button>
+            <button class="nav-btn" data-section="bank">🏦 Банк</button>
+            <button class="nav-btn" data-section="lottery">🎰 Лотерея</button>
+            <button class="nav-btn" data-section="chat">💬 Чат</button>
+            <button class="nav-btn" data-section="messages">📨 Сообщения</button>
+            <button class="nav-btn" data-section="search">🔍 Поиск</button>
+            <button class="nav-btn" data-section="profile">👤 Профиль</button>
         </div>
 
-        <!-- Секция Главная (лента постов) -->
+        <!-- Главная (лента) -->
         <div id="homeSection" class="section active">
             <div class="card create-post-card">
                 <h2>Новый пост</h2>
@@ -47,7 +49,7 @@
             <div id="feedContainer"></div>
         </div>
 
-        <!-- Секция Кошелёк -->
+        <!-- Кошелёк -->
         <div id="walletSection" class="section">
             <div class="dashboard-grid">
                 <div class="card">
@@ -80,7 +82,7 @@
             </div>
         </div>
 
-        <!-- Секция Банк -->
+        <!-- Банк -->
         <div id="bankSection" class="section">
             <div class="tabs">
                 <button class="tab active" onclick="showBankTab('deposit')">Вклады</button>
@@ -123,7 +125,7 @@
             </div>
         </div>
 
-        <!-- Секция Лотерея -->
+        <!-- Лотерея -->
         <div id="lotterySection" class="section">
             <div class="card">
                 <h2>Лотерея (5 монет)</h2>
@@ -138,7 +140,7 @@
             </div>
         </div>
 
-        <!-- Секция Чат -->
+        <!-- Чат -->
         <div id="chatSection" class="section">
             <div class="card">
                 <h2>Общий чат</h2>
@@ -150,7 +152,25 @@
             </div>
         </div>
 
-        <!-- Секция Поиск -->
+        <!-- Сообщения -->
+        <div id="messagesSection" class="section">
+            <div class="private-chat-container">
+                <div class="conversations-list" id="conversationsList"></div>
+                <div>
+                    <div id="privateMessages" class="private-messages"></div>
+                    <div class="chat-input-area" id="privateChatInput" style="display:none;">
+                        <textarea id="privateMessageInput" placeholder="Введите сообщение..."></textarea>
+                        <button onclick="sendPrivateMessage()">Отправить</button>
+                    </div>
+                    <div id="newConversation" style="margin-top:1rem;">
+                        <input type="text" id="newConversationName" placeholder="Имя пользователя">
+                        <button onclick="startConversation()">Написать</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Поиск -->
         <div id="searchSection" class="section">
             <div class="card">
                 <h2>Поиск игроков</h2>
@@ -160,7 +180,7 @@
             </div>
         </div>
 
-        <!-- Секция Профиль (будет заполняться динамически) -->
+        <!-- Профиль -->
         <div id="profileSection" class="section">
             <div id="profileContent"></div>
         </div>
@@ -168,6 +188,7 @@
         <datalist id="playersList"></datalist>
     </div>
 
+    <script src="/static/theme.js"></script>
     <script src="/static/script.js"></script>
 </body>
 </html>
