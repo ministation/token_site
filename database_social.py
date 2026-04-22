@@ -1,20 +1,28 @@
 import sqlite3
 import datetime
 from typing import Optional, List, Dict, Any
+import json
+import os
+SOCIAL_DB_PATH = os.getenv("SOCIAL_DB_PATH", "social.db")
 
-SOCIAL_DB_PATH = "social.db"
-
-def init_social_db(db_path: str):
-    conn = sqlite3.connect(db_path)
+def get_db():
+    """Возвращает соединение с SQLite"""
+    conn = sqlite3.connect(SOCIAL_DB_PATH)
     conn.row_factory = sqlite3.Row
+    return conn
+
+def init_social_db():
+    """Создает таблицы для соцсети, если их нет"""
+    conn = get_db()
     cursor = conn.cursor()
     
+    # Таблица пользователей соцсети (связана с игроком через player_id)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS social_users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            player_id TEXT UNIQUE NOT NULL,
-            user_uuid TEXT UNIQUE NOT NULL,
-            discord_id TEXT UNIQUE,
+            player_id TEXT UNIQUE NOT NULL,      -- UUID из игровой БД
+            user_uuid TEXT UNIQUE NOT NULL,      -- тоже самое, для совместимости
+            discord_id TEXT UNIQUE NOT NULL,
             discord_username TEXT,
             discord_avatar TEXT,
             game_nickname TEXT,
@@ -24,6 +32,7 @@ def init_social_db(db_path: str):
         )
     """)
     
+    # Таблица постов
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS posts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -36,6 +45,7 @@ def init_social_db(db_path: str):
         )
     """)
     
+    # Таблица лайков (посты)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS likes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -48,6 +58,7 @@ def init_social_db(db_path: str):
         )
     """)
     
+    # Таблица комментариев
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS comments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -60,6 +71,7 @@ def init_social_db(db_path: str):
         )
     """)
     
+    # Таблица подписок (follower подписан на following)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS follows (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -72,35 +84,23 @@ def init_social_db(db_path: str):
         )
     """)
     
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS private_messages (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            sender_id TEXT NOT NULL,
-            receiver_id TEXT NOT NULL,
-            message TEXT NOT NULL,
-            is_read INTEGER DEFAULT 0,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (sender_id) REFERENCES social_users(player_id) ON DELETE CASCADE,
-            FOREIGN KEY (receiver_id) REFERENCES social_users(player_id) ON DELETE CASCADE
-        )
-    """)
-    
     conn.commit()
     conn.close()
 
-def get_db(db_path: str = SOCIAL_DB_PATH):
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
-    return conn
+# Инициализация при импорте
+init_social_db()
 
-# ---------- Пользователи ----------
+# ---------- Функции работы с пользователями ----------
 def get_or_create_social_user(player_id: str, user_uuid: str, discord_id: str, 
                               discord_username: str, discord_avatar: str, game_nickname: str) -> Dict:
     conn = get_db()
     cursor = conn.cursor()
+    
+    # Проверяем существование
     cursor.execute("SELECT * FROM social_users WHERE player_id = ?", (player_id,))
     row = cursor.fetchone()
     if row:
+        # Обновляем данные (ник, аватар могли измениться)
         cursor.execute("""
             UPDATE social_users 
             SET discord_username = ?, discord_avatar = ?, game_nickname = ?, updated_at = CURRENT_TIMESTAMP
@@ -125,6 +125,14 @@ def get_social_user_by_player_id(player_id: str) -> Optional[Dict]:
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM social_users WHERE player_id = ?", (player_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+def get_social_user_by_discord_id(discord_id: str) -> Optional[Dict]:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM social_users WHERE discord_id = ?", (discord_id,))
     row = cursor.fetchone()
     conn.close()
     return dict(row) if row else None
@@ -168,13 +176,32 @@ def search_social_users(query: str, limit: int = 20) -> List[Dict]:
 def create_post(author_player_id: str, content: str, image_url: str = None) -> int:
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO posts (author_player_id, content, image_url) VALUES (?, ?, ?)", (author_player_id, content, image_url))
+    cursor.execute("""
+        INSERT INTO posts (author_player_id, content, image_url)
+        VALUES (?, ?, ?)
+    """, (author_player_id, content, image_url))
     conn.commit()
     post_id = cursor.lastrowid
     conn.close()
     return post_id
 
+def get_post_by_id(post_id: int) -> Optional[Dict]:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT p.*, su.game_nickname, su.discord_username, su.discord_avatar,
+               (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as like_count,
+               (SELECT COUNT(*) FROM comments WHERE post_id = p.id) as comment_count
+        FROM posts p
+        JOIN social_users su ON p.author_player_id = su.player_id
+        WHERE p.id = ?
+    """, (post_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
 def get_feed_posts(player_id: str, limit: int = 30, offset: int = 0) -> List[Dict]:
+    """Лента: посты от подписок + свои посты"""
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("""
@@ -222,6 +249,7 @@ def delete_post(post_id: int, author_player_id: str) -> bool:
 
 # ---------- Лайки ----------
 def toggle_like(post_id: int, player_id: str) -> str:
+    """Возвращает 'liked' или 'unliked'"""
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("SELECT 1 FROM likes WHERE post_id = ? AND player_id = ?", (post_id, player_id))
@@ -249,7 +277,10 @@ def get_like_count(post_id: int) -> int:
 def add_comment(post_id: int, author_player_id: str, content: str) -> int:
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO comments (post_id, author_player_id, content) VALUES (?, ?, ?)", (post_id, author_player_id, content))
+    cursor.execute("""
+        INSERT INTO comments (post_id, author_player_id, content)
+        VALUES (?, ?, ?)
+    """, (post_id, author_player_id, content))
     conn.commit()
     comment_id = cursor.lastrowid
     conn.close()
@@ -286,7 +317,10 @@ def follow_user(follower_id: str, following_id: str) -> bool:
     conn = get_db()
     cursor = conn.cursor()
     try:
-        cursor.execute("INSERT INTO follows (follower_player_id, following_player_id) VALUES (?, ?)", (follower_id, following_id))
+        cursor.execute("""
+            INSERT INTO follows (follower_player_id, following_player_id)
+            VALUES (?, ?)
+        """, (follower_id, following_id))
         conn.commit()
         return True
     except sqlite3.IntegrityError:
@@ -297,7 +331,9 @@ def follow_user(follower_id: str, following_id: str) -> bool:
 def unfollow_user(follower_id: str, following_id: str) -> bool:
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM follows WHERE follower_player_id = ? AND following_player_id = ?", (follower_id, following_id))
+    cursor.execute("""
+        DELETE FROM follows WHERE follower_player_id = ? AND following_player_id = ?
+    """, (follower_id, following_id))
     conn.commit()
     affected = cursor.rowcount
     conn.close()
@@ -350,61 +386,3 @@ def get_following(player_id: str, limit: int = 20) -> List[Dict]:
     rows = cursor.fetchall()
     conn.close()
     return [dict(row) for row in rows]
-
-# ---------- Личные сообщения ----------
-def send_private_message(sender_id: str, receiver_id: str, message: str) -> int:
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("INSERT INTO private_messages (sender_id, receiver_id, message) VALUES (?, ?, ?)", (sender_id, receiver_id, message))
-    conn.commit()
-    msg_id = cursor.lastrowid
-    conn.close()
-    return msg_id
-
-def get_conversations(player_id: str) -> List[Dict]:
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("""
-        SELECT other_id, su.game_nickname, su.discord_avatar,
-               (SELECT COUNT(*) FROM private_messages WHERE receiver_id = ? AND sender_id = other_id AND is_read = 0) as unread
-        FROM (
-            SELECT DISTINCT CASE WHEN sender_id = ? THEN receiver_id ELSE sender_id END as other_id
-            FROM private_messages WHERE sender_id = ? OR receiver_id = ?
-        ) conv
-        JOIN social_users su ON conv.other_id = su.player_id
-    """, (player_id, player_id, player_id, player_id))
-    rows = cursor.fetchall()
-    conn.close()
-    return [dict(row) for row in rows]
-
-def get_private_messages(user1: str, user2: str, limit: int = 50) -> List[Dict]:
-    conn = get_db()
-    cursor = conn.cursor()
-    # Автоматически помечаем как прочитанные при получении
-    cursor.execute("UPDATE private_messages SET is_read = 1 WHERE sender_id = ? AND receiver_id = ?", (user2, user1))
-    conn.commit()
-    cursor.execute("""
-        SELECT id, sender_id, receiver_id, message, is_read, created_at
-        FROM private_messages
-        WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)
-        ORDER BY created_at ASC
-        LIMIT ?
-    """, (user1, user2, user2, user1, limit))
-    rows = cursor.fetchall()
-    conn.close()
-    return [dict(row) for row in rows]
-
-def get_unread_messages_count(player_id: str) -> int:
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("SELECT COUNT(*) FROM private_messages WHERE receiver_id = ? AND is_read = 0", (player_id,))
-    count = cursor.fetchone()[0]
-    conn.close()
-    return count
-
-def mark_message_read(message_id: int, player_id: str):
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("UPDATE private_messages SET is_read = 1 WHERE id = ? AND receiver_id = ?", (message_id, player_id))
-    conn.commit()
-    conn.close()
