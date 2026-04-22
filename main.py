@@ -79,13 +79,6 @@ user_sessions = {}
 transfer_cooldowns = {}
 chat_messages = []
 
-# -------------------- ГЛАВНАЯ СТРАНИЦА (SPA) --------------------
-@app.get("/")
-@app.get("/profile/{player_id}")
-@app.get("/messages")
-async def index(request: Request, player_id: str = None):
-    return templates.TemplateResponse("index.html", {"request": request})
-
 # -------------------- ЗАГРУЗКА/СОХРАНЕНИЕ СЕССИЙ --------------------
 def load_sessions():
     if os.path.exists(SESSIONS_FILE):
