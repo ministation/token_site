@@ -2,8 +2,7 @@ const API_BASE = '';
 const COIN_ICON = '<img src="/static/coin.png" class="coin-icon-result" alt="">';
 let currentUser = null;
 let slotInterval = null;
-let currentProfileId = null;
-let currentConversationId = null;
+let currentProfileId = null; // Для просмотра профиля
 
 const SLOT_SYMBOLS = ['cherry', 'lemon', 'orange', 'grapes', 'diamond', 'seven'];
 
@@ -22,7 +21,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         loadChat();
         setInterval(loadChat, 5000);
-        loadConversations();
     }
 });
 
@@ -43,9 +41,8 @@ function setupNavigation() {
                 }
             } else if (section === 'home') {
                 loadFeed();
-            } else if (section === 'messages') {
-                loadConversations();
             } else if (section === 'search') {
+                // Очищаем поле
                 document.getElementById('socialSearchInput').value = '';
                 document.getElementById('searchResults').innerHTML = '';
             }
@@ -71,13 +68,13 @@ async function checkAuth() {
             panel.style.display = 'flex';
             panel.innerHTML = `
                 ${data.avatar ? `<img src="${data.avatar}" alt="">` : ''}
-                <span id="userName">${data.username || 'Гость'}</span>
+                <span id="userName">${data.username}</span>
                 <button onclick="logout()">Выйти</button>
             `;
             
-            if (!data.player) {
-                // Показать форму привязки UUID
-                showLinkPlayerForm();
+            if (data.player) {
+                // Показываем разделы, требующие привязки
+                document.querySelectorAll('.requires-player').forEach(el => el.style.display = 'block');
             }
         } else {
             document.getElementById('loginBtn').style.display = 'block';
@@ -85,47 +82,6 @@ async function checkAuth() {
         }
     } catch (e) {
         console.error('Auth check failed:', e);
-    }
-}
-
-function showLinkPlayerForm() {
-    const walletSection = document.getElementById('walletSection');
-    if (walletSection) {
-        const linkHtml = `
-            <div class="card">
-                <h2>Привязка игрового аккаунта</h2>
-                <p>Введите ваш UUID из игры (можно узнать в настройках профиля).</p>
-                <input type="text" id="uuidInput" placeholder="UUID">
-                <button onclick="linkPlayer()">Привязать</button>
-                <div id="linkResult" class="result"></div>
-            </div>
-        `;
-        walletSection.insertAdjacentHTML('afterbegin', linkHtml);
-    }
-}
-
-async function linkPlayer() {
-    const uuid = document.getElementById('uuidInput').value.trim();
-    const resultDiv = document.getElementById('linkResult');
-    if (!uuid) {
-        resultDiv.innerHTML = '<p class="error">Введите UUID</p>';
-        return;
-    }
-    try {
-        const res = await fetch(`${API_BASE}/api/link_player`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({user_uuid: uuid})
-        });
-        const data = await res.json();
-        if (res.ok) {
-            resultDiv.innerHTML = '<p class="success">Аккаунт привязан! Перезагрузите страницу.</p>';
-            setTimeout(() => location.reload(), 1500);
-        } else {
-            resultDiv.innerHTML = `<p class="error">${data.detail}</p>`;
-        }
-    } catch (e) {
-        resultDiv.innerHTML = '<p class="error">Ошибка соединения</p>';
     }
 }
 
@@ -203,37 +159,42 @@ async function transfer() {
     } catch (e) { resultDiv.innerHTML = `<p class="error">${e.message}</p>`; }
 }
 
-// Лотерея
+// Слоты
 function startSlotAnimation() {
     const slotMachine = document.getElementById('slotMachine');
     const slotResult = document.getElementById('slotResult');
     slotMachine.style.display = 'flex';
     slotResult.innerHTML = '🎲 Крутим...';
+    
     document.querySelectorAll('.slot-reel').forEach(r => r.classList.add('slot-spinning'));
+    
     let spins = 0;
     slotInterval = setInterval(() => {
         document.getElementById('slot1').innerHTML = `<img src="/static/slots/${SLOT_SYMBOLS[Math.floor(Math.random() * SLOT_SYMBOLS.length)]}.png" alt="">`;
         document.getElementById('slot2').innerHTML = `<img src="/static/slots/${SLOT_SYMBOLS[Math.floor(Math.random() * SLOT_SYMBOLS.length)]}.png" alt="">`;
         document.getElementById('slot3').innerHTML = `<img src="/static/slots/${SLOT_SYMBOLS[Math.floor(Math.random() * SLOT_SYMBOLS.length)]}.png" alt="">`;
         spins++;
-        if (spins >= 12) {
+        if (spins >= 15) {
             clearInterval(slotInterval);
             document.querySelectorAll('.slot-reel').forEach(r => r.classList.remove('slot-spinning'));
         }
-    }, 80);
+    }, 100);
 }
 
 function stopSlotAnimation(prize) {
     if (slotInterval) { clearInterval(slotInterval); slotInterval = null; }
     document.querySelectorAll('.slot-reel').forEach(r => r.classList.remove('slot-spinning'));
+    
     let symbols;
     if (prize >= 15) symbols = ['diamond', 'diamond', 'diamond'];
     else if (prize >= 8) symbols = ['seven', 'seven', 'cherry'];
     else if (prize >= 4) symbols = ['grapes', 'grapes', 'lemon'];
     else symbols = ['cherry', 'lemon', 'orange'];
+    
     document.getElementById('slot1').innerHTML = `<img src="/static/slots/${symbols[0]}.png" alt="">`;
     document.getElementById('slot2').innerHTML = `<img src="/static/slots/${symbols[1]}.png" alt="">`;
     document.getElementById('slot3').innerHTML = `<img src="/static/slots/${symbols[2]}.png" alt="">`;
+    
     document.getElementById('slotResult').innerHTML = prize >= 15 ? `🎉 ДЖЕКПОТ! ${prize} ${COIN_ICON}` : `✨ Выигрыш: ${prize} ${COIN_ICON}`;
 }
 
@@ -246,7 +207,7 @@ async function playLottery() {
             stopSlotAnimation(data.prize);
             resultDiv.innerHTML = `<p class="success">🎉 Выигрыш: ${data.prize} ${COIN_ICON}! Новый баланс: ${data.new_balance} ${COIN_ICON}</p>`;
             loadMyBalance(); loadTop();
-        }, 1000);
+        }, 1500);
     } catch (e) {
         clearInterval(slotInterval);
         document.getElementById('slotMachine').style.display = 'none';
@@ -293,7 +254,7 @@ async function withdrawDeposit() {
 async function loadMyLoans() {
     try {
         const loans = await apiCall('GET', '/api/loans');
-        document.getElementById('repaySelect').innerHTML = loans.map(l => `<option value="${l.loan_id}">ID ${l.loan_id}: долг ${l.remaining}/${l.total}</option>`).join('');
+        document.getElementById('repaySelect').innerHTML = loans.map(l => `<option value="${l.loan_id}">ID ${l.loan_id}: долг ${l.remaining}/${l.total} (${new Date(l.due_at).toLocaleDateString()})</option>`).join('');
     } catch (e) {}
 }
 
@@ -370,6 +331,12 @@ async function loadChat() {
     } catch (e) {}
 }
 
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 async function sendChatMessage() {
     const input = document.getElementById('chatInput');
     const message = input.value.trim();
@@ -383,20 +350,16 @@ async function sendChatMessage() {
     }
 }
 
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
 // ---------- Соцсеть ----------
+
+// Превью изображения
 document.addEventListener('change', function(e) {
     if (e.target.id === 'postImage') {
         const file = e.target.files[0];
         if (file) {
             const reader = new FileReader();
             reader.onload = function(e) {
-                document.getElementById('imagePreview').innerHTML = `<img src="${e.target.result}" alt="Preview" style="max-width:200px; max-height:200px;">`;
+                document.getElementById('imagePreview').innerHTML = `<img src="${e.target.result}" alt="Preview">`;
             };
             reader.readAsDataURL(file);
         } else {
@@ -407,18 +370,25 @@ document.addEventListener('change', function(e) {
 
 async function createPost() {
     const content = document.getElementById('postContent').value.trim();
-    if (!content) { alert('Введите текст поста'); return; }
+    if (!content) {
+        alert('Введите текст поста');
+        return;
+    }
     const imageInput = document.getElementById('postImage');
     const formData = new FormData();
     formData.append('content', content);
-    if (imageInput.files[0]) formData.append('image', imageInput.files[0]);
+    if (imageInput.files[0]) {
+        formData.append('image', imageInput.files[0]);
+    }
     try {
         await apiCall('POST', '/api/social/posts', formData);
         document.getElementById('postContent').value = '';
         imageInput.value = '';
         document.getElementById('imagePreview').innerHTML = '';
         loadFeed();
-    } catch (e) { alert(e.message); }
+    } catch (e) {
+        alert(e.message);
+    }
 }
 
 async function loadFeed() {
@@ -426,7 +396,9 @@ async function loadFeed() {
     try {
         const posts = await apiCall('GET', '/api/social/posts/feed');
         renderPosts(posts, 'feedContainer');
-    } catch (e) { console.error(e); }
+    } catch (e) {
+        console.error(e);
+    }
 }
 
 function renderPosts(posts, containerId) {
@@ -437,8 +409,22 @@ function renderPosts(posts, containerId) {
         return;
     }
     let html = '';
-    posts.forEach(post => { html += renderPost(post); });
+    posts.forEach(post => {
+        html += renderPost(post);
+    });
     container.innerHTML = html;
+    
+    // Привязываем обработчики после рендера
+    posts.forEach(post => {
+        const likeBtn = document.getElementById(`like-btn-${post.id}`);
+        if (likeBtn) {
+            likeBtn.addEventListener('click', () => toggleLike(post.id));
+        }
+        const commentBtn = document.getElementById(`comment-btn-${post.id}`);
+        if (commentBtn) {
+            commentBtn.addEventListener('click', () => toggleComments(post.id));
+        }
+    });
 }
 
 function renderPost(post) {
@@ -457,11 +443,11 @@ function renderPost(post) {
             <div class="post-content">${escapeHtml(post.content)}</div>
             ${imageHtml}
             <div class="post-actions">
-                <button class="post-action-btn ${likedClass}" onclick="toggleLike(${post.id})">
+                <button id="like-btn-${post.id}" class="post-action-btn ${likedClass}">
                     ❤️ <span id="like-count-${post.id}">${post.like_count}</span>
                 </button>
-                <button class="post-action-btn" onclick="toggleComments(${post.id})">
-                    💬 <span id="comment-count-${post.id}">${post.comment_count}</span>
+                <button id="comment-btn-${post.id}" class="post-action-btn">
+                    💬 <span>${post.comment_count}</span>
                 </button>
             </div>
             <div id="comments-${post.id}" class="comments-section" style="display:none;"></div>
@@ -472,15 +458,23 @@ function renderPost(post) {
 async function toggleLike(postId) {
     try {
         const data = await apiCall('POST', `/api/social/posts/${postId}/like`);
-        document.getElementById(`like-count-${postId}`).textContent = data.like_count;
-        const btn = document.querySelector(`button[onclick="toggleLike(${postId})"]`);
-        btn.classList.toggle('liked', data.action === 'liked');
-    } catch (e) { alert(e.message); }
+        const likeCountSpan = document.getElementById(`like-count-${postId}`);
+        const likeBtn = document.getElementById(`like-btn-${postId}`);
+        likeCountSpan.textContent = data.like_count;
+        if (data.action === 'liked') {
+            likeBtn.classList.add('liked');
+        } else {
+            likeBtn.classList.remove('liked');
+        }
+    } catch (e) {
+        alert(e.message);
+    }
 }
 
 async function toggleComments(postId) {
     const commentsDiv = document.getElementById(`comments-${postId}`);
     if (commentsDiv.style.display === 'none') {
+        // Загружаем комментарии
         try {
             const comments = await apiCall('GET', `/api/social/posts/${postId}/comments`);
             let html = '<h4>Комментарии</h4>';
@@ -496,14 +490,16 @@ async function toggleComments(postId) {
                 `;
             });
             html += `
-                <div class="comment-form">
+                <div class="comment-form" style="margin-top:12px;">
                     <textarea id="comment-input-${postId}" placeholder="Написать комментарий..."></textarea>
                     <button onclick="addComment(${postId})">Отправить</button>
                 </div>
             `;
             commentsDiv.innerHTML = html;
             commentsDiv.style.display = 'block';
-        } catch (e) { alert(e.message); }
+        } catch (e) {
+            alert(e.message);
+        }
     } else {
         commentsDiv.style.display = 'none';
     }
@@ -516,10 +512,16 @@ async function addComment(postId) {
     try {
         await apiCall('POST', `/api/social/posts/${postId}/comments`, { content });
         input.value = '';
+        // Обновить комментарии
         toggleComments(postId);
-        const countSpan = document.getElementById(`comment-count-${postId}`);
-        if (countSpan) countSpan.textContent = parseInt(countSpan.textContent) + 1;
-    } catch (e) { alert(e.message); }
+        // Обновить счетчик комментариев в посте (можно перезагрузить ленту, но проще обновить число)
+        const commentBtn = document.getElementById(`comment-btn-${postId}`);
+        const span = commentBtn.querySelector('span');
+        const current = parseInt(span.textContent) || 0;
+        span.textContent = current + 1;
+    } catch (e) {
+        alert(e.message);
+    }
 }
 
 // Профиль
@@ -533,8 +535,8 @@ async function loadProfile(playerId) {
     try {
         const profile = await apiCall('GET', `/api/social/profile/${playerId}`);
         const posts = await apiCall('GET', `/api/social/posts/user/${playerId}`);
-        const isOwnProfile = currentUser?.player?.player_id === playerId;
         
+        const isOwnProfile = currentUser?.player?.player_id === playerId;
         const followBtnHtml = isOwnProfile ? '' : `
             <button class="follow-btn ${profile.is_following ? 'unfollow' : ''}" onclick="toggleFollow('${playerId}')">
                 ${profile.is_following ? 'Отписаться' : 'Подписаться'}
@@ -542,7 +544,7 @@ async function loadProfile(playerId) {
         `;
         
         const bioEditHtml = isOwnProfile ? `
-            <div style="margin-top:1rem;">
+            <div style="margin-top:12px;">
                 <textarea id="bioEdit" placeholder="О себе">${profile.bio || ''}</textarea>
                 <button onclick="updateBio()">Сохранить</button>
             </div>
@@ -575,9 +577,12 @@ async function loadProfile(playerId) {
             </div>
             <div id="profilePosts"></div>
         `;
+        
         document.getElementById('profileContent').innerHTML = html;
         renderPosts(posts, 'profilePosts');
-    } catch (e) { alert('Ошибка загрузки профиля: ' + e.message); }
+    } catch (e) {
+        alert('Ошибка загрузки профиля: ' + e.message);
+    }
 }
 
 async function updateBio() {
@@ -586,7 +591,9 @@ async function updateBio() {
         await apiCall('POST', '/api/social/profile/update', { bio });
         alert('Биография обновлена');
         loadMyProfile();
-    } catch (e) { alert(e.message); }
+    } catch (e) {
+        alert(e.message);
+    }
 }
 
 async function toggleFollow(targetId) {
@@ -598,14 +605,20 @@ async function toggleFollow(targetId) {
         } else {
             await apiCall('POST', `/api/social/follow/${targetId}`);
         }
+        // Обновить профиль
         loadProfile(targetId);
-    } catch (e) { alert(e.message); }
+    } catch (e) {
+        alert(e.message);
+    }
 }
 
 // Поиск соцсети
 async function searchSocial() {
     const query = document.getElementById('socialSearchInput').value.trim();
-    if (query.length < 2) { alert('Введите минимум 2 символа'); return; }
+    if (query.length < 2) {
+        alert('Введите минимум 2 символа');
+        return;
+    }
     try {
         const results = await apiCall('GET', `/api/social/search?q=${encodeURIComponent(query)}`);
         const container = document.getElementById('searchResults');
@@ -627,68 +640,7 @@ async function searchSocial() {
             `;
         });
         container.innerHTML = html;
-    } catch (e) { alert(e.message); }
-}
-
-// Личные сообщения
-async function loadConversations() {
-    if (!currentUser?.player) return;
-    try {
-        const conversations = await apiCall('GET', '/api/messages/conversations');
-        const container = document.getElementById('conversationsList');
-        if (container) {
-            container.innerHTML = conversations.map(c => `
-                <div class="conversation-item ${currentConversationId === c.other_id ? 'active' : ''}" onclick="openConversation('${c.other_id}')">
-                    <img src="${c.discord_avatar || '/static/default-avatar.png'}" class="conversation-avatar" alt="">
-                    <div class="conversation-info">
-                        <div class="conversation-name">${c.game_nickname}</div>
-                    </div>
-                    ${c.unread ? `<span class="conversation-unread">${c.unread}</span>` : ''}
-                </div>
-            `).join('');
-        }
-    } catch (e) {}
-}
-
-async function openConversation(playerId) {
-    currentConversationId = playerId;
-    document.getElementById('privateChatInput').style.display = 'flex';
-    await loadConversations();
-    await loadPrivateMessages(playerId);
-}
-
-async function loadPrivateMessages(playerId) {
-    try {
-        const messages = await apiCall('GET', `/api/messages/${playerId}`);
-        const container = document.getElementById('privateMessages');
-        container.innerHTML = messages.map(m => `
-            <div class="private-message ${m.sender_id === currentUser.player.player_id ? 'own' : ''}">
-                <img src="${m.avatar || '/static/default-avatar.png'}" alt="">
-                <div class="message-bubble">
-                    <div>${escapeHtml(m.message)}</div>
-                    <small>${new Date(m.created_at).toLocaleTimeString()}</small>
-                </div>
-            </div>
-        `).join('');
-        container.scrollTop = container.scrollHeight;
-    } catch (e) {}
-}
-
-async function sendPrivateMessage() {
-    if (!currentConversationId) return;
-    const input = document.getElementById('privateMessageInput');
-    const message = input.value.trim();
-    if (!message) return;
-    try {
-        await apiCall('POST', '/api/messages', { receiver_player_id: currentConversationId, message });
-        input.value = '';
-        await loadPrivateMessages(currentConversationId);
-        await loadConversations();
-    } catch (e) { alert(e.message); }
-}
-
-function startConversationWith(username) {
-    // Поиск пользователя и открытие чата
-    showSection('messages');
-    // Здесь можно реализовать поиск и открытие
+    } catch (e) {
+        alert(e.message);
+    }
 }
