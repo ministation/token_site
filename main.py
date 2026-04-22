@@ -318,7 +318,7 @@ async def login(request: Request):
 # Вход по UUID (для игры) – привязка к сессии
 @app.get("/login/{user_uuid}")
 @limiter.limit("10/minute")
-async def login_with_uuid(user_uuid: str, request: Request):
+async def login_with_uuid(request: Request, user_uuid: str):
     player = await find_player_by_uuid(user_uuid)
     if not player:
         raise HTTPException(status_code=404, detail="Игрок с таким UUID не найден")
@@ -343,7 +343,7 @@ async def login_with_uuid(user_uuid: str, request: Request):
 
 @app.get("/callback")
 @limiter.limit("10/minute")
-async def callback(code: str, state: str):
+async def callback(request: Request, code: str, state: str):
     if state not in user_sessions:
         raise HTTPException(status_code=400, detail="Invalid state")
     async with aiohttp.ClientSession() as sess:
