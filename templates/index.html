@@ -7,167 +7,75 @@
     <link rel="stylesheet" href="/static/style.css">
     <link rel="icon" type="image/png" href="/static/coin.png">
 </head>
-<body>
-    <div class="container">
-        <!-- Шапка -->
-        <div class="header">
-            <div class="logo">
-                <img src="/static/coin.png" alt="Coin">
-                <h1>Мини-станция</h1>
+<body class="dark">
+    <div class="app">
+        <!-- Левая боковая панель -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <img src="/static/logo.png" alt="Мини-станция" class="logo">
+                <span class="logo-text">Мини-станция</span>
             </div>
-            <div id="userInfo">
-                <button id="loginBtn" onclick="login()">Войти через Discord</button>
-                <div id="userPanel" style="display:none;"></div>
+            <ul class="nav-menu">
+                <li class="nav-item active" data-page="home"><i class="icon">🏠</i><span>Главная</span></li>
+                <li class="nav-item" data-page="messages"><i class="icon">📨</i><span>Сообщения</span><span class="badge" id="unreadMessagesBadge" style="display:none;">0</span></li>
+                <li class="nav-item" data-page="friends"><i class="icon">👥</i><span>Друзья</span></li>
+                <li class="nav-item" data-page="wallet"><i class="icon">💰</i><span>Кошелёк</span></li>
+                <li class="nav-item" data-page="bank"><i class="icon">🏦</i><span>Банк</span></li>
+                <li class="nav-item" data-page="lottery"><i class="icon">🎰</i><span>Лотерея</span></li>
+                <li class="nav-item" data-page="search"><i class="icon">🔍</i><span>Поиск</span></li>
+            </ul>
+            <div class="sidebar-footer">
+                <div class="user-info" id="sidebarUserInfo">
+                    <!-- Заполняется JS -->
+                </div>
+                <button class="theme-toggle" id="themeToggle">🌙</button>
             </div>
-        </div>
+        </nav>
 
-        <!-- Навигация -->
-        <div class="main-nav">
-            <button class="nav-btn active" data-section="home">Главная</button>
-            <button class="nav-btn" data-section="wallet">Кошелёк</button>
-            <button class="nav-btn" data-section="bank">Банк</button>
-            <button class="nav-btn" data-section="lottery">Лотерея</button>
-            <button class="nav-btn" data-section="chat">Чат</button>
-            <button class="nav-btn" data-section="search">Поиск</button>
-            <button class="nav-btn" data-section="profile">Мой профиль</button>
-        </div>
+        <!-- Основной контент -->
+        <main class="content" id="contentArea">
+            <!-- Здесь будут динамически подгружаться страницы -->
+            <!-- По умолчанию - лента -->
+            <div id="page-home" class="page-container active"></div>
+            <div id="page-messages" class="page-container"></div>
+            <div id="page-friends" class="page-container"></div>
+            <div id="page-wallet" class="page-container"></div>
+            <div id="page-bank" class="page-container"></div>
+            <div id="page-lottery" class="page-container"></div>
+            <div id="page-search" class="page-container"></div>
+            <div id="page-profile" class="page-container"></div>
+        </main>
 
-        <!-- Секция Главная (лента постов) -->
-        <div id="homeSection" class="section active">
-            <div class="card create-post-card">
-                <h2>Новый пост</h2>
-                <div class="post-form">
-                    <textarea id="postContent" placeholder="Что у вас нового?"></textarea>
-                    <input type="file" id="postImage" accept="image/*">
-                    <label for="postImage" class="image-upload-label">📎 Добавить фото</label>
-                    <div id="imagePreview" class="image-preview"></div>
-                    <button onclick="createPost()">Опубликовать</button>
-                </div>
+        <!-- Правая боковая панель (инфо) -->
+        <aside class="right-sidebar">
+            <div class="card balance-card" id="miniBalanceCard">
+                <h3>💰 Баланс</h3>
+                <div class="balance-value" id="miniBalance">0</div>
+                <button class="btn btn-primary btn-sm" onclick="app.navigateTo('wallet')">Пополнить</button>
             </div>
-            <div id="feedContainer"></div>
-        </div>
-
-        <!-- Секция Кошелёк -->
-        <div id="walletSection" class="section">
-            <div class="dashboard-grid">
-                <div class="card">
-                    <h2>Мой баланс</h2>
-                    <div id="myBalance">Загрузка...</div>
-                </div>
-                <div class="card">
-                    <h2>Проверить баланс</h2>
-                    <input type="text" id="balanceNick" placeholder="Ник игрока" list="playersList">
-                    <button onclick="checkBalance()">Проверить</button>
-                    <div id="balanceResult" class="result"></div>
-                </div>
-                <div class="card">
-                    <h2>Перевод монет</h2>
-                    <input type="text" id="receiverNick" placeholder="Кому" list="playersList">
-                    <input type="number" id="transferAmount" placeholder="Сумма" min="1">
-                    <button onclick="transfer()">Отправить</button>
-                    <div id="transferResult" class="result"></div>
-                </div>
+            <div class="card stats-card">
+                <h3>📊 Статистика</h3>
+                <div class="stat-row"><span>Игроков:</span><span id="statPlayers">-</span></div>
+                <div class="stat-row"><span>Монет в обороте:</span><span id="statTokens">-</span></div>
+                <div class="stat-row"><span>Вкладов:</span><span id="statDeposits">-</span></div>
+                <div class="stat-row"><span>Займов:</span><span id="statLoans">-</span></div>
             </div>
-            <div class="bottom-row">
-                <div class="card">
-                    <h2>Топ игроков</h2>
-                    <div id="topResult"></div>
-                </div>
-                <div class="card">
-                    <h2>Статистика</h2>
-                    <div id="statsResult"></div>
-                </div>
+            <div class="card online-friends">
+                <h3>👥 Друзья онлайн</h3>
+                <div id="onlineFriendsList">Загрузка...</div>
             </div>
-        </div>
-
-        <!-- Секция Банк -->
-        <div id="bankSection" class="section">
-            <div class="tabs">
-                <button class="tab active" onclick="showBankTab('deposit')">Вклады</button>
-                <button class="tab" onclick="showBankTab('withdraw')">Снять вклад</button>
-                <button class="tab" onclick="showBankTab('loan')">Займы</button>
-                <button class="tab" onclick="showBankTab('repay')">Погасить</button>
-            </div>
-            <div id="depositTab" class="bank-tab">
-                <div class="card">
-                    <h2>Создать вклад</h2>
-                    <input type="number" id="depositAmount" placeholder="Сумма (мин. 10)">
-                    <button onclick="createDeposit()">Создать</button>
-                    <div id="depositResult" class="result"></div>
-                </div>
-            </div>
-            <div id="withdrawTab" class="bank-tab" style="display:none;">
-                <div class="card">
-                    <h2>Снять вклад</h2>
-                    <select id="withdrawSelect"></select>
-                    <button onclick="withdrawDeposit()">Снять</button>
-                    <div id="withdrawResult" class="result"></div>
-                </div>
-            </div>
-            <div id="loanTab" class="bank-tab" style="display:none;">
-                <div class="card">
-                    <h2>Взять заём</h2>
-                    <input type="number" id="loanAmount" placeholder="Сумма">
-                    <button onclick="createLoan()">Получить</button>
-                    <div id="loanResult" class="result"></div>
-                </div>
-            </div>
-            <div id="repayTab" class="bank-tab" style="display:none;">
-                <div class="card">
-                    <h2>Погасить заём</h2>
-                    <select id="repaySelect"></select>
-                    <input type="number" id="repayAmount" placeholder="Сумма (необязательно)">
-                    <button onclick="repayLoan()">Погасить</button>
-                    <div id="repayResult" class="result"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Секция Лотерея -->
-        <div id="lotterySection" class="section">
-            <div class="card">
-                <h2>Лотерея (5 монет)</h2>
-                <div id="slotMachine" class="slot-machine" style="display:none;">
-                    <div id="slot1" class="slot-reel"></div>
-                    <div id="slot2" class="slot-reel"></div>
-                    <div id="slot3" class="slot-reel"></div>
-                </div>
-                <div id="slotResult" style="margin-bottom:10px;"></div>
-                <button onclick="playLottery()">Испытать удачу</button>
-                <div id="lotteryResult" class="result"></div>
-            </div>
-        </div>
-
-        <!-- Секция Чат -->
-        <div id="chatSection" class="section">
-            <div class="card">
-                <h2>Общий чат</h2>
-                <div id="chatMessages" class="chat-messages"></div>
-                <div class="chat-input-area">
-                    <textarea id="chatInput" placeholder="Введите сообщение..."></textarea>
-                    <button onclick="sendChatMessage()">Отправить</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Секция Поиск -->
-        <div id="searchSection" class="section">
-            <div class="card">
-                <h2>Поиск игроков</h2>
-                <input type="text" id="socialSearchInput" placeholder="Ник или Discord имя">
-                <button onclick="searchSocial()">Найти</button>
-                <div id="searchResults" class="search-results"></div>
-            </div>
-        </div>
-
-        <!-- Секция Профиль (будет заполняться динамически) -->
-        <div id="profileSection" class="section">
-            <div id="profileContent"></div>
-        </div>
-
-        <datalist id="playersList"></datalist>
+        </aside>
     </div>
 
+    <!-- Модальное окно -->
+    <div class="modal" id="modal" style="display:none;">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+
+    <script src="/static/theme.js"></script>
     <script src="/static/script.js"></script>
 </body>
 </html>
