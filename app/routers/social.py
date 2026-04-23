@@ -212,18 +212,10 @@ async def api_get_following(player_id: str, limit: int = 20):
 async def api_social_search(q: str, limit: int = 20):
     if len(q) < 2:
         return []
-    # Ищем игроков в PostgreSQL
-    from app.services.bank import search_all_players
-    results = await search_all_players(q, limit)
-    # Добавим social-данные (аватар, discord) через SQLite
-    enriched = []
-    for player in results:
-        social_profile = get_social_user_by_player_id(player["player_id"])
-        enriched.append({
-            "player_id": player["player_id"],
-            "nickname": player["nickname"],
-            "balance": player["balance"],
-            "discord_avatar": social_profile["discord_avatar"] if social_profile else None,
-            "discord_username": social_profile["discord_username"] if social_profile else None,
-        })
-    return enriched
+    try:
+        from app.services.bank import search_all_players
+        results = await search_all_players(q, limit)
+        return results
+    except Exception as e:
+        print(f"Search error: {e}")
+        return []
