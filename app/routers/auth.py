@@ -69,7 +69,7 @@ async def callback(code: str, state: str):
     if player:
         session_data['player'] = player
         # Создаем/обновляем профиль соцсети
-        await get_or_create_social_user(
+        get_or_create_social_user(
         player_id=player['player_id'],
         user_uuid=player['user_uuid'],
         discord_id=discord_id,
