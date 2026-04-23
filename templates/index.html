@@ -32,137 +32,27 @@
             <button class="nav-btn" data-section="profile">Мой профиль</button>
         </div>
 
-        <!-- Секция Главная (лента постов) -->
+        <!-- Секции -->
         <div id="homeSection" class="section active">
-            <div class="card create-post-card">
-                <h2>Новый пост</h2>
-                <div class="post-form">
-                    <textarea id="postContent" placeholder="Что у вас нового?"></textarea>
-                    <input type="file" id="postImage" accept="image/*">
-                    <label for="postImage" class="image-upload-label">📎 Добавить фото</label>
-                    <div id="imagePreview" class="image-preview"></div>
-                    <button onclick="createPost()">Опубликовать</button>
-                </div>
-            </div>
-            <div id="feedContainer"></div>
+            {% include 'partials/home.html' %}
         </div>
-
-        <!-- Секция Кошелёк -->
         <div id="walletSection" class="section">
-            <div class="dashboard-grid">
-                <div class="card">
-                    <h2>Мой баланс</h2>
-                    <div id="myBalance">Загрузка...</div>
-                </div>
-                <div class="card">
-                    <h2>Проверить баланс</h2>
-                    <input type="text" id="balanceNick" placeholder="Ник игрока" list="playersList">
-                    <button onclick="checkBalance()">Проверить</button>
-                    <div id="balanceResult" class="result"></div>
-                </div>
-                <div class="card">
-                    <h2>Перевод монет</h2>
-                    <input type="text" id="receiverNick" placeholder="Кому" list="playersList">
-                    <input type="number" id="transferAmount" placeholder="Сумма" min="1">
-                    <button onclick="transfer()">Отправить</button>
-                    <div id="transferResult" class="result"></div>
-                </div>
-            </div>
-            <div class="bottom-row">
-                <div class="card">
-                    <h2>Топ игроков</h2>
-                    <div id="topResult"></div>
-                </div>
-                <div class="card">
-                    <h2>Статистика</h2>
-                    <div id="statsResult"></div>
-                </div>
-            </div>
+            {% include 'partials/wallet.html' %}
         </div>
-
-        <!-- Секция Банк -->
         <div id="bankSection" class="section">
-            <div class="tabs">
-                <button class="tab active" onclick="showBankTab('deposit')">Вклады</button>
-                <button class="tab" onclick="showBankTab('withdraw')">Снять вклад</button>
-                <button class="tab" onclick="showBankTab('loan')">Займы</button>
-                <button class="tab" onclick="showBankTab('repay')">Погасить</button>
-            </div>
-            <div id="depositTab" class="bank-tab">
-                <div class="card">
-                    <h2>Создать вклад</h2>
-                    <input type="number" id="depositAmount" placeholder="Сумма (мин. 10)">
-                    <button onclick="createDeposit()">Создать</button>
-                    <div id="depositResult" class="result"></div>
-                </div>
-            </div>
-            <div id="withdrawTab" class="bank-tab" style="display:none;">
-                <div class="card">
-                    <h2>Снять вклад</h2>
-                    <select id="withdrawSelect"></select>
-                    <button onclick="withdrawDeposit()">Снять</button>
-                    <div id="withdrawResult" class="result"></div>
-                </div>
-            </div>
-            <div id="loanTab" class="bank-tab" style="display:none;">
-                <div class="card">
-                    <h2>Взять заём</h2>
-                    <input type="number" id="loanAmount" placeholder="Сумма">
-                    <button onclick="createLoan()">Получить</button>
-                    <div id="loanResult" class="result"></div>
-                </div>
-            </div>
-            <div id="repayTab" class="bank-tab" style="display:none;">
-                <div class="card">
-                    <h2>Погасить заём</h2>
-                    <select id="repaySelect"></select>
-                    <input type="number" id="repayAmount" placeholder="Сумма (необязательно)">
-                    <button onclick="repayLoan()">Погасить</button>
-                    <div id="repayResult" class="result"></div>
-                </div>
-            </div>
+            {% include 'partials/bank.html' %}
         </div>
-
-        <!-- Секция Лотерея -->
         <div id="lotterySection" class="section">
-            <div class="card">
-                <h2>Лотерея (5 монет)</h2>
-                <div id="slotMachine" class="slot-machine" style="display:none;">
-                    <div id="slot1" class="slot-reel"></div>
-                    <div id="slot2" class="slot-reel"></div>
-                    <div id="slot3" class="slot-reel"></div>
-                </div>
-                <div id="slotResult" style="margin-bottom:10px;"></div>
-                <button onclick="playLottery()">Испытать удачу</button>
-                <div id="lotteryResult" class="result"></div>
-            </div>
+            {% include 'partials/lottery.html' %}
         </div>
-
-        <!-- Секция Чат -->
         <div id="chatSection" class="section">
-            <div class="card">
-                <h2>Общий чат</h2>
-                <div id="chatMessages" class="chat-messages"></div>
-                <div class="chat-input-area">
-                    <textarea id="chatInput" placeholder="Введите сообщение..."></textarea>
-                    <button onclick="sendChatMessage()">Отправить</button>
-                </div>
-            </div>
+            {% include 'partials/chat.html' %}
         </div>
-
-        <!-- Секция Поиск -->
         <div id="searchSection" class="section">
-            <div class="card">
-                <h2>Поиск игроков</h2>
-                <input type="text" id="socialSearchInput" placeholder="Ник или Discord имя">
-                <button onclick="searchSocial()">Найти</button>
-                <div id="searchResults" class="search-results"></div>
-            </div>
+            {% include 'partials/search.html' %}
         </div>
-
-        <!-- Секция Профиль (будет заполняться динамически) -->
         <div id="profileSection" class="section">
-            <div id="profileContent"></div>
+            {% include 'partials/profile.html' %}
         </div>
 
         <datalist id="playersList"></datalist>

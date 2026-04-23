@@ -1,0 +1,29 @@
+<div class="dashboard-grid">
+    <div class="card">
+        <h2>Мой баланс</h2>
+        <div id="myBalance">Загрузка...</div>
+    </div>
+    <div class="card">
+        <h2>Проверить баланс</h2>
+        <input type="text" id="balanceNick" placeholder="Ник игрока" list="playersList">
+        <button onclick="checkBalance()">Проверить</button>
+        <div id="balanceResult" class="result"></div>
+    </div>
+    <div class="card">
+        <h2>Перевод монет</h2>
+        <input type="text" id="receiverNick" placeholder="Кому" list="playersList">
+        <input type="number" id="transferAmount" placeholder="Сумма" min="1">
+        <button onclick="transfer()">Отправить</button>
+        <div id="transferResult" class="result"></div>
+    </div>
+</div>
+<div class="bottom-row">
+    <div class="card">
+        <h2>Топ игроков</h2>
+        <div id="topResult"></div>
+    </div>
+    <div class="card">
+        <h2>Статистика</h2>
+        <div id="statsResult"></div>
+    </div>
+</div>

@@ -1,0 +1,39 @@
+<div class="tabs">
+    <button class="tab active" onclick="showBankTab('deposit')">Вклады</button>
+    <button class="tab" onclick="showBankTab('withdraw')">Снять вклад</button>
+    <button class="tab" onclick="showBankTab('loan')">Займы</button>
+    <button class="tab" onclick="showBankTab('repay')">Погасить</button>
+</div>
+<div id="depositTab" class="bank-tab">
+    <div class="card">
+        <h2>Создать вклад</h2>
+        <input type="number" id="depositAmount" placeholder="Сумма (мин. 10)">
+        <button onclick="createDeposit()">Создать</button>
+        <div id="depositResult" class="result"></div>
+    </div>
+</div>
+<div id="withdrawTab" class="bank-tab" style="display:none;">
+    <div class="card">
+        <h2>Снять вклад</h2>
+        <select id="withdrawSelect"></select>
+        <button onclick="withdrawDeposit()">Снять</button>
+        <div id="withdrawResult" class="result"></div>
+    </div>
+</div>
+<div id="loanTab" class="bank-tab" style="display:none;">
+    <div class="card">
+        <h2>Взять заём</h2>
+        <input type="number" id="loanAmount" placeholder="Сумма">
+        <button onclick="createLoan()">Получить</button>
+        <div id="loanResult" class="result"></div>
+    </div>
+</div>
+<div id="repayTab" class="bank-tab" style="display:none;">
+    <div class="card">
+        <h2>Погасить заём</h2>
+        <select id="repaySelect"></select>
+        <input type="number" id="repayAmount" placeholder="Сумма (необязательно)">
+        <button onclick="repayLoan()">Погасить</button>
+        <div id="repayResult" class="result"></div>
+    </div>
+</div>

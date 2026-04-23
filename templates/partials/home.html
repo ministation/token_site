@@ -1,0 +1,11 @@
+<div class="card create-post-card">
+    <h2>Новый пост</h2>
+    <div class="post-form">
+        <textarea id="postContent" placeholder="Что у вас нового?"></textarea>
+        <input type="file" id="postImage" accept="image/*">
+        <label for="postImage" class="image-upload-label">📎 Добавить фото</label>
+        <div id="imagePreview" class="image-preview"></div>
+        <button onclick="createPost()">Опубликовать</button>
+    </div>
+</div>
+<div id="feedContainer"></div>
