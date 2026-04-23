@@ -466,3 +466,44 @@ button:hover { background: rgba(120, 80, 180, 0.8); }
 ::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: rgba(30, 20, 50, 0.3); }
 ::-webkit-scrollbar-thumb { background: rgba(120, 80, 180, 0.5); }
+
+.server-info {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+.server-info .description {
+    font-size: 1.2rem;
+    line-height: 1.6;
+    color: #ccc;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 1.5rem;
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+}
+.social-links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+}
+.link-btn {
+    display: inline-block;
+    padding: 8px 18px;
+    border-radius: 20px;
+    text-decoration: none;
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+.link-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+.website { background: #ff6b6b; }
+.discord { background: #5865F2; }
+.telegram { background: #27A7E7; }
+.wiki { background: #4CAF50; }
+.boosty { background: #F15A29; }
+.github { background: #24292e; }
