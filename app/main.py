@@ -1,3 +1,4 @@
+import jinja2
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from starlette.templating import Jinja2Templates
@@ -8,8 +9,13 @@ from app.core.sessions import load_sessions
 app = FastAPI(title="SS14 Token Bank & Social")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Единственный шаблонизатор
-templates = Jinja2Templates(directory="templates")
+# Создаём окружение Jinja2 с отключённым кэшем
+env = jinja2.Environment(
+    loader=jinja2.FileSystemLoader("templates"),
+    auto_reload=True,
+    cache_size=0,                # <-- отключаем кэш
+)
+templates = Jinja2Templates(env=env)
 app.state.templates = templates
 
 
