@@ -8,9 +8,9 @@ from app.core.sessions import load_sessions
 app = FastAPI(title="SS14 Token Bank & Social")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Единственный экземпляр шаблонов
-templates = Jinja2Templates(directory="templates")
-app.state.templates = templates   # для доступа из роутеров
+# Единственный шаблонизатор — создаётся здесь
+templates = Jinja2Templates(directory="templates", auto_reload=True)
+app.state.templates = templates
 
 
 @app.on_event("startup")
