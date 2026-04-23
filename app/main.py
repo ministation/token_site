@@ -6,6 +6,7 @@ from jinja2 import Environment, FileSystemLoader
 from app.routers import auth, bank, social, chat, pages
 from app.db.database import get_pg_pool, close_pg_pool
 from app.core.sessions import load_sessions
+from app.routers import auth, bank, social, chat, pages, messages
 
 app = FastAPI(title="SS14 Token Bank & Social")
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -39,3 +40,4 @@ app.include_router(bank.router)
 app.include_router(social.router)
 app.include_router(chat.router)
 app.include_router(pages.router)
+app.include_router(messages.router)

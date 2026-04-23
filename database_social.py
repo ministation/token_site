@@ -83,7 +83,20 @@ def init_social_db():
             FOREIGN KEY (following_player_id) REFERENCES social_users(player_id) ON DELETE CASCADE
         )
     """)
-    
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS private_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sender_id TEXT NOT NULL,
+            receiver_id TEXT NOT NULL,
+            content TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            read INTEGER DEFAULT 0,
+            FOREIGN KEY (sender_id) REFERENCES social_users(player_id) ON DELETE CASCADE,
+            FOREIGN KEY (receiver_id) REFERENCES social_users(player_id) ON DELETE CASCADE
+        )
+    """)
+
     conn.commit()
     conn.close()
 
@@ -386,3 +399,56 @@ def get_following(player_id: str, limit: int = 20) -> List[Dict]:
     rows = cursor.fetchall()
     conn.close()
     return [dict(row) for row in rows]
+
+def send_private_message(sender_id: str, receiver_id: str, content: str) -> int:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO private_messages (sender_id, receiver_id, content) VALUES (?, ?, ?)",
+        (sender_id, receiver_id, content)
+    )
+    conn.commit()
+    msg_id = cursor.lastrowid
+    conn.close()
+    return msg_id
+
+def get_conversation(user_id: str, other_id: str, limit: int = 50) -> List[Dict]:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT * FROM private_messages
+        WHERE (sender_id = ? AND receiver_id = ?)
+           OR (sender_id = ? AND receiver_id = ?)
+        ORDER BY created_at DESC
+        LIMIT ?
+    """, (user_id, other_id, other_id, user_id, limit))
+    messages = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    return messages
+
+def get_user_dialogs(user_id: str) -> List[Dict]:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT other_id, MAX(created_at) as last_time, content as last_msg,
+               SUM(CASE WHEN sender_id != ? AND read = 0 THEN 1 ELSE 0 END) as unread
+        FROM (
+            SELECT receiver_id as other_id, created_at, content, read, sender_id
+            FROM private_messages WHERE sender_id = ?
+            UNION ALL
+            SELECT sender_id as other_id, created_at, content, read, sender_id
+            FROM private_messages WHERE receiver_id = ?
+        ) GROUP BY other_id
+        ORDER BY last_time DESC
+    """, (user_id, user_id, user_id))
+    dialogs = []
+    for row in cursor.fetchall():
+        d = dict(row)
+        # Получаем ник собеседника
+        cursor2 = conn.cursor()
+        cursor2.execute("SELECT game_nickname FROM social_users WHERE player_id = ?", (d["other_id"],))
+        other = cursor2.fetchone()
+        d["nickname"] = other["game_nickname"] if other else "Unknown"
+        dialogs.append(d)
+    conn.close()
+    return dialogs
