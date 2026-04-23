@@ -533,55 +533,85 @@ async function loadMyProfile() {
 
 async function loadProfile(playerId) {
     try {
-        const profile = await apiCall('GET', `/api/social/profile/${playerId}`);
-        const posts = await apiCall('GET', `/api/social/posts/user/${playerId}`);
-        
-        const isOwnProfile = currentUser?.player?.player_id === playerId;
-        const followBtnHtml = isOwnProfile ? '' : `
-            <button class="follow-btn ${profile.is_following ? 'unfollow' : ''}" onclick="toggleFollow('${playerId}')">
-                ${profile.is_following ? 'Отписаться' : 'Подписаться'}
-            </button>
-        `;
-        
-        const bioEditHtml = isOwnProfile ? `
-            <div style="margin-top:12px;">
-                <textarea id="bioEdit" placeholder="О себе">${profile.bio || ''}</textarea>
-                <button onclick="updateBio()">Сохранить</button>
-            </div>
-        ` : `<p>${profile.bio || 'Нет описания.'}</p>`;
-        
-        let html = `
+        const resp = await fetch(`/api/social/profile/${playerId}`);
+        if (!resp.ok) {
+            document.getElementById('profileContent').innerHTML = '<div class="card"><h2>Профиль не найден</h2></div>';
+            return;
+        }
+        const profile = await resp.json();
+        const isOwn = currentPlayerId === profile.player_id;
+
+        document.getElementById('profileContent').innerHTML = `
             <div class="card">
                 <div class="profile-header">
-                    <img src="${profile.discord_avatar || '/static/default-avatar.png'}" class="profile-avatar" alt="">
+                    <img src="${profile.discord_avatar || '/static/default_avatar.png'}" class="profile-avatar" alt="Аватар">
                     <div class="profile-info">
-                        <h1 class="profile-name">${profile.discord_username}</h1>
-                        <p>@${profile.game_nickname}</p>
+                        <h2 class="profile-name">${profile.game_nickname}</h2>
+                        <p style="color: #a080d0;">@${profile.discord_username}</p>
                         <div class="profile-stats">
-                            <div class="profile-stat">
-                                <div class="profile-stat-value">${profile.following_count}</div>
-                                <div class="profile-stat-label">Подписок</div>
-                            </div>
                             <div class="profile-stat">
                                 <div class="profile-stat-value">${profile.followers_count}</div>
                                 <div class="profile-stat-label">Подписчиков</div>
                             </div>
+                            <div class="profile-stat">
+                                <div class="profile-stat-value">${profile.following_count}</div>
+                                <div class="profile-stat-label">Подписок</div>
+                            </div>
                         </div>
-                        ${followBtnHtml}
+                        <div class="profile-actions">
+                            ${isOwn ? `
+                                <button class="follow-btn" onclick="editProfile()">✏️ Редактировать</button>
+                            ` : `
+                                <button class="follow-btn ${profile.is_following ? 'unfollow' : ''}" 
+                                        onclick="toggleFollow('${profile.player_id}', this)">
+                                    ${profile.is_following ? 'Отписаться' : 'Подписаться'}
+                                </button>
+                                <button class="message-btn" 
+                                        onclick="openMessageModal('${profile.player_id}', '${profile.game_nickname}')">
+                                    💬 Написать сообщение
+                                </button>
+                            `}
+                        </div>
                     </div>
                 </div>
-                <div class="profile-bio">
-                    <h3>О себе</h3>
-                    ${bioEditHtml}
-                </div>
+                ${profile.bio ? `<div class="profile-bio">${profile.bio}</div>` : '<div class="profile-bio" style="color: #666;">Био пока нет...</div>'}
             </div>
-            <div id="profilePosts"></div>
+            <div class="card">
+                <h2>Посты</h2>
+                <div id="userPosts"></div>
+            </div>
         `;
-        
-        document.getElementById('profileContent').innerHTML = html;
-        renderPosts(posts, 'profilePosts');
+
+        // Загружаем посты этого пользователя
+        const postsResp = await fetch(`/api/social/posts/user/${playerId}`);
+        const posts = await postsResp.json();
+        const postsContainer = document.getElementById('userPosts');
+        postsContainer.innerHTML = posts.map(p => `
+            <div class="post">
+                <div class="post-header">
+                    <img src="${p.author_avatar || '/static/default_avatar.png'}" class="post-avatar">
+                    <div class="post-author-info">
+                        <div class="post-author-name">${p.author_nickname}</div>
+                        <div class="post-author-nick">@${p.author_discord_username}</div>
+                        <div class="post-time">${new Date(p.created_at).toLocaleString()}</div>
+                    </div>
+                </div>
+                <div class="post-content">${p.content}</div>
+                ${p.image_url ? `<img src="${p.image_url}" class="post-image">` : ''}
+                <div class="post-actions">
+                    <button class="post-action-btn ${p.liked_by_me ? 'liked' : ''}" onclick="likePost(${p.id}, this)">
+                        ❤️ <span>${p.like_count}</span>
+                    </button>
+                    <button class="post-action-btn" onclick="showComments(${p.id})">
+                        💬 <span>${p.comment_count}</span>
+                    </button>
+                </div>
+                <div class="comments-section" id="comments-${p.id}" style="display:none;"></div>
+            </div>
+        `).join('');
     } catch (e) {
-        alert('Ошибка загрузки профиля: ' + e.message);
+        console.error('Ошибка загрузки профиля:', e);
+        document.getElementById('profileContent').innerHTML = '<div class="card"><h2>Ошибка загрузки</h2></div>';
     }
 }
 
