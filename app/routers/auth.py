@@ -70,13 +70,13 @@ async def callback(code: str, state: str):
         session_data['player'] = player
         # Создаем/обновляем профиль соцсети
         await get_or_create_social_user(
-            player_id=player['player_id'],
-            user_uuid=player['user_uuid'],
-            discord_id=discord_id,
-            discord_username=username,
-            discord_avatar=avatar,
-            game_nickname=player['last_seen_user_name']
-        )
+        player_id=player['player_id'],
+        user_uuid=player['user_uuid'],
+        discord_id=discord_id,
+        discord_username=username,
+        discord_avatar=avatar,
+        game_nickname=player['last_seen_user_name']
+    )
 
     set_session(session_token, session_data)
 
