@@ -1,8 +1,7 @@
 import os
 import shutil
 import datetime
-from fastapi import APIRouter, Request, HTTPException, UploadFile, File, Form, Depends, Query
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Request, HTTPException, UploadFile, File, Form
 from app.dependencies import get_current_user, get_current_player
 from app.models.social import ProfileUpdate, CommentCreate
 from app.services.social import (
@@ -13,23 +12,10 @@ from app.services.social import (
     search_social_users
 )
 from app.config import UPLOAD_DIR
+import database_social as social_db
 
 router = APIRouter(prefix="/api/social", tags=["social"])
 
-# Отдельный роут для страницы профиля (не API)
-from fastapi.templating import Jinja2Templates
-templates = Jinja2Templates(directory="templates")
-
-# Этот роут без префикса /api/social, т.к. отдаёт HTML
-@router.get("/profile/{player_id}")
-async def profile_page(request: Request, player_id: str):
-    profile = get_social_user_by_player_id(player_id)
-    if not profile:
-        raise HTTPException(status_code=404, detail="Профиль не найден")
-    return templates.TemplateResponse("profile.html", {"request": request, "profile": profile})
-
-
-# -------------------- API --------------------
 
 @router.get("/profile/{player_id}")
 async def api_get_profile(request: Request, player_id: str):
@@ -121,11 +107,11 @@ async def api_user_posts(request: Request, player_id: str, limit: int = 20, offs
     for p in posts:
         liked = False
         if viewer_id:
-            liked = is_following(viewer_id, player_id)  # На самом деле здесь нужна проверка лайка, а не подписки, исправлю: используем social_db отдельно
-            # Для чистоты оставим пока заглушку, так как в оригинале был запрос к social_db.
-            # Перенесём правильную проверку через get_like_count или отдельный метод.
-            # Но чтобы не усложнять, допустим, что у нас есть liked_by_me в get_user_posts? В оригинале нет.
-            # Я добавлю отдельную проверку.
+            conn = social_db.get_db()
+            cursor = conn.cursor()
+            cursor.execute("SELECT 1 FROM likes WHERE post_id = ? AND player_id = ?", (p["id"], viewer_id))
+            liked = cursor.fetchone() is not None
+            conn.close()
         result.append({
             "id": p["id"],
             "author_player_id": p["author_player_id"],
