@@ -1,7 +1,8 @@
-import jinja2
 from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
-from starlette.templating import Jinja2Templates
+from jinja2 import Environment, FileSystemLoader
+
 from app.routers import auth, bank, social, chat, pages
 from app.db.database import get_pg_pool, close_pg_pool
 from app.core.sessions import load_sessions
@@ -9,14 +10,9 @@ from app.core.sessions import load_sessions
 app = FastAPI(title="SS14 Token Bank & Social")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Создаём окружение Jinja2 с отключённым кэшем
-env = jinja2.Environment(
-    loader=jinja2.FileSystemLoader("templates"),
-    auto_reload=True,
-    cache_size=0,                # <-- отключаем кэш
-)
-templates = Jinja2Templates(env=env)
-app.state.templates = templates
+# Единое окружение Jinja2 для всех шаблонов
+env = Environment(loader=FileSystemLoader("templates"), auto_reload=True)
+app.state.templates_env = env
 
 
 @app.on_event("startup")
@@ -34,7 +30,8 @@ async def shutdown():
 
 @app.get("/")
 async def index(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    template = env.get_template("index.html")
+    return HTMLResponse(template.render({"request": request}))
 
 
 app.include_router(auth.router)
