@@ -1,9 +1,8 @@
 from fastapi import APIRouter, Request, HTTPException
-from fastapi.templating import Jinja2Templates
+from app.core.templates import templates   # <-- общий экземпляр
 from app.services.social import get_social_user_by_player_id
 
 router = APIRouter(tags=["pages"])
-templates = Jinja2Templates(directory="templates")
 
 
 @router.get("/profile/{player_id}")

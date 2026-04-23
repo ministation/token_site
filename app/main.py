@@ -1,13 +1,12 @@
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
-from app.routers import auth, bank, social, chat, pages  # <-- pages
+from app.routers import auth, bank, social, chat, pages
 from app.db.database import get_pg_pool, close_pg_pool
 from app.core.sessions import load_sessions
+from app.core.templates import templates   # <-- общий экземпляр
 
 app = FastAPI(title="SS14 Token Bank & Social")
 app.mount("/static", StaticFiles(directory="static"), name="static")
-templates = Jinja2Templates(directory="templates")
 
 
 @app.on_event("startup")
@@ -23,15 +22,13 @@ async def shutdown():
     await close_pg_pool()
 
 
-# Главная страница
 @app.get("/")
 async def index(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
 
-# Подключаем роутеры
 app.include_router(auth.router)
 app.include_router(bank.router)
 app.include_router(social.router)
 app.include_router(chat.router)
-app.include_router(pages.router)   # роутер для HTML-страниц
+app.include_router(pages.router)
