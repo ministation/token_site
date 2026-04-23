@@ -19,12 +19,25 @@ router = APIRouter(prefix="/api/social", tags=["social"])
 
 @router.get("/profile/{player_id}")
 async def api_get_profile(request: Request, player_id: str):
-    current_user = await get_current_user(request)
-    my_player_id = current_user.get('player', {}).get('player_id')
+    # Пробуем получить текущего пользователя (может быть не авторизован)
+    my_player_id = None
+    try:
+        current_user = await get_current_user(request)
+        my_player_id = current_user.get('player', {}).get('player_id')
+    except:
+        pass  # гость — ничего страшного
 
     profile = get_social_user_by_player_id(player_id)
     if not profile:
         raise HTTPException(status_code=404, detail="Профиль не найден")
+
+    # Исправляем аватарку
+    avatar = profile.get("discord_avatar")
+    if avatar and not avatar.startswith("http"):
+        discord_id = profile.get("discord_id", "")
+        avatar = f"https://cdn.discordapp.com/avatars/{discord_id}/{avatar}.png" if discord_id else None
+    else:
+        avatar = avatar or "/static/default_avatar.png"
 
     counts = get_follow_counts(player_id)
     following = False
@@ -35,11 +48,12 @@ async def api_get_profile(request: Request, player_id: str):
         "player_id": profile["player_id"],
         "game_nickname": profile["game_nickname"],
         "discord_username": profile["discord_username"],
-        "discord_avatar": profile["discord_avatar"],
+        "discord_avatar": avatar,
         "bio": profile["bio"],
         "following_count": counts["following"],
         "followers_count": counts["followers"],
         "is_following": following,
+        "is_own": my_player_id == profile["player_id"],
         "created_at": profile["created_at"]
     }
 
