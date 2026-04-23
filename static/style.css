@@ -497,16 +497,14 @@ button:hover { background: rgba(120, 80, 180, 0.8); }
     font-weight: 600;
     font-size: 1rem;
     color: #fff;
-    background: #333; /* fallback */
+    background: #333;
     box-shadow: 0 4px 12px rgba(0,0,0,0.2);
     transition: transform 0.2s, box-shadow 0.2s;
     gap: 8px;
     min-width: 120px;
 }
-.link-btn img {
-    width: 20px;
-    height: 20px;
-    display: inline-block;
+.link-btn i {
+    font-size: 1.1rem;  /* размер иконки */
 }
 .link-btn:hover {
     transform: translateY(-2px);
