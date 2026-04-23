@@ -8,8 +8,8 @@ from app.core.sessions import load_sessions
 app = FastAPI(title="SS14 Token Bank & Social")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Единственный шаблонизатор — создаётся здесь
-templates = Jinja2Templates(directory="templates", auto_reload=True)
+# Единственный шаблонизатор
+templates = Jinja2Templates(directory="templates")
 app.state.templates = templates
 
 
