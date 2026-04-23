@@ -485,22 +485,34 @@ button:hover { background: rgba(120, 80, 180, 0.8); }
     flex-wrap: wrap;
     justify-content: center;
     gap: 10px;
+    margin-top: 1rem;
 }
 .link-btn {
-    display: inline-block;
-    padding: 8px 18px;
-    border-radius: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 20px;
+    border-radius: 30px;
     text-decoration: none;
-    color: #fff;
     font-weight: 600;
-    font-size: 0.95rem;
+    font-size: 1rem;
+    color: #fff;
+    background: #333; /* fallback */
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
     transition: transform 0.2s, box-shadow 0.2s;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    gap: 8px;
+    min-width: 120px;
+}
+.link-btn img {
+    width: 20px;
+    height: 20px;
+    display: inline-block;
 }
 .link-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.3);
 }
+/* Цвета для каждого сервиса */
 .website { background: #ff6b6b; }
 .discord { background: #5865F2; }
 .telegram { background: #27A7E7; }
