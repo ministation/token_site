@@ -1,43 +1,30 @@
-import json
-import os
 import secrets
-import datetime
-from app.config import SESSIONS_FILE
+import database_social as social_db
 
-# Глобальное хранилище сессий
+# Глобальный кэш сессий (для быстрого доступа без частых обращений к БД)
+# Заполняется при старте и поддерживается в актуальном состоянии.
 user_sessions: dict = {}
 
-
 def load_sessions():
+    """Загружает сессии из БД в память (вызывается при старте)."""
     global user_sessions
-    if os.path.exists(SESSIONS_FILE):
-        try:
-            with open(SESSIONS_FILE, 'r') as f:
-                user_sessions = json.load(f)
-        except Exception:
-            user_sessions = {}
-    else:
-        user_sessions = {}
-
-
-def save_sessions():
-    with open(SESSIONS_FILE, 'w') as f:
-        json.dump(user_sessions, f, indent=2, default=str)
-
+    user_sessions = social_db.load_sessions_from_db()
 
 def generate_session_token() -> str:
     return secrets.token_urlsafe(32)
 
-
 def get_session(session_token: str) -> dict | None:
-    return user_sessions.get(session_token)
-
+    # Сначала ищем в кэше, если нет – пробуем загрузить из БД (на случай рассинхронизации)
+    if session_token in user_sessions:
+        return user_sessions[session_token]
+    # Запасной вариант: загрузить напрямую (может быть, другой процесс обновил)
+    all_sessions = social_db.load_sessions_from_db()
+    return all_sessions.get(session_token)
 
 def set_session(session_token: str, data: dict):
     user_sessions[session_token] = data
-    save_sessions()
-
+    social_db.save_session_to_db(session_token, data)
 
 def delete_session(session_token: str):
     user_sessions.pop(session_token, None)
-    save_sessions()
+    social_db.delete_session_from_db(session_token)

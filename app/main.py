@@ -8,6 +8,8 @@ from app.db.database import get_pg_pool, close_pg_pool
 from app.core.sessions import load_sessions
 from app.routers import auth, bank, social, chat, pages, messages
 
+import database_social as social_db
+
 app = FastAPI(title="SS14 Token Bank & Social")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
@@ -18,7 +20,8 @@ app.state.templates_env = env
 
 @app.on_event("startup")
 async def startup():
-    load_sessions()
+    load_sessions()                       # загружает из БД
+    social_db.cleanup_expired_seesions(30)  # удаляет старые
     await get_pg_pool()
     print("✅ Подключено к PostgreSQL (игровая БД)")
     print("✅ SQLite для соцсети готова")

@@ -96,7 +96,13 @@ def init_social_db():
             FOREIGN KEY (receiver_id) REFERENCES social_users(player_id) ON DELETE CASCADE
         )
     """)
-
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS sessions (
+            session_token TEXT PRIMARY KEY,
+            user_data TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
     conn.commit()
     conn.close()
 
@@ -452,3 +458,46 @@ def get_user_dialogs(user_id: str) -> List[Dict]:
         dialogs.append(d)
     conn.close()
     return dialogs
+
+import json
+from datetime import datetime
+
+def load_sessions_from_db() -> dict:
+    """Загружает все активные сессии в словарь."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT session_token, user_data FROM sessions")
+    sessions = {}
+    for row in cursor.fetchall():
+        sessions[row["session_token"]] = json.loads(row["user_data"])
+    conn.close()
+    return sessions
+
+def save_session_to_db(session_token: str, data: dict):
+    """Сохраняет или обновляет сессию."""
+    conn = get_db()
+    cursor = conn.cursor()
+    user_data_json = json.dumps(data)
+    cursor.execute("""
+        INSERT INTO sessions (session_token, user_data, created_at)
+        VALUES (?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(session_token) DO UPDATE SET user_data = excluded.user_data
+    """, (session_token, user_data_json))
+    conn.commit()
+    conn.close()
+
+def delete_session_from_db(session_token: str):
+    """Удаляет сессию."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM sessions WHERE session_token = ?", (session_token,))
+    conn.commit()
+    conn.close()
+
+def cleanup_expired_sessions(max_age_days: int = 30):
+    """Удаляет сессии старше указанного количества дней."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM sessions WHERE created_at < datetime('now', '-' || ? || ' days')", (max_age_days,))
+    conn.commit()
+    conn.close()
