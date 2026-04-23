@@ -21,7 +21,7 @@ app.state.templates_env = env
 @app.on_event("startup")
 async def startup():
     load_sessions()                       # загружает из БД
-    social_db.cleanup_expired_seesions(30)  # удаляет старые
+    social_db.cleanup_expired_sessions(30)
     await get_pg_pool()
     print("✅ Подключено к PostgreSQL (игровая БД)")
     print("✅ SQLite для соцсети готова")
