@@ -16,7 +16,6 @@ router = APIRouter(tags=["auth"])
 @router.get("/login")
 async def login():
     state = secrets.token_urlsafe(16)
-    # Временно сохраняем state (как в оригинале)
     user_sessions[state] = {"created": datetime.datetime.now().isoformat()}
     discord_auth_url = (
         f"https://discord.com/api/oauth2/authorize"
@@ -68,15 +67,15 @@ async def callback(code: str, state: str):
     player = await find_player_by_discord(discord_id)
     if player:
         session_data['player'] = player
-        # Создаем/обновляем профиль соцсети
+        # Синхронный вызов – БЕЗ await
         get_or_create_social_user(
-        player_id=player['player_id'],
-        user_uuid=player['user_uuid'],
-        discord_id=discord_id,
-        discord_username=username,
-        discord_avatar=avatar,
-        game_nickname=player['last_seen_user_name']
-    )
+            player_id=player['player_id'],
+            user_uuid=player['user_uuid'],
+            discord_id=discord_id,
+            discord_username=username,
+            discord_avatar=avatar,
+            game_nickname=player['last_seen_user_name']
+        )
 
     set_session(session_token, session_data)
 
@@ -87,7 +86,6 @@ async def callback(code: str, state: str):
         httponly=True,
         max_age=30 * 24 * 3600
     )
-    # Удаляем временный state
     user_sessions.pop(state, None)
     return response
 
