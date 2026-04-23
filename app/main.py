@@ -1,12 +1,16 @@
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
+from starlette.templating import Jinja2Templates
 from app.routers import auth, bank, social, chat, pages
 from app.db.database import get_pg_pool, close_pg_pool
 from app.core.sessions import load_sessions
-from app.core.templates import templates   # <-- общий экземпляр
 
 app = FastAPI(title="SS14 Token Bank & Social")
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# Единственный экземпляр шаблонов
+templates = Jinja2Templates(directory="templates")
+app.state.templates = templates   # для доступа из роутеров
 
 
 @app.on_event("startup")
