@@ -18,3 +18,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     setupAutocomplete();
 });
+
+async function loadServerStatus() {
+    try {
+        const res = await fetch('/api/server-status');
+        const data = await res.json();
+        
+        const dot = document.getElementById('statusDot');
+        dot.className = 'status-dot' + (data.online ? ' online' : '');
+        
+        document.getElementById('statusName').textContent = data.name;
+        document.getElementById('statusPlayers').textContent = data.players;
+        document.getElementById('statusMax').textContent = data.max_players;
+        document.getElementById('statusMap').textContent = data.map;
+        document.getElementById('statusPreset').textContent = data.preset || '-';
+        
+        const percent = Math.min(100, (data.players / data.max_players) * 100);
+        document.getElementById('progressFill').style.width = percent + '%';
+    } catch (e) {
+        console.error('Status error:', e);
+    }
+}
+
+// В DOMContentLoaded добавь:
+loadServerStatus();
+setInterval(loadServerStatus, 30000); // обновление каждые 30 сек
