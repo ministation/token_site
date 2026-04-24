@@ -1,20 +1,53 @@
 from app.db.database import get_pg_pool
 
+ROLE_TRANSLATIONS = {
+    'Paramedic': 'Парамедик', 'ChiefMedicalOfficer': 'Главный врач', 'Psychologist': 'Психолог',
+    'MedicalDoctor': 'Врач', 'Chemist': 'Химик', 'MedicalIntern': 'Медицинский интерн',
+    'Surgeon': 'Хирург', 'Virologist': 'Вирусолог',
+    'ChiefEngineer': 'Старший инженер', 'StationEngineer': 'Инженер станции',
+    'TechnicalAssistant': 'Технический ассистент', 'AtmosphericTechnician': 'Атмосферный техник',
+    'HeadOfSecurity': 'Глава службы безопасности', 'Pilot': 'Пилот',
+    'Detective': 'Детектив', 'Brigmedic': 'Бригмедик', 'SecurityOfficer': 'Офицер безопасности',
+    'SecurityCadet': 'Кадет безопасности', 'Warden': 'Смотритель', 'CBURN': 'РХБЗЗ',
+    'Captain': 'Капитан', 'BlueshieldOfficer': 'ОСЩ', 'CommandMaid': 'Командная горничная',
+    'CentralCommandOfficial': 'Представитель ЦентКома', 'NanotrasenRepresentative': 'Представитель НаноТрейзен',
+    'DeathSquad': 'Эскадрон смерти', 'ERTLeader': 'Лидер ОБР', 'ERTEngineer': 'Инженер ОБР',
+    'ERTMedical': 'Медик ОБР', 'ERTChaplain': 'Священник ОБР', 'ERTSecurity': 'Офицер безопасности ОБР',
+    'ERTJanitor': 'Уборщик ОБР', 'HecuOperative': 'Оперативник ХЕКУ',
+    'Quartermaster': 'Квартирмейстер', 'HeadOfPersonnel': 'Глава персонала',
+    'ResearchDirector': 'Директор исследований', 'Scientist': 'Ученый',
+    'ResearchAssistant': 'Лаборант', 'Roboticist': 'Робототехник',
+    'Botanist': 'Ботаник', 'Bartender': 'Бармен', 'Clown': 'Клоун',
+    'Chef': 'Шеф-повар', 'Janitor': 'Уборщик', 'Lawyer': 'Юрист',
+    'Librarian': 'Библиотекарь', 'Visitor': 'Посетитель', 'ServiceWorker': 'Работник сервиса',
+    'Zookeeper': 'Смотритель зоопарка', 'Musician': 'Музыкант', 'Chaplain': 'Священник',
+    'Mime': 'Мим', 'Passenger': 'Пассажир', 'CargoTechnician': 'Карго-техник',
+    'Reporter': 'Репортер', 'SalvageSpecialist': 'Спасатель',
+    'Boxer': 'Боксер', 'RadioHost': 'Радиоведущий', 'Diplomat': 'Дипломат',
+    'GovernmentMan': 'Правительственный агент', 'SpecialOperationsOfficer': 'Офицер спецопераций',
+    'NavyOfficerUndercover': 'Офицер флота под прикрытием', 'NavyCaptain': 'Капитан флота',
+    'NavyOfficer': 'Офицер флота', 'NanotrasenCareerTrainer': 'Инструктор НаноТрейзен',
+    'PartyMaker': 'Организатор вечеринок', 'SecurityClown': 'Клоун безопасности',
+}
+
+
+def translate_role(role: str) -> str:
+    if role.startswith("Job:"):
+        role = role[4:]
+    return ROLE_TRANSLATIONS.get(role, role)
+
+
 async def get_all_bans(limit: int = 50, offset: int = 0):
     pg = await get_pg_pool()
     async with pg.acquire() as conn:
         rows = await conn.fetch("""
             SELECT 
-                b.ban_id,
-                b.type,
-                b.ban_time,
-                b.expiration_time,
-                b.reason,
+                b.ban_id, b.type, b.ban_time, b.expiration_time, b.reason,
                 b.banning_admin,
-                COALESCE(bp_agg.players, ARRAY[]::text[]) as players,
+                p_admin.last_seen_user_name as admin_name,
+                COALESCE(bp_agg.players, ARRAY[]::text[]) as player_ids,
                 COALESCE(br_agg.roles, ARRAY[]::text[]) as roles,
-                COALESCE(brnd_agg.rounds, ARRAY[]::integer[]) as rounds,
-                p_admin.last_seen_user_name as admin_name
+                COALESCE(brnd_agg.rounds, ARRAY[]::integer[]) as rounds
             FROM ban b
             LEFT JOIN player p_admin ON b.banning_admin = p_admin.user_id
             LEFT JOIN LATERAL (
@@ -35,6 +68,14 @@ async def get_all_bans(limit: int = 50, offset: int = 0):
         
         bans = []
         for row in rows:
+            # Получаем имена игроков
+            player_names = []
+            for pid in (row["player_ids"] or []):
+                p = await conn.fetchrow(
+                    "SELECT last_seen_user_name FROM player WHERE user_id::text = $1", pid
+                )
+                player_names.append(p["last_seen_user_name"] if p else pid[:8]+"...")
+            
             bans.append({
                 "ban_id": row["ban_id"],
                 "type": row["type"],
@@ -42,8 +83,8 @@ async def get_all_bans(limit: int = 50, offset: int = 0):
                 "expiration_time": row["expiration_time"].isoformat() if row["expiration_time"] else None,
                 "reason": row["reason"] or "Не указана",
                 "admin_name": row["admin_name"] or "Неизвестный",
-                "players": row["players"] or [],
-                "roles": row["roles"] or [],
+                "player_names": player_names,
+                "roles": [translate_role(r) for r in (row["roles"] or [])],
                 "rounds": row["rounds"] or []
             })
         return bans
@@ -54,11 +95,7 @@ async def get_player_bans(player_uuid: str, limit: int = 50):
     async with pg.acquire() as conn:
         rows = await conn.fetch("""
             SELECT 
-                b.ban_id,
-                b.type,
-                b.ban_time,
-                b.expiration_time,
-                b.reason,
+                b.ban_id, b.type, b.ban_time, b.expiration_time, b.reason,
                 p_admin.last_seen_user_name as admin_name
             FROM ban b
             JOIN ban_player bp ON b.ban_id = bp.ban_id
@@ -76,22 +113,3 @@ async def get_player_bans(player_uuid: str, limit: int = 50):
             "reason": row["reason"] or "Не указана",
             "admin_name": row["admin_name"] or "Неизвестный",
         } for row in rows]
-
-async def get_playtime_stats():
-    """Статистика по часам игры: новички, обычные, ветераны."""
-    pg = await get_pg_pool()
-    async with pg.acquire() as conn:
-        row = await conn.fetchrow("""
-            SELECT 
-                COUNT(*) FILTER (WHERE COALESCE(overall_time, interval '0') < interval '50 hours') as newbies,
-                COUNT(*) FILTER (WHERE COALESCE(overall_time, interval '0') BETWEEN interval '50 hours' AND interval '400 hours') as regulars,
-                COUNT(*) FILTER (WHERE COALESCE(overall_time, interval '0') > interval '400 hours') as veterans,
-                COUNT(*) as total
-            FROM player_play_time
-        """)
-        return {
-            "newbies": row["newbies"],
-            "regulars": row["regulars"],
-            "veterans": row["veterans"],
-            "total": row["total"]
-        }
