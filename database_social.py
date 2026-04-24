@@ -208,7 +208,7 @@ def get_post_by_id(post_id: int) -> Optional[Dict]:
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT p.*, su.game_nickname, su.discord_username, su.discord_avatar,
+        SELECT p.*, su.game_nickname, su.discord_username, su.discord_avatar, su.discord_id,
                (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as like_count,
                (SELECT COUNT(*) FROM comments WHERE post_id = p.id) as comment_count
         FROM posts p
@@ -224,7 +224,7 @@ def get_feed_posts(player_id: str, limit: int = 30, offset: int = 0) -> List[Dic
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT p.*, su.game_nickname, su.discord_username, su.discord_avatar,
+        SELECT p.*, su.game_nickname, su.discord_username, su.discord_avatar, su.discord_id,
                (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as like_count,
                (SELECT COUNT(*) FROM comments WHERE post_id = p.id) as comment_count,
                EXISTS(SELECT 1 FROM likes WHERE post_id = p.id AND player_id = ?) as liked_by_me
@@ -243,7 +243,7 @@ def get_user_posts(player_id: str, limit: int = 30, offset: int = 0) -> List[Dic
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT p.*, su.game_nickname, su.discord_username, su.discord_avatar,
+        SELECT p.*, su.game_nickname, su.discord_username, su.discord_avatar, su.discord_id,
                (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as like_count,
                (SELECT COUNT(*) FROM comments WHERE post_id = p.id) as comment_count,
                EXISTS(SELECT 1 FROM likes WHERE post_id = p.id AND player_id = ?) as liked_by_me

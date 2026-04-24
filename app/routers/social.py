@@ -16,6 +16,7 @@ import database_social as social_db
 
 router = APIRouter(prefix="/api/social", tags=["social"])
 
+
 def avatar_url(avatar_hash, discord_id=None):
     """Преобразует хеш аватара Discord в полный URL."""
     if not avatar_hash:
@@ -26,27 +27,23 @@ def avatar_url(avatar_hash, discord_id=None):
         return f"https://cdn.discordapp.com/avatars/{discord_id}/{avatar_hash}.png"
     return "/static/default_avatar.png"
 
+
+# ==================== ПРОФИЛЬ ====================
+
 @router.get("/profile/{player_id}")
 async def api_get_profile(request: Request, player_id: str):
-    # Пробуем получить текущего пользователя (может быть не авторизован)
     my_player_id = None
     try:
         current_user = await get_current_user(request)
         my_player_id = current_user.get('player', {}).get('player_id')
     except:
-        pass  # гость — ничего страшного
+        pass
 
     profile = get_social_user_by_player_id(player_id)
     if not profile:
         raise HTTPException(status_code=404, detail="Профиль не найден")
 
-    # Исправляем аватарку
-    avatar = profile.get("discord_avatar")
-    if avatar and not avatar.startswith("http"):
-        discord_id = profile.get("discord_id", "")
-        avatar = f"https://cdn.discordapp.com/avatars/{discord_id}/{avatar}.png" if discord_id else None
-    else:
-        avatar = avatar or "/static/default_avatar.png"
+    avatar = avatar_url(profile.get("discord_avatar"), profile.get("discord_id"))
 
     counts = get_follow_counts(player_id)
     following = False
@@ -57,8 +54,9 @@ async def api_get_profile(request: Request, player_id: str):
         "player_id": profile["player_id"],
         "game_nickname": profile["game_nickname"],
         "discord_username": profile["discord_username"],
+        "discord_id": profile.get("discord_id"),
         "discord_avatar": avatar,
-        "bio": profile["bio"],
+        "bio": profile.get("bio", ""),
         "following_count": counts["following"],
         "followers_count": counts["followers"],
         "is_following": following,
@@ -73,6 +71,8 @@ async def api_update_profile(request: Request, update: ProfileUpdate):
     update_social_user(player['player_id'], bio=update.bio)
     return {"success": True}
 
+
+# ==================== ПОСТЫ ====================
 
 @router.post("/posts")
 async def api_create_post(
@@ -105,9 +105,10 @@ async def api_feed(request: Request, limit: int = 20, offset: int = 0):
             "author_player_id": p["author_player_id"],
             "author_nickname": p["game_nickname"],
             "author_discord_username": p["discord_username"],
-            "author_avatar": avatar_url(p["discord_avatar"]),
+            "author_discord_id": p.get("discord_id", ""),
+            "author_avatar": avatar_url(p["discord_avatar"], p.get("discord_id")),
             "content": p["content"],
-            "image_url": p["image_url"],
+            "image_url": p.get("image_url"),
             "like_count": p["like_count"],
             "comment_count": p["comment_count"],
             "liked_by_me": bool(p["liked_by_me"]),
@@ -140,9 +141,10 @@ async def api_user_posts(request: Request, player_id: str, limit: int = 20, offs
             "author_player_id": p["author_player_id"],
             "author_nickname": p["game_nickname"],
             "author_discord_username": p["discord_username"],
-            "author_avatar": avatar_url(p["discord_avatar"]),
+            "author_discord_id": p.get("discord_id", ""),
+            "author_avatar": avatar_url(p["discord_avatar"], p.get("discord_id")),
             "content": p["content"],
-            "image_url": p["image_url"],
+            "image_url": p.get("image_url"),
             "like_count": p["like_count"],
             "comment_count": p["comment_count"],
             "liked_by_me": liked,
@@ -160,6 +162,8 @@ async def api_delete_post(request: Request, post_id: int):
     return {"success": True}
 
 
+# ==================== ЛАЙКИ ====================
+
 @router.post("/posts/{post_id}/like")
 async def api_toggle_like(request: Request, post_id: int):
     player = await get_current_player(request)
@@ -167,6 +171,8 @@ async def api_toggle_like(request: Request, post_id: int):
     like_count = get_like_count(post_id)
     return {"action": action, "like_count": like_count}
 
+
+# ==================== КОММЕНТАРИИ ====================
 
 @router.post("/posts/{post_id}/comments")
 async def api_add_comment(request: Request, post_id: int, comment: CommentCreate):
@@ -184,8 +190,8 @@ async def api_get_comments(post_id: int):
             "id": c["id"],
             "post_id": c["post_id"],
             "author_player_id": c["author_player_id"],
-            "author_nickname": c["game_nickname"],
-            "author_avatar": c["discord_avatar"],
+            "author_nickname": c.get("game_nickname", "Unknown"),
+            "author_avatar": avatar_url(c.get("discord_avatar")),
             "content": c["content"],
             "created_at": c["created_at"]
         })
@@ -200,6 +206,8 @@ async def api_delete_comment(request: Request, comment_id: int):
         raise HTTPException(status_code=404, detail="Комментарий не найден или нет прав")
     return {"success": True}
 
+
+# ==================== ПОДПИСКИ ====================
 
 @router.post("/follow/{target_player_id}")
 async def api_follow(request: Request, target_player_id: str):
@@ -231,14 +239,39 @@ async def api_get_following(player_id: str, limit: int = 20):
     return following
 
 
+# ==================== ПОИСК ====================
+
 @router.get("/search")
 async def api_social_search(q: str, limit: int = 20):
     if len(q) < 2:
         return []
     try:
         from app.services.bank import search_all_players
-        results = await search_all_players(q, limit)
-        return results
+        players = await search_all_players(q, limit)
+        enriched = []
+        for p in players:
+            social = get_social_user_by_player_id(p["player_id"])
+            if social:
+                enriched.append({
+                    "player_id": p["player_id"],
+                    "game_nickname": social.get("game_nickname", p["nickname"]),
+                    "nickname": social.get("game_nickname", p["nickname"]),
+                    "discord_username": social.get("discord_username"),
+                    "discord_avatar": avatar_url(social.get("discord_avatar"), social.get("discord_id")),
+                    "balance": p["balance"],
+                    "bio": social.get("bio", "")
+                })
+            else:
+                enriched.append({
+                    "player_id": p["player_id"],
+                    "game_nickname": p["nickname"],
+                    "nickname": p["nickname"],
+                    "discord_username": None,
+                    "discord_avatar": "/static/default_avatar.png",
+                    "balance": p["balance"],
+                    "bio": ""
+                })
+        return enriched
     except Exception as e:
         print(f"Search error: {e}")
         return []
