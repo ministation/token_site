@@ -302,8 +302,6 @@ async def search_all_players(query: str, limit: int = 20):
                  "player_id": r["user_uuid"],
                  "balance": r["balance"]} for r in rows]
     
-cat >> /home/ss14_user/token_site/app/services/bank.py << 'EOF'
-
 async def get_balance_by_player_id(player_uuid: str) -> int:
     """Возвращает баланс игрока по его player_id (UUID)."""
     pg = await get_pg_pool()
@@ -314,4 +312,3 @@ async def get_balance_by_player_id(player_uuid: str) -> int:
             player_uuid
         )
         return row[0] if row else 0
-EOF
