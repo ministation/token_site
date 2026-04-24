@@ -8,25 +8,47 @@
     <link rel="stylesheet" href="/static/style.css">
     <link rel="icon" type="image/png" href="/static/coin.png">
 </head>
+<!-- Chart.js для диаграммы -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <script>
 async function loadPlaytimeChart() {
     try {
-        const res = await fetch('/api/bans/stats');
+        const res = await fetch('/api/playtime-stats');
         const data = await res.json();
         
-        new Chart(document.getElementById('playtimeCanvas'), {
+        const ctx = document.getElementById('playtimeCanvas');
+        if (!ctx) return;
+        
+        new Chart(ctx, {
             type: 'doughnut',
             data: {
                 labels: ['Новички (<50ч)', 'Обычные (50-400ч)', 'Ветераны (400+ч)'],
                 datasets: [{
                     data: [data.newbies, data.regulars, data.veterans],
-                    backgroundColor: ['#4CAF50', '#FFC107', '#F44336']
+                    backgroundColor: ['#4CAF50', '#FFC107', '#F44336'],
+                    borderColor: 'rgba(0,0,0,0.3)',
+                    borderWidth: 2
                 }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: '#ccc',
+                            padding: 15
+                        }
+                    }
+                }
             }
         });
-    } catch(e) {}
+    } catch(e) {
+        console.error('Chart error:', e);
+    }
 }
+
+// Запускаем при загрузке
 loadPlaytimeChart();
 </script>
 <body>
@@ -49,10 +71,10 @@ loadPlaytimeChart();
             <button class="nav-btn" data-section="wallet">Кошелёк</button>
             <button class="nav-btn" data-section="bank">Банк</button>
             <button class="nav-btn" data-section="lottery">Лотерея</button>
-            <button class="nav-btn" data-section="chat">Чат</button>
-            <button class="nav-btn" data-section="messages">Сообщения</button>
-            <button class="nav-btn" data-section="search">Поиск</button>
-            <button class="nav-btn" data-section="profile">Мой профиль</button>
+            <!-- <button class="nav-btn" data-section="chat">Чат</button>
+            <button class="nav-btn" data-section="messages">Сообщения</button> -->
+            <!-- <button class="nav-btn" data-section="search">Поиск</button>
+            <button class="nav-btn" data-section="profile">Мой профиль</button> -->
         </div>
 
         <!-- Секции -->

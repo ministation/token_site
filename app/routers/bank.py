@@ -9,7 +9,7 @@ from app.services.bank import (
     find_player_by_nick, get_balance, transfer_tokens, remove_tokens, add_tokens,
     get_random_lottery_prize, get_active_deposits, create_deposit,
     withdraw_deposit, get_active_loans, create_loan, repay_loan,
-    get_top_players, get_total_stats, get_bank_stats, search_all_players
+    get_top_players, get_total_stats, get_bank_stats, search_all_players, get_playtime_stats
 )
 from app.config import LOTTERY_COST, MIN_TRANSFER, TRANSFER_COOLDOWN, BANK_DEPOSIT_MIN
 from app.core.state import transfer_cooldowns
@@ -206,3 +206,7 @@ async def api_players_search(q: str = "", limit: int = 20):
     if len(q) < 2:
         return []
     return await search_all_players(q, limit)
+
+@router.get("/playtime-stats")
+async def api_playtime_stats():
+    return await get_playtime_stats()

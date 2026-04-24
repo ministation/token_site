@@ -592,3 +592,15 @@ button:hover { background: rgba(120, 80, 180, 0.8); }
     margin: 20px auto;
     text-align: center;
 }
+.playtime-chart {
+    max-width: 350px;
+    margin: 20px auto;
+    text-align: center;
+    background: rgba(25, 18, 40, 0.7);
+    border-radius: 12px;
+    padding: 16px;
+}
+.playtime-chart h3 {
+    color: #d0c0e8;
+    margin-bottom: 12px;
+}
