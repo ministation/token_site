@@ -83,7 +83,8 @@ async function toggleLike(postId) {
         const data = await apiCall('POST', `/api/social/posts/${postId}/like`);
         const likeCountSpan = document.getElementById(`like-count-${postId}`);
         if (likeCountSpan) likeCountSpan.textContent = data.like_count;
-        const btn = document.querySelector(`.post[data-post-id="${postId}"] .post-action-btn.liked, .post[data-post-id="${postId}"] .post-action-btn:first-child`);
+        const postEl = document.querySelector(`.post[data-post-id="${postId}"]`);
+        const btn = postEl?.querySelector('.post-action-btn');
         if (btn) {
             if (data.action === 'liked') btn.classList.add('liked');
             else btn.classList.remove('liked');

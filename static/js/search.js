@@ -1,13 +1,7 @@
 async function searchSocial(query = '') {
     try {
-        let url;
-        if (query && query.length >= 1) {
-            url = `/api/social/search?q=${encodeURIComponent(query)}&limit=50`;
-        } else {
-            url = '/api/social/search?q=&limit=50';  // пустой запрос — все игроки
-        }
-        
-        const res = await fetch(url);
+        const searchQuery = query || '';
+        const res = await fetch(`/api/social/search?q=${encodeURIComponent(searchQuery)}&limit=50`);
         if (!res.ok) throw new Error('Search failed');
         const results = await res.json();
         
@@ -23,8 +17,8 @@ async function searchSocial(query = '') {
                      class="search-avatar" alt="" 
                      onerror="this.src='/static/default_avatar.png'">
                 <div style="flex:1;">
-                    <div><strong>${user.game_nickname || user.nickname || 'Без имени'}</strong></div>
-                    <div style="font-size:0.8rem; color:#888;">@${user.discord_username || 'Не привязан'}</div>
+                    <div><strong>${escapeHtml(user.game_nickname || user.nickname || 'Без имени')}</strong></div>
+                    <div style="font-size:0.8rem; color:#888;">@${escapeHtml(user.discord_username || 'Не привязан')}</div>
                     ${user.balance !== undefined ? `<div style="color:#fc0;">🪙 ${user.balance} монет</div>` : ''}
                 </div>
                 <button onclick="window.location.href='/profile/${user.player_id}'" class="follow-btn">👤 Профиль</button>

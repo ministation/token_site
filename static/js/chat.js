@@ -8,7 +8,7 @@ async function loadChat() {
                 <div class="chat-message">
                     ${m.avatar ? `<img src="${m.avatar}" class="chat-avatar" alt="">` : ''}
                     <div class="chat-content">
-                        <div class="chat-username">${m.username}</div>
+                        <div class="chat-username">${escapeHtml(m.username)}</div>
                         <div class="chat-text">${escapeHtml(m.message)}</div>
                         <div class="chat-time">${new Date(m.timestamp).toLocaleTimeString()}</div>
                     </div>

@@ -21,6 +21,7 @@ function setupAutocomplete() {
     });
 }
 
+// Баланс
 async function loadMyBalance() {
     try {
         const data = await apiCall('GET', '/api/balance');
@@ -57,16 +58,19 @@ async function transfer() {
 function startSlotAnimation() {
     const slotMachine = document.getElementById('slotMachine');
     const slotResult = document.getElementById('slotResult');
-    slotMachine.style.display = 'flex';
-    slotResult.innerHTML = '🎲 Крутим...';
+    if (slotMachine) slotMachine.style.display = 'flex';
+    if (slotResult) slotResult.innerHTML = '🎲 Крутим...';
     
     document.querySelectorAll('.slot-reel').forEach(r => r.classList.add('slot-spinning'));
     
     let spins = 0;
     slotInterval = setInterval(() => {
-        document.getElementById('slot1').innerHTML = `<img src="/static/slots/${SLOT_SYMBOLS[Math.floor(Math.random() * SLOT_SYMBOLS.length)]}.png" alt="">`;
-        document.getElementById('slot2').innerHTML = `<img src="/static/slots/${SLOT_SYMBOLS[Math.floor(Math.random() * SLOT_SYMBOLS.length)]}.png" alt="">`;
-        document.getElementById('slot3').innerHTML = `<img src="/static/slots/${SLOT_SYMBOLS[Math.floor(Math.random() * SLOT_SYMBOLS.length)]}.png" alt="">`;
+        const slot1 = document.getElementById('slot1');
+        const slot2 = document.getElementById('slot2');
+        const slot3 = document.getElementById('slot3');
+        if (slot1) slot1.innerHTML = `<img src="/static/slots/${SLOT_SYMBOLS[Math.floor(Math.random() * SLOT_SYMBOLS.length)]}.png" alt="">`;
+        if (slot2) slot2.innerHTML = `<img src="/static/slots/${SLOT_SYMBOLS[Math.floor(Math.random() * SLOT_SYMBOLS.length)]}.png" alt="">`;
+        if (slot3) slot3.innerHTML = `<img src="/static/slots/${SLOT_SYMBOLS[Math.floor(Math.random() * SLOT_SYMBOLS.length)]}.png" alt="">`;
         spins++;
         if (spins >= 15) {
             clearInterval(slotInterval);
@@ -85,11 +89,15 @@ function stopSlotAnimation(prize) {
     else if (prize >= 4) symbols = ['grapes', 'grapes', 'lemon'];
     else symbols = ['cherry', 'lemon', 'orange'];
     
-    document.getElementById('slot1').innerHTML = `<img src="/static/slots/${symbols[0]}.png" alt="">`;
-    document.getElementById('slot2').innerHTML = `<img src="/static/slots/${symbols[1]}.png" alt="">`;
-    document.getElementById('slot3').innerHTML = `<img src="/static/slots/${symbols[2]}.png" alt="">`;
+    const slot1 = document.getElementById('slot1');
+    const slot2 = document.getElementById('slot2');
+    const slot3 = document.getElementById('slot3');
+    if (slot1) slot1.innerHTML = `<img src="/static/slots/${symbols[0]}.png" alt="">`;
+    if (slot2) slot2.innerHTML = `<img src="/static/slots/${symbols[1]}.png" alt="">`;
+    if (slot3) slot3.innerHTML = `<img src="/static/slots/${symbols[2]}.png" alt="">`;
     
-    document.getElementById('slotResult').innerHTML = prize >= 15 ? `🎉 ДЖЕКПОТ! ${prize} ${COIN_ICON}` : `✨ Выигрыш: ${prize} ${COIN_ICON}`;
+    const slotResult = document.getElementById('slotResult');
+    if (slotResult) slotResult.innerHTML = prize >= 15 ? `🎉 ДЖЕКПОТ! ${prize} ${COIN_ICON}` : `✨ Выигрыш: ${prize} ${COIN_ICON}`;
 }
 
 async function playLottery() {
@@ -99,29 +107,112 @@ async function playLottery() {
         const data = await apiCall('POST', '/api/lottery');
         setTimeout(() => {
             stopSlotAnimation(data.prize);
-            resultDiv.innerHTML = `<p class="success">🎉 Выигрыш: ${data.prize} ${COIN_ICON}! Новый баланс: ${data.new_balance} ${COIN_ICON}</p>`;
+            if (resultDiv) resultDiv.innerHTML = `<p class="success">🎉 Выигрыш: ${data.prize} ${COIN_ICON}! Новый баланс: ${data.new_balance} ${COIN_ICON}</p>`;
             loadMyBalance(); loadTop();
         }, 1500);
     } catch (e) {
         clearInterval(slotInterval);
-        document.getElementById('slotMachine').style.display = 'none';
-        resultDiv.innerHTML = `<p class="error">${e.message}</p>`;
+        const slotMachine = document.getElementById('slotMachine');
+        if (slotMachine) slotMachine.style.display = 'none';
+        if (resultDiv) resultDiv.innerHTML = `<p class="error">${e.message}</p>`;
     }
 }
 
 // Банк
 function showBankTab(tab) {
     document.querySelectorAll('.bank-tab').forEach(t => t.style.display = 'none');
-    document.getElementById(tab + 'Tab').style.display = 'block';
+    const tabEl = document.getElementById(tab + 'Tab');
+    if (tabEl) tabEl.style.display = 'block';
     document.querySelectorAll('#bankSection .tab').forEach(t => t.classList.remove('active'));
     event.target.classList.add('active');
 }
 
-async function createDeposit() { /* без изменений */ }
-async function loadMyDeposits() { /* без изменений */ }
-async function withdrawDeposit() { /* без изменений */ }
-async function loadMyLoans() { /* без изменений */ }
-async function createLoan() { /* без изменений */ }
-async function repayLoan() { /* без изменений */ }
-async function loadTop() { /* без изменений */ }
-async function loadStats() { /* без изменений */ }
+async function createDeposit() {
+    const amount = parseInt(document.getElementById('depositAmount').value);
+    const resultDiv = document.getElementById('depositResult');
+    if (!amount || amount < 10) { resultDiv.innerHTML = '<p class="error">Минимальная сумма: 10</p>'; return; }
+    try {
+        const data = await apiCall('POST', '/api/deposit', { amount });
+        resultDiv.innerHTML = `<p class="success">✅ Вклад создан! ID: ${data.deposit_id}</p>`;
+        loadMyBalance(); loadMyDeposits();
+    } catch (e) { resultDiv.innerHTML = `<p class="error">${e.message}</p>`; }
+}
+
+async function loadMyDeposits() {
+    try {
+        const deposits = await apiCall('GET', '/api/deposits');
+        document.getElementById('withdrawSelect').innerHTML = deposits.map(d => 
+            `<option value="${d.deposit_id}">ID ${d.deposit_id}: ${d.amount} → ${d.total} (${new Date(d.mature_at).toLocaleDateString()})</option>`
+        ).join('');
+    } catch (e) {}
+}
+
+async function withdrawDeposit() {
+    const depositId = document.getElementById('withdrawSelect').value;
+    if (!depositId) return;
+    try {
+        const data = await apiCall('POST', '/api/withdraw', { deposit_id: parseInt(depositId) });
+        document.getElementById('withdrawResult').innerHTML = `<p class="success">✅ Получено ${data.amount} ${COIN_ICON}</p>`;
+        loadMyBalance(); loadMyDeposits();
+    } catch (e) { document.getElementById('withdrawResult').innerHTML = `<p class="error">${e.message}</p>`; }
+}
+
+async function loadMyLoans() {
+    try {
+        const loans = await apiCall('GET', '/api/loans');
+        document.getElementById('repaySelect').innerHTML = loans.map(l => 
+            `<option value="${l.loan_id}">ID ${l.loan_id}: долг ${l.remaining}/${l.total} (${new Date(l.due_at).toLocaleDateString()})</option>`
+        ).join('');
+    } catch (e) {}
+}
+
+async function createLoan() {
+    const amount = parseInt(document.getElementById('loanAmount').value);
+    if (!amount || amount <= 0) { document.getElementById('loanResult').innerHTML = '<p class="error">Введите сумму</p>'; return; }
+    try {
+        const data = await apiCall('POST', '/api/loan', { amount });
+        document.getElementById('loanResult').innerHTML = `<p class="success">✅ Заём выдан! ID: ${data.loan_id}</p>`;
+        loadMyBalance(); loadMyLoans();
+    } catch (e) { document.getElementById('loanResult').innerHTML = `<p class="error">${e.message}</p>`; }
+}
+
+async function repayLoan() {
+    const loanId = parseInt(document.getElementById('repaySelect').value);
+    const amount = document.getElementById('repayAmount').value;
+    if (!loanId) return;
+    try {
+        const body = { loan_id: loanId };
+        if (amount) body.amount = parseInt(amount);
+        const data = await apiCall('POST', '/api/repay', body);
+        document.getElementById('repayResult').innerHTML = `<p class="success">✅ ${data.message}</p>`;
+        loadMyBalance(); loadMyLoans();
+    } catch (e) { document.getElementById('repayResult').innerHTML = `<p class="error">${e.message}</p>`; }
+}
+
+async function loadTop() {
+    try {
+        const data = await apiCall('GET', '/api/top');
+        let html = '';
+        data.players.forEach((p, i) => html += `<div class="top-player">${i+1}. ${p.name} — ${p.balance} ${COIN_ICON}</div>`);
+        html += `<div class="stats-grid" style="margin-top:15px">
+            <div class="stat-item"><div class="stat-value">${data.stats.total_players}</div><div class="stat-label">Игроков</div></div>
+            <div class="stat-item"><div class="stat-value">${data.stats.total_tokens}</div><div class="stat-label">Монет</div></div>
+            <div class="stat-item"><div class="stat-value">${data.bank.total_deposits}</div><div class="stat-label">Вкладов</div></div>
+            <div class="stat-item"><div class="stat-value">${data.bank.total_loans}</div><div class="stat-label">Займов</div></div>
+        </div>`;
+        document.getElementById('topResult').innerHTML = html;
+    } catch (e) {}
+}
+
+async function loadStats() {
+    try {
+        const data = await apiCall('GET', '/api/stats');
+        document.getElementById('statsResult').innerHTML = `<div class="stats-grid">
+            <div class="stat-item"><div class="stat-value">${data.stats.total_players}</div><div class="stat-label">Игроков</div></div>
+            <div class="stat-item"><div class="stat-value">${data.stats.total_tokens}</div><div class="stat-label">Монет</div></div>
+            <div class="stat-item"><div class="stat-value">${data.bank.total_deposits}</div><div class="stat-label">Вкладов</div></div>
+            <div class="stat-item"><div class="stat-value">${data.bank.total_loans}</div><div class="stat-label">Займов</div></div>
+            <div class="stat-item"><div class="stat-value">${data.bank.liquidity}</div><div class="stat-label">Свободно</div></div>
+        </div>`;
+    } catch (e) {}
+}

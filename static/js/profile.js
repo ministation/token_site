@@ -13,53 +13,44 @@ async function loadProfile(playerId) {
             document.getElementById('profileContent').innerHTML = '<div class="card"><h2>Профиль не найден</h2></div>';
             return;
         }
-        const profile = await resp.json();
-        const isOwn = currentPlayerId === profile.player_id;
-        const avatarUrl = profile.discord_avatar || '/static/default_avatar.png';
+        const p = await resp.json();
+        const avatarUrl = p.discord_avatar || '/static/default_avatar.png';
+        const isOwn = currentPlayerId === p.player_id;
 
         document.getElementById('profileContent').innerHTML = `
             <div class="card">
                 <div class="profile-header">
                     <img src="${avatarUrl}" class="profile-avatar" onerror="this.src='/static/default_avatar.png'">
                     <div class="profile-info">
-                        <h2 class="profile-name">${escapeHtml(profile.game_nickname || 'Игрок')}</h2>
-                        <p style="color: #a080d0;">@${escapeHtml(profile.discord_username || 'Не привязан')}</p>
+                        <h2>${escapeHtml(p.game_nickname || 'Игрок')}</h2>
+                        <p style="color:#a080d0;">@${escapeHtml(p.discord_username || 'Не привязан')}</p>
                         <div class="profile-stats">
                             <div class="profile-stat">
-                                <div class="profile-stat-value">${profile.followers_count || 0}</div>
+                                <div class="profile-stat-value">${p.followers_count||0}</div>
                                 <div class="profile-stat-label">Подписчиков</div>
                             </div>
                             <div class="profile-stat">
-                                <div class="profile-stat-value">${profile.following_count || 0}</div>
+                                <div class="profile-stat-value">${p.following_count||0}</div>
                                 <div class="profile-stat-label">Подписок</div>
                             </div>
                         </div>
                         <div class="profile-actions">
-                            ${isOwn ? `
-                                <button class="follow-btn" onclick="editProfile()">✏️ Редактировать</button>
-                            ` : `
-                                <button class="follow-btn ${profile.is_following ? 'unfollow' : ''}" 
-                                        onclick="toggleFollow('${profile.player_id}')">
-                                    ${profile.is_following ? 'Отписаться' : 'Подписаться'}
+                            ${!isOwn ? `
+                                <button class="follow-btn ${p.is_following?'unfollow':''}" onclick="toggleFollow('${p.player_id}')">
+                                    ${p.is_following?'Отписаться':'Подписаться'}
                                 </button>
-                            `}
+                                <button class="message-btn" onclick="openMessageModal('${p.player_id}', '${escapeHtml(p.game_nickname)}')">
+                                    💬 Написать
+                                </button>
+                            ` : ''}
                         </div>
                     </div>
                 </div>
-                ${profile.bio ? `<div class="profile-bio">${escapeHtml(profile.bio)}</div>` : '<div class="profile-bio">Био пока нет...</div>'}
-            </div>
-            <div class="card">
-                <h2>Посты</h2>
-                <div id="userPosts"></div>
+                ${p.bio ? `<div class="profile-bio">${escapeHtml(p.bio)}</div>` : ''}
             </div>
         `;
-
-        const postsResp = await fetch(`/api/social/posts/user/${playerId}`);
-        const posts = await postsResp.json();
-        const postsContainer = document.getElementById('userPosts');
-        postsContainer.innerHTML = posts.length ? posts.map(p => renderPost(p)).join('') : '<p>Нет постов</p>';
-    } catch (e) {
-        console.error(e);
+    } catch(e) {
+        document.getElementById('profileContent').innerHTML = '<div class="card"><h2>Ошибка загрузки</h2></div>';
     }
 }
 
@@ -74,4 +65,19 @@ async function toggleFollow(targetId) {
         }
         loadProfile(targetId);
     } catch (e) { alert(e.message); }
+}
+
+function openMessageModal(playerId, nickname) {
+    const message = prompt(`Сообщение для ${nickname}:`);
+    if (!message || !message.trim()) return;
+    sendMessage(playerId, message.trim());
+}
+
+async function sendMessage(playerId, content) {
+    try {
+        await apiCall('POST', '/api/messages/send', { receiver_id: playerId, content });
+        alert('✅ Сообщение отправлено!');
+    } catch (e) {
+        alert('❌ ' + e.message);
+    }
 }

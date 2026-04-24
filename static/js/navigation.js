@@ -16,7 +16,6 @@ function setupNavigation() {
                 loadFeed();
             } else if (section === 'search') {
                 document.getElementById('socialSearchInput').value = '';
-                // Сразу показываем всех игроков
                 if (typeof searchSocial === 'function') {
                     searchSocial('');
                 }
