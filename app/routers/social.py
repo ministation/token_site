@@ -16,6 +16,15 @@ import database_social as social_db
 
 router = APIRouter(prefix="/api/social", tags=["social"])
 
+def avatar_url(avatar_hash, discord_id=None):
+    """Преобразует хеш аватара Discord в полный URL."""
+    if not avatar_hash:
+        return "/static/default_avatar.png"
+    if avatar_hash.startswith("http"):
+        return avatar_hash
+    if discord_id:
+        return f"https://cdn.discordapp.com/avatars/{discord_id}/{avatar_hash}.png"
+    return "/static/default_avatar.png"
 
 @router.get("/profile/{player_id}")
 async def api_get_profile(request: Request, player_id: str):
