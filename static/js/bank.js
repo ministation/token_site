@@ -25,8 +25,13 @@ function setupAutocomplete() {
 async function loadMyBalance() {
     try {
         const data = await apiCall('GET', '/api/balance');
-        document.getElementById('myBalance').innerHTML = `<p>Баланс: <strong>${data.balance}</strong> ${COIN_ICON}</p>`;
-    } catch (e) {}
+        const el = document.getElementById('myBalance');
+        if (el) {
+            el.innerHTML = `<p>Баланс: <strong>${data.balance}</strong> ${COIN_ICON}</p>`;
+        }
+    } catch (e) {
+        console.error('Balance error:', e);
+    }
 }
 
 async function checkBalance() {
