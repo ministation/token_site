@@ -68,9 +68,8 @@ loadPlaytimeChart();
         <!-- Навигация -->
         <div class="main-nav">
             <button class="nav-btn active" data-section="home">Главная</button>
-            <button class="nav-btn" data-section="wallet">Кошелёк</button>
-            <button class="nav-btn" data-section="bank">Банк</button>
-            <button class="nav-btn" data-section="lottery">Лотерея</button>
+            <button class="nav-btn" data-section="economy">Монетки</button>
+            <button class="nav-btn" data-section="bans">Наказания</button>
             <!-- <button class="nav-btn" data-section="chat">Чат</button>
             <button class="nav-btn" data-section="messages">Сообщения</button> -->
             <!-- <button class="nav-btn" data-section="search">Поиск</button>
@@ -81,14 +80,8 @@ loadPlaytimeChart();
         <div id="homeSection" class="section active">
             {% include 'partials/home.html' %}
         </div>
-        <div id="walletSection" class="section">
-            {% include 'partials/wallet.html' %}
-        </div>
-        <div id="bankSection" class="section">
-            {% include 'partials/bank.html' %}
-        </div>
-        <div id="lotterySection" class="section">
-            {% include 'partials/lottery.html' %}
+        <div id="economySection" class="section">
+            {% include 'partials/economy.html' %}
         </div>
         <div id="chatSection" class="section">
             {% include 'partials/chat.html' %}

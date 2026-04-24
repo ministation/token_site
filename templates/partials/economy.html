@@ -1,0 +1,97 @@
+<!-- Под-навигация экономики -->
+<div class="economy-tabs">
+    <button class="tab active" onclick="showEconomyTab('wallet')">Кошелёк</button>
+    <button class="tab" onclick="showEconomyTab('bank')">Банк</button>
+    <button class="tab" onclick="showEconomyTab('lottery')">Лотерея</button>
+</div>
+
+<!-- Кошелёк -->
+<div id="economyWallet" class="economy-tab-content">
+    <div class="dashboard-grid">
+        <div class="card">
+            <h2>Мой баланс</h2>
+            <div id="myBalance">Загрузка...</div>
+        </div>
+        <div class="card">
+            <h2>Проверить баланс</h2>
+            <input type="text" id="balanceNick" placeholder="Ник игрока" list="playersList">
+            <button onclick="checkBalance()">Проверить</button>
+            <div id="balanceResult" class="result"></div>
+        </div>
+        <div class="card">
+            <h2>Перевод монет</h2>
+            <input type="text" id="receiverNick" placeholder="Кому" list="playersList">
+            <input type="number" id="transferAmount" placeholder="Сумма" min="1">
+            <button onclick="transfer()">Отправить</button>
+            <div id="transferResult" class="result"></div>
+        </div>
+    </div>
+    <div class="bottom-row">
+        <div class="card">
+            <h2>Топ игроков</h2>
+            <div id="topResult"></div>
+        </div>
+        <div class="card">
+            <h2>Статистика</h2>
+            <div id="statsResult"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Банк -->
+<div id="economyBank" class="economy-tab-content" style="display:none;">
+    <div class="tabs">
+        <button class="tab active" onclick="showBankSubTab('deposit')">Вклады</button>
+        <button class="tab" onclick="showBankSubTab('withdraw')">Снять вклад</button>
+        <button class="tab" onclick="showBankSubTab('loan')">Займы</button>
+        <button class="tab" onclick="showBankSubTab('repay')">Погасить</button>
+    </div>
+    <div id="depositTab" class="bank-tab">
+        <div class="card">
+            <h2>Создать вклад</h2>
+            <input type="number" id="depositAmount" placeholder="Сумма (мин. 10)">
+            <button onclick="createDeposit()">Создать</button>
+            <div id="depositResult" class="result"></div>
+        </div>
+    </div>
+    <div id="withdrawTab" class="bank-tab" style="display:none;">
+        <div class="card">
+            <h2>Снять вклад</h2>
+            <select id="withdrawSelect"></select>
+            <button onclick="withdrawDeposit()">Снять</button>
+            <div id="withdrawResult" class="result"></div>
+        </div>
+    </div>
+    <div id="loanTab" class="bank-tab" style="display:none;">
+        <div class="card">
+            <h2>Взять заём</h2>
+            <input type="number" id="loanAmount" placeholder="Сумма">
+            <button onclick="createLoan()">Получить</button>
+            <div id="loanResult" class="result"></div>
+        </div>
+    </div>
+    <div id="repayTab" class="bank-tab" style="display:none;">
+        <div class="card">
+            <h2>Погасить заём</h2>
+            <select id="repaySelect"></select>
+            <input type="number" id="repayAmount" placeholder="Сумма (необязательно)">
+            <button onclick="repayLoan()">Погасить</button>
+            <div id="repayResult" class="result"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Лотерея -->
+<div id="economyLottery" class="economy-tab-content" style="display:none;">
+    <div class="card">
+        <h2>Лотерея</h2>
+        <div id="slotMachine" class="slot-machine" style="display:none;">
+            <div id="slot1" class="slot-reel"></div>
+            <div id="slot2" class="slot-reel"></div>
+            <div id="slot3" class="slot-reel"></div>
+        </div>
+        <div id="slotResult" style="margin-bottom:10px;"></div>
+        <button onclick="playLottery()">Испытать удачу</button>
+        <div id="lotteryResult" class="result"></div>
+    </div>
+</div>

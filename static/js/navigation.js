@@ -14,15 +14,26 @@ function setupNavigation() {
                 }
             } else if (section === 'home') {
                 loadFeed();
+                loadServerStatus();
+            } else if (section === 'economy') {
+                // Загружаем все данные экономики
+                if (typeof loadMyBalance === 'function') loadMyBalance();
+                if (typeof loadMyDeposits === 'function') loadMyDeposits();
+                if (typeof loadMyLoans === 'function') loadMyLoans();
+                if (typeof loadTop === 'function') loadTop();
+                if (typeof loadStats === 'function') loadStats();
             } else if (section === 'search') {
                 document.getElementById('socialSearchInput').value = '';
-                // Сразу показываем всех игроков
                 if (typeof searchSocial === 'function') {
                     searchSocial('');
                 }
             } else if (section === 'messages') {
                 if (typeof loadDialogs === 'function') {
                     loadDialogs();
+                }
+            } else if (section === 'bans') {
+                if (typeof loadBans === 'function') {
+                    loadBans();
                 }
             }
         });
