@@ -125,3 +125,26 @@ async function createLoan() { /* без изменений */ }
 async function repayLoan() { /* без изменений */ }
 async function loadTop() { /* без изменений */ }
 async function loadStats() { /* без изменений */ }
+
+function showEconomyTab(tab) {
+    document.querySelectorAll('.economy-tab-content').forEach(t => t.style.display = 'none');
+    document.getElementById('economy' + tab.charAt(0).toUpperCase() + tab.slice(1)).style.display = 'block';
+    
+    document.querySelectorAll('.economy-tabs .tab').forEach(t => t.classList.remove('active'));
+    event.target.classList.add('active');
+    
+    if (tab === 'wallet') {
+        loadMyBalance();
+        loadTop();
+    } else if (tab === 'bank') {
+        loadMyDeposits();
+        loadMyLoans();
+    }
+}
+
+function showBankSubTab(tab) {
+    document.querySelectorAll('.bank-tab').forEach(t => t.style.display = 'none');
+    document.getElementById(tab + 'Tab').style.display = 'block';
+    document.querySelectorAll('#economyBank .tab').forEach(t => t.classList.remove('active'));
+    event.target.classList.add('active');
+}

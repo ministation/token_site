@@ -604,3 +604,21 @@ button:hover { background: rgba(120, 80, 180, 0.8); }
     color: #d0c0e8;
     margin-bottom: 12px;
 }
+
+.economy-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 16px;
+}
+.economy-tabs .tab {
+    background: rgba(40, 25, 60, 0.6);
+    color: #e0dde8;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 30px;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+.economy-tabs .tab.active {
+    background: rgba(120, 80, 180, 0.8);
+}
