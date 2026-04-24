@@ -13,6 +13,7 @@ from app.services.social import (
 )
 from app.config import UPLOAD_DIR
 import database_social as social_db
+from app.services.bank import get_balance_by_player_id
 
 router = APIRouter(prefix="/api/social", tags=["social"])
 
@@ -243,31 +244,29 @@ async def api_get_following(player_id: str, limit: int = 20):
 
 @router.get("/search")
 async def api_social_search(q: str = "", limit: int = 50):
+    """Поиск только среди пользователей соцсети."""
     try:
-        from app.services.bank import search_all_players
-        search_pattern = f"%{q}%" if q else "%%"
-        players = await search_all_players(search_pattern, limit)
+        if len(q) >= 2:
+            results = search_social_users(q, limit)
+        else:
+            results = search_social_users("", limit)
+        
+        from app.services.bank import get_balance_by_player_id
+        
         enriched = []
-        for p in players:
-            social = get_social_user_by_player_id(p["player_id"])
-            if social:
-                enriched.append({
-                    "player_id": p["player_id"],
-                    "game_nickname": social.get("game_nickname", p["nickname"]),
-                    "nickname": social.get("game_nickname", p["nickname"]),
-                    "discord_username": social.get("discord_username"),
-                    "discord_avatar": avatar_url(social.get("discord_avatar"), social.get("discord_id")),
-                    "balance": p["balance"],
-                })
-            else:
-                enriched.append({
-                    "player_id": p["player_id"],
-                    "game_nickname": p["nickname"],
-                    "nickname": p["nickname"],
-                    "discord_username": None,
-                    "discord_avatar": "/static/default_avatar.png",
-                    "balance": p["balance"],
-                })
+        for r in results:
+            try:
+                balance = await get_balance_by_player_id(r["player_id"])
+            except:
+                balance = 0
+            enriched.append({
+                "player_id": r["player_id"],
+                "game_nickname": r.get("game_nickname", "Unknown"),
+                "nickname": r.get("game_nickname", "Unknown"),
+                "discord_username": r.get("discord_username"),
+                "discord_avatar": avatar_url(r.get("discord_avatar"), r.get("discord_id")),
+                "balance": balance,
+            })
         return enriched
     except Exception as e:
         print(f"Search error: {e}")

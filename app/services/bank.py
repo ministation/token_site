@@ -312,3 +312,14 @@ async def search_all_players(query: str, limit: int = 50):
         return [{"nickname": r["last_seen_user_name"],
                  "player_id": str(r["player_id"]),
                  "balance": r["balance"]} for r in rows]
+    
+async def get_balance_by_player_id(player_uuid: str) -> int:
+    """Возвращает баланс игрока по его player_id (UUID)."""
+    pg = await get_pg_pool()
+    async with pg.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT COALESCE(amount, 0) FROM player_antag_token "
+            "WHERE player_id::text = $1 AND token_id = 'balance'",
+            player_uuid
+        )
+        return row[0] if row else 0

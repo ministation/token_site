@@ -82,11 +82,16 @@
                                         <div class="profile-stat-label">Подписок</div>
                                     </div>
                                 </div>
-                                ${!isOwn ? `
-                                    <button class="follow-btn ${p.is_following?'unfollow':''}" onclick="toggleFollow('${p.player_id}', this)">
-                                        ${p.is_following?'Отписаться':'Подписаться'}
-                                    </button>
-                                ` : ''}
+                                <div class="profile-actions">
+                                    ${!isOwn ? `
+                                        <button class="follow-btn ${p.is_following?'unfollow':''}" onclick="toggleFollow('${p.player_id}', this)">
+                                            ${p.is_following?'Отписаться':'Подписаться'}
+                                        </button>
+                                        <button class="message-btn" onclick="sendMessageTo('${p.player_id}', '${escapeHtml(p.game_nickname || 'Игрок')}')">
+                                            💬 Написать
+                                        </button>
+                                    ` : ''}
+                                </div>
                             </div>
                         </div>
                         ${p.bio ? `<div class="profile-bio">${escapeHtml(p.bio)}</div>` : ''}
@@ -106,6 +111,26 @@
                 const playerId = path.split('/').pop();
                 loadProfile(playerId);
             } catch(e) { alert('Ошибка'); }
+        }
+
+        async function sendMessageTo(playerId, nickname) {
+            const message = prompt(`Сообщение для ${nickname}:`);
+            if (!message || !message.trim()) return;
+            try {
+                const res = await fetch('/api/messages/send', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ receiver_id: playerId, content: message.trim() })
+                });
+                if (res.ok) {
+                    alert('✅ Сообщение отправлено!');
+                } else {
+                    const err = await res.json();
+                    alert('❌ ' + err.detail);
+                }
+            } catch(e) {
+                alert('Ошибка отправки');
+            }
         }
 
         document.addEventListener('DOMContentLoaded', async () => {
