@@ -1,9 +1,8 @@
 async function loadMyProfile() {
-    if (!currentUser?.player) {
+    if (!currentPlayerId) {
         alert('Привяжите Discord к игровому аккаунту');
         return;
     }
-    currentPlayerId = currentUser.player.player_id;
     await loadProfile(currentPlayerId);
 }
 
@@ -21,10 +20,10 @@ async function loadProfile(playerId) {
         document.getElementById('profileContent').innerHTML = `
             <div class="card">
                 <div class="profile-header">
-                    <img src="${avatarUrl}" class="profile-avatar" alt="Аватар" onerror="this.src='/static/default_avatar.png'">
+                    <img src="${avatarUrl}" class="profile-avatar" onerror="this.src='/static/default_avatar.png'">
                     <div class="profile-info">
-                        <h2 class="profile-name">${profile.game_nickname || 'Игрок'}</h2>
-                        <p style="color: #a080d0;">@${profile.discord_username || 'Не привязан'}</p>
+                        <h2 class="profile-name">${escapeHtml(profile.game_nickname || 'Игрок')}</h2>
+                        <p style="color: #a080d0;">@${escapeHtml(profile.discord_username || 'Не привязан')}</p>
                         <div class="profile-stats">
                             <div class="profile-stat">
                                 <div class="profile-stat-value">${profile.followers_count || 0}</div>
@@ -43,15 +42,11 @@ async function loadProfile(playerId) {
                                         onclick="toggleFollow('${profile.player_id}')">
                                     ${profile.is_following ? 'Отписаться' : 'Подписаться'}
                                 </button>
-                                <button class="message-btn" 
-                                        onclick="openMessageModal('${profile.player_id}', '${profile.game_nickname}')">
-                                    💬 Написать сообщение
-                                </button>
                             `}
                         </div>
                     </div>
                 </div>
-                ${profile.bio ? `<div class="profile-bio">${escapeHtml(profile.bio)}</div>` : '<div class="profile-bio" style="color: #666;">Био пока нет...</div>'}
+                ${profile.bio ? `<div class="profile-bio">${escapeHtml(profile.bio)}</div>` : '<div class="profile-bio">Био пока нет...</div>'}
             </div>
             <div class="card">
                 <h2>Посты</h2>
@@ -59,14 +54,12 @@ async function loadProfile(playerId) {
             </div>
         `;
 
-        // Загружаем посты
         const postsResp = await fetch(`/api/social/posts/user/${playerId}`);
         const posts = await postsResp.json();
         const postsContainer = document.getElementById('userPosts');
-        postsContainer.innerHTML = posts.map(p => renderPost(p)).join('');
+        postsContainer.innerHTML = posts.length ? posts.map(p => renderPost(p)).join('') : '<p>Нет постов</p>';
     } catch (e) {
         console.error(e);
-        document.getElementById('profileContent').innerHTML = '<div class="card"><h2>Ошибка загрузки</h2></div>';
     }
 }
 

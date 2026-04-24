@@ -1,4 +1,5 @@
 let currentUser = null;
+let currentPlayerId = null;
 const API_BASE = '';
 const COIN_ICON = '<img src="/static/coin.png" class="coin-icon-result" alt="">';
 
@@ -13,10 +14,13 @@ async function checkAuth() {
             const panel = document.getElementById('userPanel');
             panel.style.display = 'flex';
             panel.innerHTML = `
-                ${data.avatar ? `<img src="${data.avatar}" alt="">` : ''}
+                ${data.avatar ? `<img src="${data.avatar}" alt="" onerror="this.style.display='none'">` : ''}
                 <span id="userName">${data.display_name || data.username}</span>
                 <button onclick="logout()">Выйти</button>
             `;
+            if (data.player) {
+                currentPlayerId = data.player.player_id;
+            }
         } else {
             document.getElementById('loginBtn').style.display = 'block';
             document.getElementById('userPanel').style.display = 'none';
@@ -48,6 +52,7 @@ async function apiCall(method, url, body = null) {
 }
 
 function escapeHtml(text) {
+    if (!text) return '';
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
