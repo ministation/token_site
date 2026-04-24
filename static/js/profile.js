@@ -1,12 +1,17 @@
 async function loadMyProfile() {
     if (!currentPlayerId) {
-        alert('Привяжите Discord к игровому аккаунту');
+        console.log('currentPlayerId is empty, cannot load profile');
         return;
     }
     await loadProfile(currentPlayerId);
 }
 
 async function loadProfile(playerId) {
+    if (!playerId) {
+        document.getElementById('profileContent').innerHTML = '<div class="card"><h2>Профиль недоступен</h2></div>';
+        return;
+    }
+    
     try {
         const resp = await fetch(`/api/social/profile/${playerId}`);
         if (!resp.ok) {
@@ -26,18 +31,18 @@ async function loadProfile(playerId) {
                         <p style="color:#a080d0;">@${escapeHtml(p.discord_username || 'Не привязан')}</p>
                         <div class="profile-stats">
                             <div class="profile-stat">
-                                <div class="profile-stat-value">${p.followers_count||0}</div>
+                                <div class="profile-stat-value">${p.followers_count || 0}</div>
                                 <div class="profile-stat-label">Подписчиков</div>
                             </div>
                             <div class="profile-stat">
-                                <div class="profile-stat-value">${p.following_count||0}</div>
+                                <div class="profile-stat-value">${p.following_count || 0}</div>
                                 <div class="profile-stat-label">Подписок</div>
                             </div>
                         </div>
                         <div class="profile-actions">
                             ${!isOwn ? `
-                                <button class="follow-btn ${p.is_following?'unfollow':''}" onclick="toggleFollow('${p.player_id}')">
-                                    ${p.is_following?'Отписаться':'Подписаться'}
+                                <button class="follow-btn ${p.is_following ? 'unfollow' : ''}" onclick="toggleFollow('${p.player_id}')">
+                                    ${p.is_following ? 'Отписаться' : 'Подписаться'}
                                 </button>
                                 <button class="message-btn" onclick="openMessageModal('${p.player_id}', '${escapeHtml(p.game_nickname)}')">
                                     💬 Написать
