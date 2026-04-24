@@ -314,7 +314,7 @@ async def get_balance_by_player_id(player_uuid: str) -> int:
         return row[0] if row else 0
 
 async def get_playtime_stats():
-    """Статистика по общему времени игры (только Overall)."""
+    """Статистика по регулярным игрокам (Overall > 5 часов)."""
     pg = await get_pg_pool()
     async with pg.acquire() as conn:
         row = await conn.fetchrow("""
@@ -325,6 +325,7 @@ async def get_playtime_stats():
                 FROM play_time
                 WHERE tracker = 'Overall'
                 GROUP BY player_id
+                HAVING SUM(time_spent) > interval '5 hours'
             )
             SELECT 
                 COUNT(*) FILTER (WHERE total_time < interval '50 hours') as newbies,
@@ -334,8 +335,8 @@ async def get_playtime_stats():
             FROM player_totals
         """)
         return {
-            "newbies": row["newbies"],
-            "regulars": row["regulars"],
-            "veterans": row["veterans"],
-            "total": row["total"]
+            "newbies": row["newbies"] or 0,
+            "regulars": row["regulars"] or 0,
+            "veterans": row["veterans"] or 0,
+            "total": row["total"] or 0
         }
