@@ -16,7 +16,7 @@ async def profile_page(request: Request, player_id: str):
     template = env.get_template("profile.html")
     return HTMLResponse(template.render({"request": request, "profile": profile}))
 
-@router.get("/server-status")
+@router.get("/api/server-status")
 async def server_status():
     try:
         async with aiohttp.ClientSession() as session:
