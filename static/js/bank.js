@@ -1,6 +1,3 @@
-const SLOT_SYMBOLS = ['cherry', 'lemon', 'orange', 'grapes', 'diamond', 'seven'];
-let slotInterval = null;
-
 function setupAutocomplete() {
     const inputs = ['balanceNick', 'receiverNick'];
     let searchTimeout;
@@ -23,41 +20,29 @@ function setupAutocomplete() {
 async function loadMyBalance() {
     try {
         const res = await fetch('/api/balance');
-        if (!res.ok) throw new Error('Not authenticated');
+        if (!res.ok) return;
         const data = await res.json();
         const el = document.getElementById('myBalance');
         if (el) el.innerHTML = '<p>Баланс: <strong>' + data.balance + '</strong> ' + COIN_ICON + '</p>';
-    } catch (e) { console.log('Balance:', e.message); }
+    } catch (e) {}
 }
 
-async function checkBalance() {
-    const nick = document.getElementById('balanceNick').value;
-    const resultDiv = document.getElementById('balanceResult');
-    if (!nick) { resultDiv.innerHTML = '<p class="error">Введите ник</p>'; return; }
+async function loadMyDeposits() {
     try {
-        const res = await fetch('/api/balance/' + encodeURIComponent(nick));
-        if (!res.ok) throw new Error('Not found');
-        const data = await res.json();
-        resultDiv.innerHTML = '<p>' + data.nickname + ': <strong>' + data.balance + '</strong> ' + COIN_ICON + '</p>';
-    } catch (e) { resultDiv.innerHTML = '<p class="error">' + e.message + '</p>'; }
+        const res = await fetch('/api/deposits');
+        const deposits = await res.json();
+        const sel = document.getElementById('withdrawSelect');
+        if (sel) sel.innerHTML = deposits.map(d => '<option value="' + d.deposit_id + '">ID ' + d.deposit_id + ': ' + d.amount + ' → ' + d.total + '</option>').join('');
+    } catch (e) {}
 }
 
-async function transfer() {
-    const receiver = document.getElementById('receiverNick').value;
-    const amount = parseInt(document.getElementById('transferAmount').value);
-    const resultDiv = document.getElementById('transferResult');
-    if (!receiver || !amount) { resultDiv.innerHTML = '<p class="error">Заполните поля</p>'; return; }
+async function loadMyLoans() {
     try {
-        const res = await fetch('/api/transfer', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ receiver_nick: receiver, amount })
-        });
-        if (!res.ok) { const err = await res.json(); throw new Error(err.detail); }
-        const data = await res.json();
-        resultDiv.innerHTML = '<p class="success">✅ ' + data.amount + ' ' + COIN_ICON + ' игроку ' + data.receiver + '</p>';
-        loadMyBalance(); loadTop();
-    } catch (e) { resultDiv.innerHTML = '<p class="error">' + e.message + '</p>'; }
+        const res = await fetch('/api/loans');
+        const loans = await res.json();
+        const sel = document.getElementById('repaySelect');
+        if (sel) sel.innerHTML = loans.map(l => '<option value="' + l.loan_id + '">ID ' + l.loan_id + ': ' + l.remaining + '/' + l.total + '</option>').join('');
+    } catch (e) {}
 }
 
 async function loadTop() {
