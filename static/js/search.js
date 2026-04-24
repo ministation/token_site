@@ -9,66 +9,30 @@ async function searchSocial(query = '') {
             return;
         }
         
-        container.innerHTML = results.map(user => `
-            <div class="search-result-item">
-                <img src="${user.discord_avatar || '/static/default_avatar.png'}" 
-                     class="search-avatar" alt="" 
-                     onerror="this.src='/static/default_avatar.png'">
-                <div style="flex:1;">
-                    <div><strong>${user.game_nickname || 'Без имени'}</strong></div>
-                    <div style="font-size:0.8rem; color:#888;">@${user.discord_username || 'Не привязан'}</div>
-                    <div style="color:#fc0;">🪙 ${user.balance || 0} монет</div>
-                </div>
-                <button onclick="window.location.href='/profile/${user.player_id}'" class="follow-btn">👤 Профиль</button>
-            </div>
-        `).join('');
+        container.innerHTML = results.map(user => {
+            const nickname = user.game_nickname || user.nickname || 'Без имени';
+            const username = user.discord_username || 'Не привязан';
+            const avatar = user.discord_avatar || '/static/default_avatar.png';
+            const balance = user.balance || 0;
+            
+            return '<div class="search-result-item">' +
+                '<img src="' + avatar + '" class="search-avatar" onerror="this.src=\'/static/default_avatar.png\'">' +
+                '<div style="flex:1;">' +
+                '<div><strong>' + nickname + '</strong></div>' +
+                '<div style="font-size:0.8rem; color:#888;">@' + username + '</div>' +
+                '<div style="color:#fc0;">🪙 ' + balance + ' монет</div>' +
+                '</div>' +
+                '<button onclick="window.location.href=\'/profile/' + user.player_id + '\'" class="follow-btn">👤 Профиль</button>' +
+                '</div>';
+        }).join('');
     } catch (e) {
-        console.error(e);
+        console.error('Search error:', e);
         document.getElementById('searchResults').innerHTML = '<p style="color:#e08090;">Ошибка</p>';
     }
 }
 
 function performSocialSearch() {
-    const query = document.getElementById('socialSearchInput')?.value?.trim() || '';
-    searchSocial(query);
-}
-
-// При вводе текста — обычный поиск
-function performSocialSearch() {
-    const query = document.getElementById('socialSearchInput').value.trim();
-    searchSocial(query);
-}
-
-async function searchSocial(query = '') {
-    try {
-        // Если запрос пустой — показываем всех
-        const searchQuery = query || 'a';  // большинство ников содержит хотя бы одну букву
-        const results = await apiCall('GET', `/api/social/search?q=${encodeURIComponent(searchQuery)}&limit=50`);
-        const container = document.getElementById('searchResults');
-        if (!results.length) {
-            container.innerHTML = '<p>Никого не найдено</p>';
-            return;
-        }
-        container.innerHTML = results.map(user => `
-            <div class="search-result-item">
-                <img src="${user.discord_avatar || '/static/default_avatar.png'}" 
-                     class="search-avatar" alt="" 
-                     onerror="this.src='/static/default_avatar.png'">
-                <div style="flex:1;">
-                    <div><strong>${user.game_nickname || user.nickname || 'Без имени'}</strong></div>
-                    <div style="font-size:0.8rem; color:#888;">@${user.discord_username || 'Не привязан'}</div>
-                    ${user.balance !== undefined ? `<div style="color:#fc0;">🪙 ${user.balance} монет</div>` : ''}
-                </div>
-                <button onclick="window.location.href='/profile/${user.player_id}'" class="follow-btn">👤 Профиль</button>
-            </div>
-        `).join('');
-    } catch (e) {
-        console.error(e);
-        document.getElementById('searchResults').innerHTML = '<p style="color:#e08090;">Ошибка при поиске</p>';
-    }
-}
-
-function performSocialSearch() {
-    const query = document.getElementById('socialSearchInput').value.trim();
+    const input = document.getElementById('socialSearchInput');
+    const query = input ? input.value.trim() : '';
     searchSocial(query);
 }
