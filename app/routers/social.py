@@ -242,12 +242,12 @@ async def api_get_following(player_id: str, limit: int = 20):
 # ==================== ПОИСК ====================
 
 @router.get("/search")
-async def api_social_search(q: str, limit: int = 20):
-    if len(q) < 2:
-        return []
+async def api_social_search(q: str = "", limit: int = 50):
     try:
         from app.services.bank import search_all_players
-        players = await search_all_players(q, limit)
+        # Если запрос пустой — ищем всех (паттерн %%)
+        search_pattern = f"%{q}%" if q else "%%"
+        players = await search_all_players(search_pattern, limit)
         enriched = []
         for p in players:
             social = get_social_user_by_player_id(p["player_id"])
@@ -259,7 +259,6 @@ async def api_social_search(q: str, limit: int = 20):
                     "discord_username": social.get("discord_username"),
                     "discord_avatar": avatar_url(social.get("discord_avatar"), social.get("discord_id")),
                     "balance": p["balance"],
-                    "bio": social.get("bio", "")
                 })
             else:
                 enriched.append({
@@ -269,7 +268,6 @@ async def api_social_search(q: str, limit: int = 20):
                     "discord_username": None,
                     "discord_avatar": "/static/default_avatar.png",
                     "balance": p["balance"],
-                    "bio": ""
                 })
         return enriched
     except Exception as e:

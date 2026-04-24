@@ -286,18 +286,29 @@ def get_random_lottery_prize():
         return random.randint(11, 15)
     return random.randint(16, 25)
 
-async def search_all_players(query: str, limit: int = 20):
+async def search_all_players(query: str, limit: int = 50):
     pg = await get_pg_pool()
     async with pg.acquire() as conn:
-        rows = await conn.fetch("""
-            SELECT p.last_seen_user_name, p.player_id::text as user_uuid,
-                   COALESCE(pat.amount, 0) as balance
-            FROM player p
-            LEFT JOIN player_antag_token pat ON p.user_id = pat.player_id AND pat.token_id = 'balance'
-            WHERE LOWER(p.last_seen_user_name) LIKE LOWER($1)
-            ORDER BY balance DESC
-            LIMIT $2
-        """, f"%{query}%", limit)
+        if query == "%%":
+            # Все игроки
+            rows = await conn.fetch("""
+                SELECT p.last_seen_user_name, p.player_id, 
+                       COALESCE(pat.amount, 0) as balance
+                FROM player p
+                LEFT JOIN player_antag_token pat ON p.user_id = pat.player_id AND pat.token_id = 'balance'
+                ORDER BY balance DESC
+                LIMIT $1
+            """, limit)
+        else:
+            rows = await conn.fetch("""
+                SELECT p.last_seen_user_name, p.player_id, 
+                       COALESCE(pat.amount, 0) as balance
+                FROM player p
+                LEFT JOIN player_antag_token pat ON p.user_id = pat.player_id AND pat.token_id = 'balance'
+                WHERE LOWER(p.last_seen_user_name) LIKE LOWER($1)
+                ORDER BY balance DESC
+                LIMIT $2
+            """, query, limit)
         return [{"nickname": r["last_seen_user_name"],
-                 "player_id": r["user_uuid"],
+                 "player_id": str(r["player_id"]),
                  "balance": r["balance"]} for r in rows]

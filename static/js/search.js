@@ -1,16 +1,27 @@
 async function searchSocial(query = '') {
-    // Если запрос пустой — показываем всех игроков (минимум 1 символ для "всех")
-    const searchQuery = query || 'a';  // хитрость: ищем всех, у кого есть буква 'a' (почти все ники)
     try {
-        const results = await apiCall('GET', `/api/social/search?q=${encodeURIComponent(searchQuery)}&limit=50`);
+        let url;
+        if (query && query.length >= 1) {
+            url = `/api/social/search?q=${encodeURIComponent(query)}&limit=50`;
+        } else {
+            url = '/api/social/search?q=&limit=50';  // пустой запрос — все игроки
+        }
+        
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('Search failed');
+        const results = await res.json();
+        
         const container = document.getElementById('searchResults');
-        if (!results.length) {
-            container.innerHTML = '<p>Никого не найдено</p>';
+        if (!results || results.length === 0) {
+            container.innerHTML = '<p style="color:#888;">Никого не найдено</p>';
             return;
         }
+        
         container.innerHTML = results.map(user => `
             <div class="search-result-item">
-                <img src="${user.discord_avatar || '/static/default_avatar.png'}" class="search-avatar" alt="" onerror="this.src='/static/default_avatar.png'">
+                <img src="${user.discord_avatar || '/static/default_avatar.png'}" 
+                     class="search-avatar" alt="" 
+                     onerror="this.src='/static/default_avatar.png'">
                 <div style="flex:1;">
                     <div><strong>${user.game_nickname || user.nickname || 'Без имени'}</strong></div>
                     <div style="font-size:0.8rem; color:#888;">@${user.discord_username || 'Не привязан'}</div>
@@ -20,13 +31,12 @@ async function searchSocial(query = '') {
             </div>
         `).join('');
     } catch (e) {
-        console.error(e);
+        console.error('Search error:', e);
         document.getElementById('searchResults').innerHTML = '<p style="color:#e08090;">Ошибка при поиске</p>';
     }
 }
 
-// При вводе текста — обычный поиск
 function performSocialSearch() {
-    const query = document.getElementById('socialSearchInput').value.trim();
+    const query = document.getElementById('socialSearchInput')?.value?.trim() || '';
     searchSocial(query);
 }
