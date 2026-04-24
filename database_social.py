@@ -180,7 +180,8 @@ def update_social_user(player_id: str, bio: str = None, game_nickname: str = Non
 def search_social_users(query: str, limit: int = 50) -> List[Dict]:
     conn = get_db()
     cursor = conn.cursor()
-    if query and len(query) >= 2:
+    
+    if query and len(query.strip()) >= 1:
         cursor.execute("""
             SELECT player_id, game_nickname, discord_username, discord_avatar, discord_id, bio 
             FROM social_users 
@@ -195,6 +196,7 @@ def search_social_users(query: str, limit: int = 50) -> List[Dict]:
             ORDER BY game_nickname
             LIMIT ?
         """, (limit,))
+    
     rows = cursor.fetchall()
     conn.close()
     return [dict(row) for row in rows]

@@ -243,10 +243,9 @@ async def api_get_following(player_id: str, limit: int = 20):
 
 @router.get("/search")
 async def api_social_search(q: str = "", limit: int = 50):
-    """Поиск пользователей соцсети. Пустой запрос — все пользователи."""
     try:
-        # Используем search_social_users (только авторизованные)
-        results = search_social_users(q, limit)
+        # Если есть текст — фильтруем, если нет — все
+        results = search_social_users(q.strip(), limit)
         
         from app.services.bank import get_balance_by_player_id
         
