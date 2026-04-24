@@ -127,24 +127,41 @@ async function loadTop() { /* без изменений */ }
 async function loadStats() { /* без изменений */ }
 
 function showEconomyTab(tab) {
+    // Скрываем все вкладки экономики
     document.querySelectorAll('.economy-tab-content').forEach(t => t.style.display = 'none');
-    document.getElementById('economy' + tab.charAt(0).toUpperCase() + tab.slice(1)).style.display = 'block';
     
+    // Показываем нужную
+    const tabMap = {
+        'wallet': 'economyWallet',
+        'bank': 'economyBank',
+        'lottery': 'economyLottery'
+    };
+    const targetId = tabMap[tab];
+    if (targetId) {
+        document.getElementById(targetId).style.display = 'block';
+    }
+    
+    // Обновляем активный класс на кнопках
     document.querySelectorAll('.economy-tabs .tab').forEach(t => t.classList.remove('active'));
     event.target.classList.add('active');
     
+    // Загружаем данные для конкретной вкладки
     if (tab === 'wallet') {
-        loadMyBalance();
-        loadTop();
+        if (typeof loadMyBalance === 'function') loadMyBalance();
+        if (typeof loadTop === 'function') loadTop();
+        if (typeof loadStats === 'function') loadStats();
     } else if (tab === 'bank') {
-        loadMyDeposits();
-        loadMyLoans();
+        if (typeof loadMyDeposits === 'function') loadMyDeposits();
+        if (typeof loadMyLoans === 'function') loadMyLoans();
     }
 }
 
 function showBankSubTab(tab) {
     document.querySelectorAll('.bank-tab').forEach(t => t.style.display = 'none');
-    document.getElementById(tab + 'Tab').style.display = 'block';
+    const target = document.getElementById(tab + 'Tab');
+    if (target) target.style.display = 'block';
+    
     document.querySelectorAll('#economyBank .tab').forEach(t => t.classList.remove('active'));
     event.target.classList.add('active');
 }
+
