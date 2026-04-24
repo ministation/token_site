@@ -1,4 +1,3 @@
-cat > /home/ss14_user/token_site/static/js/bans.js << 'EOF'
 let bansOffset = 0;
 
 async function loadBans() {
@@ -55,4 +54,3 @@ async function loadMyBans() {
         c.innerHTML = '<h3>Ваши наказания:</h3>' + bans.map(b => renderBanCard(b)).join('');
     } catch (e) { document.getElementById('myBansContainer').innerHTML = '<p>Войдите, чтобы увидеть свои баны</p>'; }
 }
-EOF
