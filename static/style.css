@@ -479,6 +479,8 @@ button:hover { background: rgba(120, 80, 180, 0.8); }
     padding: 1.5rem;
     border-radius: 12px;
     margin-bottom: 1.5rem;
+}
+
 /* ---- Кнопки соцсетей ---- */
 .social-links {
     display: flex;
@@ -488,7 +490,7 @@ button:hover { background: rgba(120, 80, 180, 0.8); }
     margin-top: 1rem;
 }
 
-.link-btn {
+.social-links a {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -497,8 +499,8 @@ button:hover { background: rgba(120, 80, 180, 0.8); }
     text-decoration: none !important;
     font-weight: 600;
     font-size: 1rem;
-    color: #fff !important;          /* ← белый текст всегда */
-    background: #333;                /* fallback */
+    color: #fff !important;
+    background: #333;
     box-shadow: 0 4px 12px rgba(0,0,0,0.2);
     transition: transform 0.2s, box-shadow 0.2s;
     gap: 8px;
@@ -507,26 +509,24 @@ button:hover { background: rgba(120, 80, 180, 0.8); }
     cursor: pointer;
 }
 
-.link-btn i {
+.social-links a i {
     font-size: 1.1rem;
-    color: inherit;                 /* наследует белый цвет */
+    color: inherit;
 }
 
-.link-btn:hover {
+.social-links a:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 16px rgba(0,0,0,0.3);
     color: #fff !important;
-    text-decoration: none !important;
 }
 
 /* Цвета кнопок */
-.website  { background: #ff6b6b !important; }
-.discord  { background: #5865F2 !important; }
-.telegram { background: #27A7E7 !important; }
-.wiki     { background: #4CAF50 !important; }
-.boosty   { background: #F15A29 !important; }
-.github   { background: #24292e !important; }
-}
+.social-links a.website  { background: #ff6b6b !important; }
+.social-links a.discord  { background: #5865F2 !important; }
+.social-links a.telegram { background: #27A7E7 !important; }
+.social-links a.wiki     { background: #4CAF50 !important; }
+.social-links a.boosty   { background: #F15A29 !important; }
+.social-links a.github   { background: #24292e !important; }
 
 /* Статус сервера */
 .server-status-card {
