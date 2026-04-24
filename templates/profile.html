@@ -3,84 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Профиль - Мини-станция</title>
+    <title>Профиль — Мини-станция</title>
     <link rel="stylesheet" href="/static/style.css">
     <link rel="icon" type="image/png" href="/static/coin.png">
-    <style>
-        .message-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            background: #a080d0;
-            color: white;
-            border: none;
-            padding: 10px 24px;
-            border-radius: 30px;
-            font-weight: 600;
-            cursor: pointer;
-            font-size: 1rem;
-            transition: background 0.2s;
-        }
-        .message-btn:hover {
-            background: #b090e0;
-        }
-        .profile-actions {
-            display: flex;
-            gap: 12px;
-            margin-top: 20px;
-            flex-wrap: wrap;
-        }
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.7);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-        }
-        .modal.active {
-            display: flex;
-        }
-        .modal-content {
-            background: #1a1030;
-            padding: 24px;
-            border-radius: 12px;
-            max-width: 500px;
-            width: 90%;
-            max-height: 80vh;
-            overflow-y: auto;
-        }
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 16px;
-        }
-        .modal-close {
-            background: none;
-            border: none;
-            color: #e0dde8;
-            font-size: 1.5rem;
-            cursor: pointer;
-        }
-        .quick-messages {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            margin-bottom: 16px;
-        }
-        .quick-message {
-            background: rgba(100,70,150,0.2);
-            padding: 8px 16px;
-            border-radius: 8px;
-            color: #e0dde8;
-            cursor: pointer;
-        }
-        .quick-message:hover {
-            background: rgba(100,70,150,0.4);
-        }
-    </style>
 </head>
 <body>
     <div class="container">
@@ -100,92 +25,18 @@
         <div id="profileContent"></div>
     </div>
 
-    <!-- Модальное окно для сообщений -->
-    <div class="modal" id="messageModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>💬 Сообщение для <span id="modalNickname"></span></h3>
-                <button class="modal-close" onclick="closeMessageModal()">✖</button>
-            </div>
-            <div class="quick-messages" id="quickMessages">
-                <div class="quick-message" onclick="sendQuickMessage('Привет! Давай играть вместе')">👋 Привет! Давай играть вместе</div>
-                <div class="quick-message" onclick="sendQuickMessage('Крутой профиль!')">👍 Крутой профиль!</div>
-                <div class="quick-message" onclick="sendQuickMessage('Как заработать столько монет?')">🪙 Как заработать столько монет?</div>
-            </div>
-            <textarea id="customMessage" placeholder="Или напиши своё сообщение..." style="width:100%;height:80px;margin-bottom:10px;"></textarea>
-            <button onclick="sendCustomMessage()" class="message-btn">Отправить</button>
-            <div id="messageResult" style="margin-top:10px;"></div>
-        </div>
-    </div>
-
-    <script src="/static/script.js"></script>
+    <script src="/static/js/auth.js"></script>
+    <script src="/static/js/social.js"></script>
+    <script src="/static/js/profile.js"></script>
     <script>
         let currentPlayerId = null;
-        let targetPlayerId = null;
 
-        // Загрузка профиля
         document.addEventListener('DOMContentLoaded', async () => {
             await checkAuth();
             const path = window.location.pathname;
-            targetPlayerId = path.split('/').pop();
-            await loadProfile(targetPlayerId);
+            const playerId = path.split('/').pop();
+            await loadProfile(playerId);
         });
-
-        // Открыть модальное окно сообщений
-        function openMessageModal(playerId, nickname) {
-            // Проверяем авторизацию
-            fetch('/api/me')
-                .then(r => r.json())
-                .then(data => {
-                    if (!data.authenticated) {
-                        alert('Нужно войти через Discord!');
-                        window.location.href = '/login';
-                        return;
-                    }
-                    currentPlayerId = data.player?.player_id;
-                    if (!currentPlayerId) {
-                        alert('Ваш Discord не привязан к игровому аккаунту!');
-                        return;
-                    }
-                    targetPlayerId = playerId;
-                    document.getElementById('modalNickname').textContent = nickname;
-                    document.getElementById('messageModal').classList.add('active');
-                });
-        }
-
-        function closeMessageModal() {
-            document.getElementById('messageModal').classList.remove('active');
-            document.getElementById('messageResult').textContent = '';
-            document.getElementById('customMessage').value = '';
-        }
-
-        function sendQuickMessage(text) {
-            document.getElementById('customMessage').value = text;
-            sendCustomMessage();
-        }
-
-        async function sendCustomMessage() {
-            const content = document.getElementById('customMessage').value.trim();
-            if (!content) return alert('Введи сообщение');
-            if (!targetPlayerId || !currentPlayerId) return alert('Ошибка данных');
-
-            try {
-                const resp = await fetch('/api/messages/send', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ receiver_id: targetPlayerId, content })
-                });
-                if (resp.ok) {
-                    document.getElementById('messageResult').textContent = '✅ Сообщение отправлено!';
-                    document.getElementById('customMessage').value = '';
-                } else {
-                    const err = await resp.json();
-                    document.getElementById('messageResult').textContent = '❌ Ошибка: ' + err.detail;
-                }
-            } catch(e) {
-                document.getElementById('messageResult').textContent = '❌ Ошибка сети';
-            }
-        }
     </script>
 </body>
 </html>
