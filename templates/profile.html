@@ -15,7 +15,7 @@
                 <h1>Мини-станция</h1>
             </div>
             <div id="userInfo">
-                <button id="loginBtn" onclick="login()">Войти через Discord</button>
+                <button id="loginBtn" onclick="window.location.href='/login'">Войти через Discord</button>
                 <div id="userPanel" style="display:none;"></div>
             </div>
         </div>
@@ -25,11 +25,88 @@
         <div id="profileContent"></div>
     </div>
 
-    <script src="/static/js/auth.js"></script>
-    <script src="/static/js/social.js"></script>
-    <script src="/static/js/profile.js"></script>
     <script>
-        let currentPlayerId = null;
+        const API_BASE = '';
+        let currentUser = null;
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        async function checkAuth() {
+            try {
+                const res = await fetch('/api/me');
+                const data = await res.json();
+                currentUser = data;
+                if (data.authenticated) {
+                    document.getElementById('loginBtn').style.display = 'none';
+                    const panel = document.getElementById('userPanel');
+                    panel.style.display = 'flex';
+                    panel.innerHTML = `
+                        ${data.avatar ? `<img src="${data.avatar}" style="width:28px;height:28px;border-radius:50%;">` : ''}
+                        <span>${data.display_name || data.username}</span>
+                        <button onclick="window.location.href='/logout'">Выйти</button>
+                    `;
+                }
+            } catch(e) {}
+        }
+
+        async function loadProfile(playerId) {
+            try {
+                const resp = await fetch(`/api/social/profile/${playerId}`);
+                if (!resp.ok) {
+                    document.getElementById('profileContent').innerHTML = '<div class="card"><h2>Профиль не найден</h2></div>';
+                    return;
+                }
+                const p = await resp.json();
+                const avatarUrl = p.discord_avatar || '/static/default_avatar.png';
+                const isOwn = currentUser?.player?.player_id === p.player_id;
+
+                document.getElementById('profileContent').innerHTML = `
+                    <div class="card">
+                        <div class="profile-header">
+                            <img src="${avatarUrl}" class="profile-avatar" onerror="this.src='/static/default_avatar.png'">
+                            <div class="profile-info">
+                                <h2>${escapeHtml(p.game_nickname || 'Игрок')}</h2>
+                                <p style="color:#a080d0;">@${escapeHtml(p.discord_username || 'Не привязан')}</p>
+                                <div class="profile-stats">
+                                    <div class="profile-stat">
+                                        <div class="profile-stat-value">${p.followers_count||0}</div>
+                                        <div class="profile-stat-label">Подписчиков</div>
+                                    </div>
+                                    <div class="profile-stat">
+                                        <div class="profile-stat-value">${p.following_count||0}</div>
+                                        <div class="profile-stat-label">Подписок</div>
+                                    </div>
+                                </div>
+                                ${!isOwn ? `
+                                    <button class="follow-btn ${p.is_following?'unfollow':''}" onclick="toggleFollow('${p.player_id}', this)">
+                                        ${p.is_following?'Отписаться':'Подписаться'}
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </div>
+                        ${p.bio ? `<div class="profile-bio">${escapeHtml(p.bio)}</div>` : ''}
+                    </div>
+                `;
+            } catch(e) {
+                document.getElementById('profileContent').innerHTML = '<div class="card"><h2>Ошибка загрузки</h2></div>';
+            }
+        }
+
+        async function toggleFollow(targetId, btn) {
+            const isFollowing = btn.textContent.includes('Отписаться');
+            const method = isFollowing ? 'DELETE' : 'POST';
+            try {
+                await fetch(`/api/social/follow/${targetId}`, { method });
+                const path = window.location.pathname;
+                const playerId = path.split('/').pop();
+                loadProfile(playerId);
+            } catch(e) { alert('Ошибка'); }
+        }
 
         document.addEventListener('DOMContentLoaded', async () => {
             await checkAuth();
