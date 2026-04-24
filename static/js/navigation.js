@@ -16,9 +16,14 @@ function setupNavigation() {
                 loadFeed();
             } else if (section === 'search') {
                 document.getElementById('socialSearchInput').value = '';
-                document.getElementById('searchResults').innerHTML = '';
+                // Сразу показываем всех игроков
+                if (typeof searchSocial === 'function') {
+                    searchSocial('');
+                }
             } else if (section === 'messages') {
-                loadDialogs();
+                if (typeof loadDialogs === 'function') {
+                    loadDialogs();
+                }
             }
         });
     });
