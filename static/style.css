@@ -581,3 +581,14 @@ button:hover { background: rgba(120, 80, 180, 0.8); }
     font-size: 0.8rem;
     color: #aaa;
 }
+.ban-card {
+    transition: background 0.2s;
+}
+.ban-card:hover {
+    background: rgba(35, 25, 55, 0.8) !important;
+}
+.playtime-chart {
+    max-width: 300px;
+    margin: 20px auto;
+    text-align: center;
+}

@@ -8,6 +8,27 @@
     <link rel="stylesheet" href="/static/style.css">
     <link rel="icon" type="image/png" href="/static/coin.png">
 </head>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script>
+async function loadPlaytimeChart() {
+    try {
+        const res = await fetch('/api/bans/stats');
+        const data = await res.json();
+        
+        new Chart(document.getElementById('playtimeCanvas'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Новички (<50ч)', 'Обычные (50-400ч)', 'Ветераны (400+ч)'],
+                datasets: [{
+                    data: [data.newbies, data.regulars, data.veterans],
+                    backgroundColor: ['#4CAF50', '#FFC107', '#F44336']
+                }]
+            }
+        });
+    } catch(e) {}
+}
+loadPlaytimeChart();
+</script>
 <body>
     <div class="container">
         <!-- Шапка -->

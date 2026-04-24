@@ -3,6 +3,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader
 
+from app.routers import auth, bank, social, chat, pages, messages, bans
 from app.routers import auth, bank, social, chat, pages
 from app.db.database import get_pg_pool, close_pg_pool
 from app.core.sessions import load_sessions
@@ -44,3 +45,4 @@ app.include_router(social.router)
 app.include_router(chat.router)
 app.include_router(pages.router)
 app.include_router(messages.router)
+app.include_router(bans.router)
