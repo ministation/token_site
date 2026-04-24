@@ -25,21 +25,31 @@ async function loadServerStatus() {
         const data = await res.json();
         
         const dot = document.getElementById('statusDot');
-        dot.className = 'status-dot' + (data.online ? ' online' : '');
+        if (dot) {
+            dot.className = 'status-dot' + (data.online ? ' online' : '');
+        }
         
-        document.getElementById('statusName').textContent = data.name;
-        document.getElementById('statusPlayers').textContent = data.players;
-        document.getElementById('statusMax').textContent = data.max_players;
-        document.getElementById('statusMap').textContent = data.map;
-        document.getElementById('statusPreset').textContent = data.preset || '-';
+        const nameEl = document.getElementById('statusName');
+        if (nameEl) nameEl.textContent = data.name || 'Мини-станция';
         
-        const percent = Math.min(100, (data.players / data.max_players) * 100);
-        document.getElementById('progressFill').style.width = percent + '%';
+        const playersEl = document.getElementById('statusPlayers');
+        if (playersEl) playersEl.textContent = data.players || 0;
+        
+        const maxEl = document.getElementById('statusMax');
+        if (maxEl) maxEl.textContent = data.max_players || 100;
+        
+        const mapEl = document.getElementById('statusMap');
+        if (mapEl) mapEl.textContent = data.map || '-';
+        
+        const presetEl = document.getElementById('statusPreset');
+        if (presetEl) presetEl.textContent = data.preset || '-';
+        
+        const fill = document.getElementById('progressFill');
+        if (fill) {
+            const percent = Math.min(100, ((data.players || 0) / (data.max_players || 100)) * 100);
+            fill.style.width = percent + '%';
+        }
     } catch (e) {
         console.error('Status error:', e);
     }
 }
-
-// В DOMContentLoaded добавь:
-loadServerStatus();
-setInterval(loadServerStatus, 30000); // обновление каждые 30 сек
