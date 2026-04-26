@@ -20,7 +20,7 @@ async def profile_page(request: Request, player_id: str):
 async def server_status():
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.get("http://94.26.176.112:1214/status", timeout=aiohttp.ClientTimeout(total=5)) as resp:
+            async with session.get("http://85.198.118.85:1214/status", timeout=aiohttp.ClientTimeout(total=5)) as resp:
                 if resp.status == 200:
                     data = await resp.json()
                     return {
