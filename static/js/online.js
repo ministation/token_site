@@ -1,5 +1,6 @@
 let onlineChart = null;
 let currentOnlineMode = 'day';
+let isInitialized = false;
 
 function switchOnlineMode(mode) {
     currentOnlineMode = mode;
@@ -16,8 +17,22 @@ function switchOnlineMode(mode) {
         const date = dayPicker ? dayPicker.value : new Date().toISOString().slice(0, 10);
         loadDailyOnline(date);
     } else {
-        loadOnlineChart('/api/online/' + mode, 'Дата');
+        loadOnlineChart('/api/online/' + mode);
     }
+}
+
+function initOnlineChart() {
+    if (isInitialized) return;
+    isInitialized = true;
+    
+    const dayPicker = document.getElementById('dayPicker');
+    if (dayPicker) {
+        dayPicker.valueAsDate = new Date();
+    }
+    
+    setTimeout(() => {
+        switchOnlineMode('day');
+    }, 200);
 }
 
 async function loadDailyOnline(date) {
@@ -26,7 +41,6 @@ async function loadDailyOnline(date) {
         const data = await resp.json();
         
         if (!data || data.length === 0) {
-            showEmptyChart('Нет данных за этот день');
             return;
         }
         
@@ -34,42 +48,18 @@ async function loadDailyOnline(date) {
         const avgValues = data.map(d => d.avg);
         const maxValues = data.map(d => d.max);
         
-        renderOnlineChart(labels, [
-            { 
-                label: 'Средний онлайн', 
-                data: avgValues, 
-                borderColor: '#00ff88', 
-                backgroundColor: 'rgba(0,255,136,0.1)',
-                tension: 0.2,
-                fill: true,
-                pointRadius: 3,
-                pointBackgroundColor: '#00ff88',
-                borderWidth: 2
-            },
-            { 
-                label: 'Максимальный онлайн', 
-                data: maxValues, 
-                borderColor: '#ff6b6b', 
-                backgroundColor: 'rgba(255,107,107,0.1)',
-                tension: 0.2,
-                fill: false,
-                pointRadius: 3,
-                pointBackgroundColor: '#ff6b6b',
-                borderWidth: 2
-            }
-        ], 'Час');
+        renderChart(labels, avgValues, maxValues, 'Час');
     } catch (e) {
-        console.error('Online day error:', e);
+        console.error('Error:', e);
     }
 }
 
-async function loadOnlineChart(url, xLabel) {
+async function loadOnlineChart(url) {
     try {
         const resp = await fetch(url);
         const data = await resp.json();
         
         if (!data || data.length === 0) {
-            showEmptyChart('Нет данных для отображения');
             return;
         }
         
@@ -77,65 +67,69 @@ async function loadOnlineChart(url, xLabel) {
         const avgValues = data.map(d => d.avg);
         const maxValues = data.map(d => d.max);
         
-        renderOnlineChart(labels, [
-            { 
-                label: 'Средний онлайн', 
-                data: avgValues, 
-                borderColor: '#00ff88', 
-                backgroundColor: 'rgba(0,255,136,0.1)',
-                tension: 0.2,
-                fill: true,
-                pointRadius: 3,
-                pointBackgroundColor: '#00ff88',
-                borderWidth: 2
-            },
-            { 
-                label: 'Максимальный онлайн', 
-                data: maxValues, 
-                borderColor: '#ff6b6b', 
-                backgroundColor: 'rgba(255,107,107,0.1)',
-                tension: 0.2,
-                fill: false,
-                pointRadius: 3,
-                pointBackgroundColor: '#ff6b6b',
-                borderWidth: 2
-            }
-        ], xLabel);
+        renderChart(labels, avgValues, maxValues, 'Дата');
     } catch (e) {
-        console.error('Online chart error:', e);
+        console.error('Error:', e);
     }
 }
 
-function renderOnlineChart(labels, datasets, xLabel) {
+function renderChart(labels, avgValues, maxValues, xLabel) {
     const canvas = document.getElementById('onlineChart');
     if (!canvas) return;
+    
+    const container = canvas.parentElement;
+    if (container) {
+        canvas.width = container.clientWidth - 40;
+        canvas.height = 300;
+    }
     
     const ctx = canvas.getContext('2d');
     
     if (onlineChart) {
         onlineChart.destroy();
+        onlineChart = null;
     }
     
     onlineChart = new Chart(ctx, {
         type: 'line',
-        data: { labels, datasets },
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Средний',
+                    data: avgValues,
+                    borderColor: '#00ff88',
+                    backgroundColor: 'rgba(0,255,136,0.1)',
+                    tension: 0.2,
+                    fill: false,
+                    pointRadius: 2,
+                    borderWidth: 2
+                },
+                {
+                    label: 'Максимум',
+                    data: maxValues,
+                    borderColor: '#ff6b6b',
+                    backgroundColor: 'rgba(255,107,107,0.1)',
+                    tension: 0.2,
+                    fill: false,
+                    pointRadius: 2,
+                    borderWidth: 2
+                }
+            ]
+        },
         options: {
-            responsive: true,
+            responsive: false,
             maintainAspectRatio: false,
-            animation: {
-                duration: 300
-            },
+            animation: false,
             plugins: {
                 legend: {
                     position: 'top',
                     labels: {
                         color: '#cccccc',
-                        padding: 20,
+                        padding: 15,
                         usePointStyle: true,
-                        pointStyleWidth: 10,
-                        font: {
-                            size: 12
-                        }
+                        pointStyleWidth: 8,
+                        font: { size: 11 }
                     }
                 }
             },
@@ -145,15 +139,14 @@ function renderOnlineChart(labels, datasets, xLabel) {
                         display: true, 
                         text: xLabel, 
                         color: '#aaaaaa',
-                        font: { size: 12 }
+                        font: { size: 11 }
                     },
                     ticks: { 
                         color: '#aaaaaa',
-                        maxRotation: 45
+                        maxRotation: 45,
+                        font: { size: 10 }
                     },
-                    grid: { 
-                        color: 'rgba(255,255,255,0.08)' 
-                    }
+                    grid: { color: 'rgba(255,255,255,0.05)' }
                 },
                 y: {
                     beginAtZero: true,
@@ -161,55 +154,25 @@ function renderOnlineChart(labels, datasets, xLabel) {
                         display: true, 
                         text: 'Игроки', 
                         color: '#aaaaaa',
-                        font: { size: 12 }
+                        font: { size: 11 }
                     },
                     ticks: { 
                         color: '#aaaaaa',
                         stepSize: 1,
-                        precision: 0
+                        precision: 0,
+                        font: { size: 10 }
                     },
-                    grid: { 
-                        color: 'rgba(255,255,255,0.08)' 
-                    }
+                    grid: { color: 'rgba(255,255,255,0.05)' }
                 }
             }
         }
     });
 }
 
-function showEmptyChart(message) {
-    const canvas = document.getElementById('onlineChart');
-    if (!canvas) return;
-    
-    const ctx = canvas.getContext('2d');
-    
+function destroyOnlineChart() {
     if (onlineChart) {
         onlineChart.destroy();
+        onlineChart = null;
+        isInitialized = false;
     }
-    
-    onlineChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: ['Нет данных'],
-            datasets: [{ data: [0], backgroundColor: 'rgba(255,255,255,0.1)' }]
-        },
-        options: {
-            plugins: {
-                legend: { display: false },
-                title: { 
-                    display: true, 
-                    text: message, 
-                    color: '#aaaaaa',
-                    font: { size: 14 }
-                }
-            }
-        }
-    });
 }
-
-document.addEventListener('DOMContentLoaded', () => {
-    const dayPicker = document.getElementById('dayPicker');
-    if (dayPicker) {
-        dayPicker.valueAsDate = new Date();
-    }
-});

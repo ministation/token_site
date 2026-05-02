@@ -36,12 +36,15 @@ function setupNavigation() {
                     loadBans();
                 }
             } else if (section === 'online') {
-                // Загружаем график онлайна
                 setTimeout(() => {
-                    if (typeof switchOnlineMode === 'function') {
-                        switchOnlineMode('day');
+                    if (typeof initOnlineChart === 'function') {
+                        initOnlineChart();
                     }
-                }, 100);
+                }, 300);
+            } else {
+                if (typeof destroyOnlineChart === 'function') {
+                    destroyOnlineChart();
+                }
             }
         });
     });
