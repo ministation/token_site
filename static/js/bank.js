@@ -165,3 +165,185 @@ function showBankSubTab(tab) {
     event.target.classList.add('active');
 }
 
+// Загружаем условия вкладов и список активных вкладов при открытии
+document.addEventListener('DOMContentLoaded', () => {
+  loadDepositTiers();
+  loadActiveDeposits(); // для заполнения выпадающего списка
+  loadActiveLoans();    // для заполнения выпадающего списка займов
+});
+
+// Переключение вкладок
+function showBankTab(tabName) {
+  document.querySelectorAll('.bank-tab').forEach(tab => tab.style.display = 'none');
+  document.querySelectorAll('.tab').forEach(btn => btn.classList.remove('active'));
+  document.getElementById(tabName + 'Tab').style.display = 'block';
+  event.target.classList.add('active');
+  if (tabName === 'withdraw') loadActiveDeposits();
+  if (tabName === 'repay') loadActiveLoans();
+}
+
+// Загрузка таблицы условий вкладов
+async function loadDepositTiers() {
+  try {
+    const resp = await fetch('/api/deposits');
+    const data = await resp.json();
+    const tiers = data.limits.tiers;
+    let html = '';
+    tiers.forEach(tier => {
+      const min = tier.min;
+      const max = tier.max;
+      const days = tier.days;
+      const payoutMin = Math.floor(min * 1.2);  // +20%
+      const payoutMax = Math.floor(max * 1.2);
+      html += `<tr>
+        <td>${min}–${max}</td>
+        <td>${days} дн.</td>
+        <td>+20%</td>
+        <td>${payoutMin}–${payoutMax}</td>
+      </tr>`;
+    });
+    document.getElementById('depositTiersBody').innerHTML = html;
+  } catch (e) {
+    console.error('Ошибка загрузки условий вкладов:', e);
+  }
+}
+
+// Создание вклада
+async function createDeposit() {
+  const amount = parseInt(document.getElementById('depositAmount').value);
+  if (isNaN(amount)) return alert('Введите сумму');
+  try {
+    const resp = await fetch('/api/deposit', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ amount })
+    });
+    const data = await resp.json();
+    if (data.success) {
+      document.getElementById('depositResult').innerHTML =
+        `<p>Вклад создан. ID: ${data.deposit_id}, срок: ${data.duration_days} дн., к получению: ${data.total} монет.</p>`;
+      loadActiveDeposits();
+      refreshBalance(); // если есть функция обновления баланса
+    } else {
+      document.getElementById('depositResult').innerHTML = `<p class="error">${data.detail || 'Ошибка'}</p>`;
+    }
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+// Загрузка активных вкладов в выпадающий список
+async function loadActiveDeposits() {
+  const select = document.getElementById('withdrawSelect');
+  select.innerHTML = '<option value="">— выберите вклад —</option>';
+  try {
+    const resp = await fetch('/api/deposits');
+    const data = await resp.json();
+    data.deposits.forEach(d => {
+      const option = document.createElement('option');
+      option.value = d.deposit_id;
+      option.textContent = `ID ${d.deposit_id}: ${d.amount} монет → ${d.total} (выплата ${d.mature_date})`;
+      select.appendChild(option);
+    });
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+// Снятие вклада
+async function withdrawDeposit() {
+  const id = document.getElementById('withdrawSelect').value;
+  if (!id) return alert('Выберите вклад');
+  try {
+    const resp = await fetch('/api/withdraw', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ deposit_id: parseInt(id) })
+    });
+    const data = await resp.json();
+    if (data.success) {
+      document.getElementById('withdrawResult').innerHTML =
+        `<p>Снято ${data.amount} монет.</p>`;
+      loadActiveDeposits();
+      refreshBalance();
+    } else {
+      document.getElementById('withdrawResult').innerHTML = `<p class="error">${data.detail || 'Ошибка'}</p>`;
+    }
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+// Займы – создание
+async function createLoan() {
+  const amount = parseInt(document.getElementById('loanAmount').value);
+  if (isNaN(amount)) return alert('Введите сумму');
+  try {
+    const resp = await fetch('/api/loan', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ amount })
+    });
+    const data = await resp.json();
+    if (data.success) {
+      document.getElementById('loanResult').innerHTML =
+        `<p>Заём получен. ID: ${data.loan_id}, вернуть: ${data.total} монет до ${new Date(data.due_at).toLocaleDateString()}</p>`;
+      loadActiveLoans();
+      refreshBalance();
+    } else {
+      document.getElementById('loanResult').innerHTML = `<p class="error">${data.detail || 'Ошибка'}</p>`;
+    }
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+// Загрузка активных займов в выпадающий список
+async function loadActiveLoans() {
+  const select = document.getElementById('repaySelect');
+  select.innerHTML = '<option value="">— выберите заём —</option>';
+  try {
+    const resp = await fetch('/api/loans');
+    const loans = await resp.json();
+    loans.forEach(l => {
+      const option = document.createElement('option');
+      option.value = l.loan_id;
+      option.textContent = `ID ${l.loan_id}: осталось ${l.remaining} из ${l.total} (срок ${l.due_at})`;
+      select.appendChild(option);
+    });
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+// Погашение займа
+async function repayLoan() {
+  const id = document.getElementById('repaySelect').value;
+  if (!id) return alert('Выберите заём');
+  const amountStr = document.getElementById('repayAmount').value;
+  const body = { loan_id: parseInt(id) };
+  if (amountStr) body.amount = parseInt(amountStr);
+  try {
+    const resp = await fetch('/api/repay', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body)
+    });
+    const data = await resp.json();
+    if (data.success) {
+      document.getElementById('repayResult').innerHTML =
+        `<p>${data.message}</p>`;
+      loadActiveLoans();
+      refreshBalance();
+    } else {
+      document.getElementById('repayResult').innerHTML = `<p class="error">${data.detail || 'Ошибка'}</p>`;
+    }
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+// Заглушка обновления баланса (замените на вашу реальную функцию)
+function refreshBalance() {
+  if (typeof loadBalance === 'function') loadBalance();
+}

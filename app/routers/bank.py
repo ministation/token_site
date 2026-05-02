@@ -90,17 +90,32 @@ async def api_lottery(request: Request):
 async def api_my_deposits(request: Request):
     player = await get_current_player(request)
     deposits = await get_active_deposits(player['user_uuid'])
-    return [
-        {
+    from app.services.bank import get_deposit_duration
+    from app.config import BANK_DEPOSIT_MAX, BANK_DEPOSIT_TIERS
+
+    result = []
+    for d in deposits:
+        total = d['amount'] + d['bonus']
+        mature_ts = int(d['mature_at'].timestamp())
+        result.append({
             'deposit_id': d['deposit_id'],
             'amount': d['amount'],
             'bonus': d['bonus'],
-            'total': d['amount'] + d['bonus'],
+            'total': total,
             'mature_at': d['mature_at'].isoformat(),
-            'mature_ts': int(d['mature_at'].timestamp())
+            'mature_ts': mature_ts,
+            'mature_date': d['mature_at'].strftime('%d.%m.%Y'),
+            'days_left': max(0, (d['mature_at'] - datetime.datetime.now()).days)
+        })
+
+    return {
+        "deposits": result,
+        "limits": {
+            "min": BANK_DEPOSIT_MIN,
+            "max": BANK_DEPOSIT_MAX,
+            "tiers": [{"min": t[0], "max": t[1], "days": t[2]} for t in BANK_DEPOSIT_TIERS]
         }
-        for d in deposits
-    ]
+    }
 
 
 @router.post("/deposit")

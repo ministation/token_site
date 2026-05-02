@@ -20,8 +20,18 @@ ADMIN_ROLE_IDS = [int(x.strip()) for x in os.getenv("ADMIN_ROLE_IDS", "").split(
 
 # Банк
 BANK_DEPOSIT_MIN = int(os.getenv("BANK_DEPOSIT_MIN", "10"))
+BANK_DEPOSIT_MAX = int(os.getenv("BANK_DEPOSIT_MAX", "30"))
 BANK_DEPOSIT_RATE = int(os.getenv("BANK_DEPOSIT_RATE", "20"))
 BANK_DEPOSIT_DAYS = int(os.getenv("BANK_DEPOSIT_DAYS", "7"))
+
+# Прогрессивные сроки вкладов: (мин_сумма, макс_сумма, дней)
+BANK_DEPOSIT_TIERS = [
+    (10, 15, 3),
+    (16, 20, 5),
+    (21, 25, 7),
+    (26, 30, 10),
+]
+
 BANK_LOAN_MAX = int(os.getenv("BANK_LOAN_MAX", "50"))
 BANK_LOAN_RATE = int(os.getenv("BANK_LOAN_RATE", "30"))
 BANK_LOAN_DAYS = int(os.getenv("BANK_LOAN_DAYS", "7"))

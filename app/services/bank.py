@@ -176,26 +176,52 @@ async def get_active_loans(user_uuid: str):
 
 
 async def create_deposit(user_uuid: str, amount: int):
-    mature_at = datetime.datetime.now() + datetime.timedelta(days=BANK_DEPOSIT_DAYS)
+    from app.config import BANK_DEPOSIT_MAX, BANK_DEPOSIT_TIERS, BANK_DEPOSIT_DAYS
+
+    if amount > BANK_DEPOSIT_MAX:
+        return None, f"Максимальная сумма вклада: {BANK_DEPOSIT_MAX} монет!"
+
+    # Определяем срок вклада по сумме
+    deposit_days = BANK_DEPOSIT_DAYS
+    for min_amt, max_amt, days in BANK_DEPOSIT_TIERS:
+        if min_amt <= amount <= max_amt:
+            deposit_days = days
+            break
+
+    mature_at = datetime.datetime.now() + datetime.timedelta(days=deposit_days)
     bonus = amount * BANK_DEPOSIT_RATE // 100
+
     pg = await get_pg_pool()
     async with pg.acquire() as conn:
         async with conn.transaction():
             existing = await conn.fetchrow(
-                "SELECT deposit_id FROM deposits WHERE user_uuid = $1 AND status = 'active'", user_uuid
+                "SELECT deposit_id FROM deposits WHERE user_uuid = $1 AND status = 'active'",
+                user_uuid
             )
             if existing:
-                return None, f"Уже есть активный депозит (ID: {existing['deposit_id']})"
-            new_balance, err = await remove_tokens(user_uuid, amount)
-            if err:
-                return None, err
+                return None, f"У вас уже есть активный вклад (ID: {existing['deposit_id']})"
+
+            balance = await get_balance(user_uuid)
+            if balance < amount:
+                return None, f"Недостаточно монет. У вас {balance}"
+
+            await remove_tokens(user_uuid, amount)
+
             await conn.execute(
                 "INSERT INTO deposits (user_uuid, amount, bonus, mature_at, status) VALUES ($1, $2, $3, $4, 'active')",
                 user_uuid, amount, bonus, mature_at
             )
             deposit_id = await conn.fetchval("SELECT currval(pg_get_serial_sequence('deposits','deposit_id'))")
-            return deposit_id, None
 
+    return deposit_id, None
+
+def get_deposit_duration(amount: int) -> int:
+    """Возвращает срок вклада в днях в зависимости от суммы."""
+    from app.config import BANK_DEPOSIT_TIERS, BANK_DEPOSIT_DAYS
+    for min_amt, max_amt, days in BANK_DEPOSIT_TIERS:
+        if min_amt <= amount <= max_amt:
+            return days
+    return BANK_DEPOSIT_DAYS
 
 async def create_loan(user_uuid: str, amount: int):
     balance = await get_balance(user_uuid)
