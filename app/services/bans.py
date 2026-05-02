@@ -103,7 +103,7 @@ async def get_player_bans(player_uuid: str, limit: int = 50):
             WHERE bp.user_id::text = $1
             ORDER BY b.ban_time DESC
             LIMIT $2
-        """, player_uuid, limit)
+        """, str(player_uuid), int(limit))
         
         return [{
             "ban_id": row["ban_id"],

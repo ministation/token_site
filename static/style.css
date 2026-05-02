@@ -458,3 +458,41 @@ button.follow-btn:hover {
     outline: none;
     border-color: #3498db;
 }
+
+.chart-tab {
+    padding: 8px 16px;
+    border: 1px solid #555;
+    background: #2a2a3e;
+    color: #aaa;
+    cursor: pointer;
+    border-radius: 4px;
+    font-size: 0.9em;
+    transition: all 0.2s;
+}
+
+.chart-tab:hover {
+    background: #3a3a5e;
+    color: #fff;
+}
+
+.chart-tab.active {
+    background: #3498db;
+    color: white;
+    border-color: #3498db;
+}
+
+#dayPicker {
+    padding: 6px 10px;
+    border: 1px solid #555;
+    background: #2a2a3e;
+    color: #ccc;
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+
+#onlineChart {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    padding: 10px;
+    margin-top: 10px;
+}

@@ -35,8 +35,28 @@ async function loadDailyOnline(date) {
         const maxValues = data.map(d => d.max);
         
         renderOnlineChart(labels, [
-            { label: 'Средний онлайн', data: avgValues, borderColor: '#3498db', backgroundColor: 'rgba(52,152,219,0.1)', tension: 0.3, fill: false },
-            { label: 'Максимальный онлайн', data: maxValues, borderColor: '#e74c3c', backgroundColor: 'rgba(231,76,60,0.1)', tension: 0.3, fill: false }
+            { 
+                label: 'Средний онлайн', 
+                data: avgValues, 
+                borderColor: '#00ff88', 
+                backgroundColor: 'rgba(0,255,136,0.1)',
+                tension: 0.2,
+                fill: true,
+                pointRadius: 3,
+                pointBackgroundColor: '#00ff88',
+                borderWidth: 2
+            },
+            { 
+                label: 'Максимальный онлайн', 
+                data: maxValues, 
+                borderColor: '#ff6b6b', 
+                backgroundColor: 'rgba(255,107,107,0.1)',
+                tension: 0.2,
+                fill: false,
+                pointRadius: 3,
+                pointBackgroundColor: '#ff6b6b',
+                borderWidth: 2
+            }
         ], 'Час');
     } catch (e) {
         console.error('Online day error:', e);
@@ -58,8 +78,28 @@ async function loadOnlineChart(url, xLabel) {
         const maxValues = data.map(d => d.max);
         
         renderOnlineChart(labels, [
-            { label: 'Средний онлайн', data: avgValues, borderColor: '#3498db', backgroundColor: 'rgba(52,152,219,0.1)', tension: 0.3, fill: false },
-            { label: 'Максимальный онлайн', data: maxValues, borderColor: '#e74c3c', backgroundColor: 'rgba(231,76,60,0.1)', tension: 0.3, fill: false }
+            { 
+                label: 'Средний онлайн', 
+                data: avgValues, 
+                borderColor: '#00ff88', 
+                backgroundColor: 'rgba(0,255,136,0.1)',
+                tension: 0.2,
+                fill: true,
+                pointRadius: 3,
+                pointBackgroundColor: '#00ff88',
+                borderWidth: 2
+            },
+            { 
+                label: 'Максимальный онлайн', 
+                data: maxValues, 
+                borderColor: '#ff6b6b', 
+                backgroundColor: 'rgba(255,107,107,0.1)',
+                tension: 0.2,
+                fill: false,
+                pointRadius: 3,
+                pointBackgroundColor: '#ff6b6b',
+                borderWidth: 2
+            }
         ], xLabel);
     } catch (e) {
         console.error('Online chart error:', e);
@@ -82,27 +122,55 @@ function renderOnlineChart(labels, datasets, xLabel) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            animation: {
+                duration: 300
+            },
             plugins: {
                 legend: {
                     position: 'top',
                     labels: {
-                        color: '#ccc',
-                        padding: 15,
-                        usePointStyle: true
+                        color: '#cccccc',
+                        padding: 20,
+                        usePointStyle: true,
+                        pointStyleWidth: 10,
+                        font: {
+                            size: 12
+                        }
                     }
                 }
             },
             scales: {
                 x: {
-                    title: { display: true, text: xLabel, color: '#aaa' },
-                    ticks: { color: '#aaa' },
-                    grid: { color: 'rgba(255,255,255,0.05)' }
+                    title: { 
+                        display: true, 
+                        text: xLabel, 
+                        color: '#aaaaaa',
+                        font: { size: 12 }
+                    },
+                    ticks: { 
+                        color: '#aaaaaa',
+                        maxRotation: 45
+                    },
+                    grid: { 
+                        color: 'rgba(255,255,255,0.08)' 
+                    }
                 },
                 y: {
                     beginAtZero: true,
-                    title: { display: true, text: 'Игроки', color: '#aaa' },
-                    ticks: { color: '#aaa', stepSize: 1 },
-                    grid: { color: 'rgba(255,255,255,0.05)' }
+                    title: { 
+                        display: true, 
+                        text: 'Игроки', 
+                        color: '#aaaaaa',
+                        font: { size: 12 }
+                    },
+                    ticks: { 
+                        color: '#aaaaaa',
+                        stepSize: 1,
+                        precision: 0
+                    },
+                    grid: { 
+                        color: 'rgba(255,255,255,0.08)' 
+                    }
                 }
             }
         }
@@ -128,13 +196,17 @@ function showEmptyChart(message) {
         options: {
             plugins: {
                 legend: { display: false },
-                title: { display: true, text: message, color: '#888' }
+                title: { 
+                    display: true, 
+                    text: message, 
+                    color: '#aaaaaa',
+                    font: { size: 14 }
+                }
             }
         }
     });
 }
 
-// Установка даты по умолчанию
 document.addEventListener('DOMContentLoaded', () => {
     const dayPicker = document.getElementById('dayPicker');
     if (dayPicker) {
