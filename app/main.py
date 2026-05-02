@@ -4,11 +4,9 @@ from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader
 import asyncio
 
-from app.routers import auth, bank, social, chat, pages, messages, bans
-from app.routers import auth, bank, social, chat, pages
+from app.routers import auth, bank, social, chat, pages, messages, bans, online
 from app.db.database import get_pg_pool, close_pg_pool
 from app.core.sessions import load_sessions
-from app.routers import auth, bank, social, chat, pages, messages, online
 from app.services.status_collector import collector_loop
 
 import database_social as social_db
@@ -23,7 +21,7 @@ app.state.templates_env = env
 
 @app.on_event("startup")
 async def startup():
-    load_sessions()                       # загружает из БД
+    load_sessions()
     social_db.cleanup_expired_sessions(30)
     await get_pg_pool()
     print("✅ Подключено к PostgreSQL (игровая БД)")
@@ -40,7 +38,6 @@ async def shutdown():
 async def index(request: Request):
     template = env.get_template("index.html")
     return HTMLResponse(template.render({"request": request}))
-
 
 app.include_router(auth.router)
 app.include_router(bank.router)
