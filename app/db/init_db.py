@@ -24,8 +24,10 @@ async def init_databases():
         """)
         # и другие таблицы, которые были в main.py...
         # все CREATE TABLE IF NOT EXISTS из исходного main.py для Postgres
+
     # SQLite tables
     sqlite = await get_sqlite_db()
+    
     await sqlite.execute("""
         CREATE TABLE IF NOT EXISTS profiles (
             user_id INTEGER PRIMARY KEY,
@@ -33,4 +35,19 @@ async def init_databases():
             status TEXT
         );
     """)
-    # все остальные SQLite-таблицы из main.py...
+    
+    # Таблица для хранения снапшотов онлайна
+    await sqlite.execute("""
+        CREATE TABLE IF NOT EXISTS server_snapshots (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp TEXT NOT NULL,
+            player_count INTEGER NOT NULL
+        )
+    """)
+    
+    await sqlite.execute("""
+        CREATE INDEX IF NOT EXISTS idx_snapshot_time 
+        ON server_snapshots(timestamp)
+    """)
+    
+    await sqlite.commit()

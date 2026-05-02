@@ -26,6 +26,7 @@ async def startup():
     await get_pg_pool()
     print("✅ Подключено к PostgreSQL (игровая БД)")
     print("✅ SQLite для соцсети готова")
+    asyncio.create_task(collector_loop(interval=300))
 
 
 @app.on_event("shutdown")
@@ -46,3 +47,4 @@ app.include_router(chat.router)
 app.include_router(pages.router)
 app.include_router(messages.router)
 app.include_router(bans.router)
+app.include_router(online.router)

@@ -35,6 +35,13 @@ function setupNavigation() {
                 if (typeof loadBans === 'function') {
                     loadBans();
                 }
+            } else if (section === 'online') {
+                // Загружаем график онлайна
+                setTimeout(() => {
+                    if (typeof switchOnlineMode === 'function') {
+                        switchOnlineMode('day');
+                    }
+                }, 100);
             }
         });
     });

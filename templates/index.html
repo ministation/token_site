@@ -70,6 +70,7 @@ loadPlaytimeChart();
             <button class="nav-btn active" data-section="home">Главная</button>
             <button class="nav-btn" data-section="economy">Монетки</button>
             <button class="nav-btn" data-section="bans">Наказания</button>
+            <button class="nav-btn" data-section="online">Статистика/button>
             <!-- <button class="nav-btn" data-section="chat">Чат</button>
             <button class="nav-btn" data-section="messages">Сообщения</button> -->
             <!-- <button class="nav-btn" data-section="search">Поиск</button>
@@ -82,6 +83,9 @@ loadPlaytimeChart();
         </div>
         <div id="economySection" class="section">
             {% include 'partials/economy.html' %}
+        </div>
+        <div id="onlineSection" class="section">
+            {% include 'partials/online.html' %}
         </div>
         <div id="bansSection" class="section">
             {% include 'partials/bans.html' %}
@@ -105,6 +109,7 @@ loadPlaytimeChart();
     <script src="/static/js/auth.js"></script>
     <script src="/static/js/navigation.js"></script>
     <script src="/static/js/bank.js"></script>
+    <script src="/static/js/online.js"></script> 
     <script src="/static/js/chat.js"></script>
     <script src="/static/js/social.js"></script>
     <script src="/static/js/bans.js"></script>

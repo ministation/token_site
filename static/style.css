@@ -422,3 +422,39 @@ button.follow-btn:hover {
 ::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: rgba(30, 20, 50, 0.3); }
 ::-webkit-scrollbar-thumb { background: rgba(120, 80, 180, 0.5); }
+
+.chart-tab {
+    padding: 6px 14px;
+    border: 1px solid #444;
+    background: #2a2a3e;
+    color: #aaa;
+    cursor: pointer;
+    border-radius: 4px;
+    font-size: 0.9em;
+    transition: all 0.2s;
+}
+
+.chart-tab:hover {
+    background: #3a3a5e;
+    color: #fff;
+}
+
+.chart-tab.active {
+    background: #3498db;
+    color: white;
+    border-color: #3498db;
+}
+
+#dayPicker {
+    padding: 6px 10px;
+    border: 1px solid #444;
+    background: #2a2a3e;
+    color: #ccc;
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+
+#dayPicker:focus {
+    outline: none;
+    border-color: #3498db;
+}

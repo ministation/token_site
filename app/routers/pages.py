@@ -36,3 +36,7 @@ async def server_status():
     except:
         pass
     return {"online": False, "players": 0, "max_players": 100, "name": "Мини-станция", "map": "Offline"}
+
+@router.get("/online")
+async def online_page(request: Request):
+    return templates.TemplateResponse("online.html", {"request": request})
