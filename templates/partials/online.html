@@ -1,100 +1,14 @@
-{% extends "index.html" %}
-{% block content %}
-<h2>Статистика онлайна</h2>
-
-<div class="chart-controls" style="display: flex; gap: 1rem; margin-bottom: 2rem;">
-    <button class="tab active" onclick="changeMode('day')">День</button>
-    <button class="tab" onclick="changeMode('week')">Неделя</button>
-    <button class="tab" onclick="changeMode('month')">Месяц</button>
-    <input type="date" id="dayPicker" style="display:none;" onchange="loadDaily(this.value)">
+    <h2>Статистика онлайна сервера</h2>
+    
+    <div class="chart-controls" style="display: flex; gap: 8px; margin-bottom: 16px;">
+        <button class="chart-tab active" onclick="switchOnlineMode('day')">День</button>
+        <button class="chart-tab" onclick="switchOnlineMode('week')">Неделя</button>
+        <button class="chart-tab" onclick="switchOnlineMode('month')">Месяц</button>
+        <input type="date" id="dayPicker" style="display:none; margin-left: auto;" onchange="loadDailyOnline(this.value)">
+    </div>
+    
+    <canvas id="onlineChart" width="400" height="200"></canvas>
+    <p style="text-align: center; color: #888; font-size: 0.85em; margin-top: 8px;">
+        Данные обновляются каждые 5 минут. Средний и пиковый онлайн.
+    </p>
 </div>
-
-<canvas id="onlineChart" width="400" height="200"></canvas>
-{% endblock %}
-
-{% block scripts %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
-<script>
-    let currentMode = 'day';
-    let chart = null;
-    const ctx = document.getElementById('onlineChart').getContext('2d');
-
-    function changeMode(mode) {
-        currentMode = mode;
-        document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
-        event.target.classList.add('active');
-        document.getElementById('dayPicker').style.display = mode === 'day' ? 'inline-block' : 'none';
-        if (mode === 'day') {
-            loadDaily(document.getElementById('dayPicker').value || new Date().toISOString().slice(0,10));
-        } else if (mode === 'week') {
-            loadChart('/api/online/week', 'Дата');
-        } else if (mode === 'month') {
-            loadChart('/api/online/month', 'Дата');
-        }
-    }
-
-    async function loadDaily(date) {
-        const url = `/api/online/day?date=${date}`;
-        try {
-            const resp = await fetch(url);
-            const data = await resp.json();
-            if (!data || data.length === 0) {
-                alert('Нет данных за этот день');
-                return;
-            }
-            const labels = data.map(d => d.hour);
-            const avgValues = data.map(d => d.avg);
-            const maxValues = data.map(d => d.max);
-            renderChart(labels, [
-                { label: 'Средний онлайн', data: avgValues, borderColor: '#3498db', tension: 0.2 },
-                { label: 'Максимальный онлайн', data: maxValues, borderColor: '#e74c3c', tension: 0.2 }
-            ], 'Час');
-        } catch (e) {
-            console.error(e);
-        }
-    }
-
-    async function loadChart(url, xLabel) {
-        try {
-            const resp = await fetch(url);
-            const data = await resp.json();
-            if (!data || data.length === 0) {
-                alert('Нет данных');
-                return;
-            }
-            const labels = data.map(d => currentMode === 'day' ? d.hour : d.date);
-            const avgValues = data.map(d => d.avg);
-            const maxValues = data.map(d => d.max);
-            renderChart(labels, [
-                { label: 'Средний онлайн', data: avgValues, borderColor: '#3498db', tension: 0.2 },
-                { label: 'Максимальный онлайн', data: maxValues, borderColor: '#e74c3c', tension: 0.2 }
-            ], xLabel);
-        } catch (e) {
-            console.error(e);
-        }
-    }
-
-    function renderChart(labels, datasets, xLabel) {
-        if (chart) chart.destroy();
-        chart = new Chart(ctx, {
-            type: 'line',
-            data: { labels, datasets },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: { position: 'top' }
-                },
-                scales: {
-                    x: { title: { display: true, text: xLabel } },
-                    y: { beginAtZero: true, title: { display: true, text: 'Игроки' } }
-                }
-            }
-        });
-    }
-
-    window.addEventListener('DOMContentLoaded', () => {
-        document.getElementById('dayPicker').valueAsDate = new Date();
-        changeMode('day');
-    });
-</script>
-{% endblock %}
