@@ -9,6 +9,7 @@ from app.routers import auth, bank, social, chat, pages
 from app.db.database import get_pg_pool, close_pg_pool
 from app.core.sessions import load_sessions
 from app.routers import auth, bank, social, chat, pages, messages, online
+from app.services.status_collector import collector_loop
 
 import database_social as social_db
 
