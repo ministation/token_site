@@ -1,10 +1,11 @@
 import asyncio
 import aiohttp
+import sqlite3
 from datetime import datetime, timezone
-from app.db.database import get_sqlite_db
 
-# Адрес статуса сервера (можно вынести в конфиг)
 STATUS_URL = "http://85.198.118.85:1214/status"
+SOCIAL_DB_PATH = "social.db"
+
 
 async def fetch_player_count() -> int | None:
     try:
@@ -17,16 +18,18 @@ async def fetch_player_count() -> int | None:
         print(f"[Collector] Ошибка получения онлайна: {e}")
     return None
 
+
 async def store_snapshot(count: int):
-    db = await get_sqlite_db()
-    await db.execute(
+    conn = sqlite3.connect(SOCIAL_DB_PATH)
+    conn.execute(
         "INSERT INTO server_snapshots (timestamp, player_count) VALUES (?, ?)",
         (datetime.now(timezone.utc).isoformat(), count)
     )
-    await db.commit()
+    conn.commit()
+    conn.close()
+
 
 async def collector_loop(interval: int = 300):
-    """Фоновый цикл сбора данных. Запускается при старте приложения."""
     while True:
         count = await fetch_player_count()
         if count is not None:
