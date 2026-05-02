@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader
+import asyncio
 
 from app.routers import auth, bank, social, chat, pages, messages, bans
 from app.routers import auth, bank, social, chat, pages
