@@ -21,29 +21,30 @@ def query_snapshots(sql: str, params: tuple = ()):
 
 @router.get("/day")
 async def online_day(date: str = Query(None, description="Дата в формате YYYY-MM-DD")):
-    """Почасовая статистика за выбранный день (Московское время)"""
+    """Статистика за выбранный день с шагом 5 минут (Московское время)"""
     if not date:
         date = datetime.now(MOSCOW_TZ).strftime("%Y-%m-%d")
     
     rows = query_snapshots("""
         SELECT
-            strftime('%Y-%m-%d %H:00:00', timestamp, '+3 hours') as hour,
+            strftime('%Y-%m-%d %H:%M', timestamp, '+3 hours') as time_5min,
             AVG(player_count) as avg,
             MAX(player_count) as max
         FROM server_snapshots
         WHERE date(timestamp, '+3 hours') = date(?)
-        GROUP BY strftime('%Y-%m-%d %H', timestamp, '+3 hours')
-        ORDER BY hour
+        GROUP BY strftime('%Y-%m-%d %H:%M', timestamp, '+3 hours')
+        ORDER BY time_5min
     """, (date,))
     
-    return [
-        {
-            "hour": row["hour"][-8:-3],
+    result = []
+    for row in rows:
+        result.append({
+            "time": row["time_5min"][-5:],  # HH:MM
             "avg": round(row["avg"], 1),
             "max": row["max"]
-        }
-        for row in rows
-    ]
+        })
+    
+    return result
 
 
 @router.get("/week")

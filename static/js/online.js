@@ -44,11 +44,11 @@ async function loadDailyOnline(date) {
             return;
         }
         
-        const labels = data.map(d => d.hour);
+        const labels = data.map(d => d.time);
         const avgValues = data.map(d => d.avg);
         const maxValues = data.map(d => d.max);
         
-        renderChart(labels, avgValues, maxValues, 'Час');
+        renderChart(labels, avgValues, maxValues, 'Время (МСК)');
     } catch (e) {
         console.error('Error:', e);
     }
@@ -100,9 +100,9 @@ function renderChart(labels, avgValues, maxValues, xLabel) {
                     data: avgValues,
                     borderColor: '#00ff88',
                     backgroundColor: 'rgba(0,255,136,0.1)',
-                    tension: 0.2,
+                    tension: 0.3,
                     fill: false,
-                    pointRadius: 2,
+                    pointRadius: 1,
                     borderWidth: 2
                 },
                 {
@@ -110,9 +110,9 @@ function renderChart(labels, avgValues, maxValues, xLabel) {
                     data: maxValues,
                     borderColor: '#ff6b6b',
                     backgroundColor: 'rgba(255,107,107,0.1)',
-                    tension: 0.2,
+                    tension: 0.3,
                     fill: false,
-                    pointRadius: 2,
+                    pointRadius: 1,
                     borderWidth: 2
                 }
             ]
@@ -144,7 +144,9 @@ function renderChart(labels, avgValues, maxValues, xLabel) {
                     ticks: { 
                         color: '#aaaaaa',
                         maxRotation: 45,
-                        font: { size: 10 }
+                        font: { size: 9 },
+                        autoSkip: true,
+                        maxTicksLimit: 24
                     },
                     grid: { color: 'rgba(255,255,255,0.05)' }
                 },
