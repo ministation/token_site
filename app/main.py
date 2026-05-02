@@ -7,7 +7,7 @@ from app.routers import auth, bank, social, chat, pages, messages, bans
 from app.routers import auth, bank, social, chat, pages
 from app.db.database import get_pg_pool, close_pg_pool
 from app.core.sessions import load_sessions
-from app.routers import auth, bank, social, chat, pages, messages
+from app.routers import auth, bank, social, chat, pages, messages, online
 
 import database_social as social_db
 
