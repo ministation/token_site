@@ -31,27 +31,28 @@ def get_pm_table_info() -> tuple[str, str, str | None]:
         cols = _table_columns(cursor, table)
         if not cols:
             continue
-        if "content" not in cols:
-            if "message" in cols:
-                cursor.execute(f"ALTER TABLE {table} ADD COLUMN content TEXT")
-                cursor.execute(f"UPDATE {table} SET content = message WHERE content IS NULL")
-            elif "text" in cols:
-                cursor.execute(f"ALTER TABLE {table} ADD COLUMN content TEXT")
-                cursor.execute(f"UPDATE {table} SET content = text WHERE content IS NULL")
-        cols = _table_columns(cursor, table)
-        content_col = "content" if "content" in cols else (
-            "message" if "message" in cols else "text"
-        )
+        
+        # Определяем колонку с текстом сообщения
+        if "content" in cols:
+            content_col = "content"
+        elif "message" in cols:
+            content_col = "message"
+        elif "text" in cols:
+            content_col = "text"
+        else:
+            continue  # таблица есть, но нет текстовой колонки — странно
+        
+        # Определяем колонку read
         read_col = "read" if "read" in cols else None
-        conn.commit()
+        
         conn.close()
         _pm_schema_cache = (table, content_col, read_col)
         return _pm_schema_cache
 
+    # Если таблиц вообще нет — создаём private_messages при следующей инициализации
     conn.close()
     _pm_schema_cache = ("private_messages", "content", "read")
     return _pm_schema_cache
-
 
 def init_social_db():
     """Создает таблицы для соцсети, если их нет"""
@@ -478,7 +479,7 @@ def get_conversation(user_id: str, other_id: str, limit: int = 50) -> List[Dict]
     cursor = conn.cursor()
     cursor.execute(f"""
         SELECT id, sender_id, receiver_id, {content_col} as content, created_at,
-               COALESCE(read, 0) as read
+               read
         FROM {table}
         WHERE (sender_id = ? AND receiver_id = ?)
            OR (sender_id = ? AND receiver_id = ?)
