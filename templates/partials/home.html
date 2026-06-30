@@ -1,38 +1,68 @@
-<div class="server-info">
-    <div class="description">
+<div class="card hero-card">
+    <span class="tagline">Космическая станция 14</span>
+    <p class="description">
         Мини-станция — это некоммерческий, самый безбашенный проект в игре Космическая станция 14,
         где ты сможешь как вдоволь поучаствовать в эпичных баталиях, так и показать свой ролевой отыгрыш.
-    </div>
+    </p>
     <div class="social-links">
-        <a href="https://ministation.ru/" target="_blank" class="link-btn website">
+        <a href="https://ministation.ru/" target="_blank" rel="noopener" class="link-btn website">
             <i class="fa-solid fa-globe"></i> Сайт
         </a>
-        <a href="https://discord.gg/mini-station" target="_blank" class="link-btn discord">
+        <a href="https://discord.gg/mini-station" target="_blank" rel="noopener" class="link-btn discord">
             <i class="fa-brands fa-discord"></i> Discord
         </a>
-        <a href="https://t.me/mini_station" target="_blank" class="link-btn telegram">
+        <a href="https://t.me/mini_station" target="_blank" rel="noopener" class="link-btn telegram">
             <i class="fa-brands fa-telegram"></i> Telegram
         </a>
-        <a href="https://wiki.ministation.ru" target="_blank" class="link-btn wiki">
+        <a href="https://wiki.ministation.ru" target="_blank" rel="noopener" class="link-btn wiki">
             <i class="fa-solid fa-book"></i> Wiki
         </a>
-        <a href="https://boosty.to/mini-station/" target="_blank" class="link-btn boosty">
+        <a href="https://boosty.to/mini-station/" target="_blank" rel="noopener" class="link-btn boosty">
             <i class="fa-solid fa-heart"></i> Boosty
         </a>
-        <a href="https://github.com/ministation/mini-station-goob" target="_blank" class="link-btn github">
+        <a href="https://github.com/ministation/mini-station-goob" target="_blank" rel="noopener" class="link-btn github">
             <i class="fa-brands fa-github"></i> GitHub
         </a>
     </div>
 </div>
 
+<div class="home-stats-row">
+    <div class="server-status-card" id="serverStatus">
+        <div class="server-status-header">
+            <span class="status-dot" id="statusDot"></span>
+            <span id="statusName">Загрузка...</span>
+        </div>
+        <div class="server-players">
+            <span id="statusPlayers">0</span>/<span id="statusMax">100</span>
+            <span class="server-players-label">игроков</span>
+        </div>
+        <div class="progress-bar-bg">
+            <div class="progress-bar-fill" id="progressFill"></div>
+        </div>
+        <div class="server-info-row">
+            <span>🗺️ <span id="statusMap">-</span></span>
+            <span>🎯 <span id="statusPreset">-</span></span>
+        </div>
+    </div>
+
+    <div class="playtime-chart" id="playtimeChart">
+        <h3><i class="fa-solid fa-chart-pie"></i> Постоянные игроки</h3>
+        <canvas id="playtimeCanvas"></canvas>
+    </div>
+</div>
+
 <div class="card create-post-card">
-    <h2>Новый пост</h2>
+    <h2><i class="fa-solid fa-pen"></i> Новый пост</h2>
     <div class="post-form">
         <textarea id="postContent" placeholder="Что у вас нового?"></textarea>
         <input type="file" id="postImage" accept="image/*">
-        <label for="postImage" class="image-upload-label">📎 Добавить фото</label>
+        <div class="form-actions">
+            <label for="postImage" class="image-upload-label">
+                <i class="fa-solid fa-paperclip"></i> Добавить фото
+            </label>
+            <button onclick="createPost()"><i class="fa-solid fa-paper-plane"></i> Опубликовать</button>
+        </div>
         <div id="imagePreview" class="image-preview"></div>
-        <button onclick="createPost()">Опубликовать</button>
     </div>
 </div>
 <div id="feedContainer"></div>

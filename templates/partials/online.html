@@ -1,0 +1,13 @@
+<div class="card">
+    <h2><i class="fa-solid fa-chart-line"></i> Статистика онлайна сервера</h2>
+
+    <div class="chart-controls">
+        <button class="chart-tab active" onclick="switchOnlineMode('day')">День</button>
+        <button class="chart-tab" onclick="switchOnlineMode('week')">Неделя</button>
+        <button class="chart-tab" onclick="switchOnlineMode('month')">Месяц</button>
+        <input type="date" id="dayPicker" style="display:none;" onchange="loadDailyOnline(this.value)">
+    </div>
+
+    <canvas id="onlineChart" width="400" height="200"></canvas>
+    <p class="chart-hint">Данные обновляются каждые 5 минут. Средний и пиковый онлайн.</p>
+</div>

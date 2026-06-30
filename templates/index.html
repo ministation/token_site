@@ -7,63 +7,47 @@
     <title>Мини-станция</title>
     <link rel="stylesheet" href="/static/style.css">
     <link rel="icon" type="image/png" href="/static/coin.png">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 </head>
 <body>
     <div class="container">
-        <!-- Шапка -->
         <div class="header">
             <div class="logo">
                 <img src="/static/coin.png" alt="Coin">
                 <h1>Мини-станция</h1>
             </div>
             <div id="userInfo">
-                <button id="loginBtn" onclick="login()">Войти через Discord</button>
+                <button id="loginBtn" onclick="login()">
+                    <img src="/static/discord.png" alt="" class="btn-icon">
+                    Войти через Discord
+                </button>
                 <div id="userPanel" style="display:none;"></div>
             </div>
         </div>
 
-        <!-- Навигация -->
-        <div class="main-nav">
-            <button class="nav-btn active" data-section="home">Главная</button>
-            <button class="nav-btn" data-section="wallet">Кошелёк</button>
-            <button class="nav-btn" data-section="bank">Банк</button>
-            <button class="nav-btn" data-section="lottery">Лотерея</button>
-            <button class="nav-btn" data-section="chat">Чат</button>
-            <button class="nav-btn" data-section="messages">Сообщения</button>
-            <button class="nav-btn" data-section="search">Поиск</button>
-            <button class="nav-btn" data-section="profile">Мой профиль</button>
-        </div>
+        <nav class="main-nav" aria-label="Основная навигация">
+            <button class="nav-btn active" data-section="home"><i class="fa-solid fa-house"></i> Главная</button>
+            <button class="nav-btn" data-section="economy"><i class="fa-solid fa-coins"></i> Монетки</button>
+            <button class="nav-btn" data-section="bans"><i class="fa-solid fa-gavel"></i> Наказания</button>
+            <button class="nav-btn" data-section="online"><i class="fa-solid fa-chart-line"></i> Статистика</button>
+        </nav>
 
-        <!-- Секции -->
         <div id="homeSection" class="section active">
             {% include 'partials/home.html' %}
         </div>
-        <div id="walletSection" class="section">
-            {% include 'partials/wallet.html' %}
+        <div id="economySection" class="section">
+            {% include 'partials/economy.html' %}
         </div>
-        <div id="bankSection" class="section">
-            {% include 'partials/bank.html' %}
+        <div id="bansSection" class="section">
+            {% include 'partials/bans.html' %}
         </div>
-        <div id="lotterySection" class="section">
-            {% include 'partials/lottery.html' %}
-        </div>
-        <div id="chatSection" class="section">
-            {% include 'partials/chat.html' %}
-        </div>
-        <div id="messagesSection" class="section">
-            {% include 'partials/messages.html' %}
-        </div>
-        <div id="searchSection" class="section">
-            {% include 'partials/search.html' %}
-        </div>
-        <div id="profileSection" class="section">
-            {% include 'partials/profile.html' %}
+        <div id="onlineSection" class="section">
+            {% include 'partials/online.html' %}
         </div>
 
         <datalist id="playersList"></datalist>
     </div>
 
-    <!-- Общие функции ВСТРОЕНЫ прямо в HTML -->
     <script>
         const API_BASE = '';
         const COIN_ICON = '<img src="/static/coin.png" class="coin-icon-result" alt="">';
@@ -96,14 +80,81 @@
         }
     </script>
 
-    <!-- Остальные скрипты -->
     <script src="/static/js/auth.js"></script>
     <script src="/static/js/navigation.js"></script>
     <script src="/static/js/bank.js"></script>
-    <script src="/static/js/chat.js"></script>
     <script src="/static/js/social.js"></script>
-    <script src="/static/js/profile.js"></script>
-    <script src="/static/js/search.js"></script>
+    <script src="/static/js/bans.js"></script>
+    <script src="/static/js/online.js"></script>
     <script src="/static/script.js"></script>
+
+    <script>
+    async function loadPlaytimeChart() {
+        try {
+            const res = await fetch('/api/playtime-stats');
+            const data = await res.json();
+            const ctx = document.getElementById('playtimeCanvas');
+            if (!ctx) return;
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Новички (<50ч)', 'Обычные (50-400ч)', 'Ветераны (400+ч)'],
+                    datasets: [{
+                        data: [data.newbies, data.regulars, data.veterans],
+                        backgroundColor: ['#6ecf8a', '#e8c060', '#e88a9a'],
+                        borderColor: 'rgba(10, 10, 20, 0.5)',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#c4b5e0', padding: 14, font: { size: 12 } }
+                        }
+                    }
+                }
+            });
+        } catch (e) {
+            console.error('Chart error:', e);
+        }
+    }
+
+    async function loadServerStatus() {
+        try {
+            const res = await fetch('/api/server-status');
+            const data = await res.json();
+
+            const dot = document.getElementById('statusDot');
+            if (dot) dot.className = 'status-dot' + (data.online ? ' online' : '');
+
+            const nameEl = document.getElementById('statusName');
+            if (nameEl) nameEl.textContent = data.name || 'Мини-станция';
+
+            const playersEl = document.getElementById('statusPlayers');
+            if (playersEl) playersEl.textContent = data.players || 0;
+
+            const maxEl = document.getElementById('statusMax');
+            if (maxEl) maxEl.textContent = data.max_players || 100;
+
+            const mapEl = document.getElementById('statusMap');
+            if (mapEl) mapEl.textContent = data.map || '-';
+
+            const presetEl = document.getElementById('statusPreset');
+            if (presetEl) presetEl.textContent = data.preset || '-';
+
+            const fill = document.getElementById('progressFill');
+            if (fill) {
+                const percent = Math.min(100, ((data.players || 0) / (data.max_players || 100)) * 100);
+                fill.style.width = percent + '%';
+            }
+        } catch (e) {}
+    }
+
+    loadServerStatus();
+    loadPlaytimeChart();
+    setInterval(loadServerStatus, 30000);
+    </script>
 </body>
 </html>
