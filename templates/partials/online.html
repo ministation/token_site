@@ -5,7 +5,7 @@
         <button class="chart-tab active" onclick="switchOnlineMode('day')">День</button>
         <button class="chart-tab" onclick="switchOnlineMode('week')">Неделя</button>
         <button class="chart-tab" onclick="switchOnlineMode('month')">Месяц</button>
-        <input type="date" id="dayPicker" style="display:none;" onchange="loadDailyOnline(this.value)">
+        <input type="date" id="dayPicker" onchange="loadDailyOnline(this.value)">
     </div>
 
     <canvas id="onlineChart" width="400" height="200"></canvas>

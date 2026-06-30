@@ -1,12 +1,15 @@
 <div class="card">
-    <h2>Личные сообщения</h2>
+    <h2><i class="fa-solid fa-envelope"></i> Личные сообщения</h2>
     <div class="messages-layout">
-        <div class="dialogs-list" id="dialogsList"></div>
+        <div class="dialogs-list" id="dialogsList">
+            <p class="empty-state">Загрузка...</p>
+        </div>
         <div class="chat-area">
-            <div id="currentConversation" class="chat-messages"></div>
+            <div class="conversation-header" id="conversationTitle">Выберите диалог</div>
+            <div id="currentConversation" class="chat-messages pm-messages"></div>
             <div class="chat-input-area">
-                <textarea id="pmInput" placeholder="Сообщение..."></textarea>
-                <button onclick="sendPrivateMessage()">Отправить</button>
+                <textarea id="pmInput" placeholder="Сообщение..." rows="2"></textarea>
+                <button onclick="sendPrivateMessage()"><i class="fa-solid fa-paper-plane"></i> Отправить</button>
             </div>
         </div>
     </div>

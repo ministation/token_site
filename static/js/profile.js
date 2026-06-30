@@ -73,16 +73,7 @@ async function toggleFollow(targetId) {
 }
 
 function openMessageModal(playerId, nickname) {
-    const message = prompt(`Сообщение для ${nickname}:`);
-    if (!message || !message.trim()) return;
-    sendMessage(playerId, message.trim());
-}
-
-async function sendMessage(playerId, content) {
-    try {
-        await apiCall('POST', '/api/messages/send', { receiver_id: playerId, content });
-        alert('✅ Сообщение отправлено!');
-    } catch (e) {
-        alert('❌ ' + e.message);
+    if (typeof startConversationWith === 'function') {
+        startConversationWith(playerId, nickname);
     }
 }

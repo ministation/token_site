@@ -103,6 +103,13 @@ def init_social_db():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS server_snapshots (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp TEXT NOT NULL,
+            player_count INTEGER NOT NULL
+        )
+    """)
     conn.commit()
     conn.close()
 

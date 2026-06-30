@@ -30,6 +30,10 @@ function setupNavigation() {
                 if (input) input.value = '';
                 if (typeof searchSocial === 'function') searchSocial('');
             } else if (section === 'messages') {
+                if (!currentUser?.player) {
+                    alert('Войдите и привяжите Discord к игровому аккаунту');
+                    return;
+                }
                 if (typeof loadDialogs === 'function') loadDialogs();
             }
         });

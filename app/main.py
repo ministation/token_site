@@ -1,12 +1,13 @@
+import asyncio
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader
 
-from app.routers import auth, bank, social, chat, pages
+from app.routers import auth, bank, social, chat, pages, messages, bans, online
 from app.db.database import get_pg_pool, close_pg_pool
 from app.core.sessions import load_sessions
-from app.routers import auth, bank, social, chat, pages, messages
+from app.services.status_collector import collector_loop
 
 import database_social as social_db
 
@@ -25,6 +26,7 @@ async def startup():
     await get_pg_pool()
     print("✅ Подключено к PostgreSQL (игровая БД)")
     print("✅ SQLite для соцсети готова")
+    asyncio.create_task(collector_loop(interval=300))
 
 
 @app.on_event("shutdown")
@@ -44,3 +46,5 @@ app.include_router(social.router)
 app.include_router(chat.router)
 app.include_router(pages.router)
 app.include_router(messages.router)
+app.include_router(bans.router)
+app.include_router(online.router)

@@ -30,6 +30,7 @@
             <button class="nav-btn" data-section="economy"><i class="fa-solid fa-coins"></i> Монетки</button>
             <button class="nav-btn" data-section="bans"><i class="fa-solid fa-gavel"></i> Наказания</button>
             <button class="nav-btn" data-section="online"><i class="fa-solid fa-chart-line"></i> Статистика</button>
+            <button class="nav-btn" data-section="messages"><i class="fa-solid fa-envelope"></i> Сообщения</button>
         </nav>
 
         <div id="homeSection" class="section active">
@@ -43,6 +44,9 @@
         </div>
         <div id="onlineSection" class="section">
             {% include 'partials/online.html' %}
+        </div>
+        <div id="messagesSection" class="section">
+            {% include 'partials/messages.html' %}
         </div>
 
         <datalist id="playersList"></datalist>
@@ -86,6 +90,7 @@
     <script src="/static/js/social.js"></script>
     <script src="/static/js/bans.js"></script>
     <script src="/static/js/online.js"></script>
+    <script src="/static/js/messages.js"></script>
     <script src="/static/script.js"></script>
 
     <script>
