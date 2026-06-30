@@ -16,6 +16,8 @@ function switchOnlineMode(mode) {
     if (mode === 'day') {
         const date = dayPicker ? dayPicker.value : new Date().toISOString().slice(0, 10);
         loadDailyOnline(date);
+    } else if (mode === 'weekly-hours') {
+        loadWeeklyHourly();
     } else {
         loadOnlineChart('/api/online/' + mode);
     }
@@ -54,6 +56,19 @@ async function loadDailyOnline(date) {
     }
 }
 
+async function loadWeeklyHourly() {
+    try {
+        const resp = await fetch('/api/stats/weekly');
+        const data = await resp.json();
+        if (!data?.length) return;
+        const labels = data.map(d => d.hour.slice(5, 16));
+        const values = data.map(d => d.players);
+        renderSingleChart(labels, values, 'Час (МСК)', 'Средний онлайн');
+    } catch (e) {
+        console.error('Error:', e);
+    }
+}
+
 async function loadOnlineChart(url) {
     try {
         const resp = await fetch(url);
@@ -73,27 +88,73 @@ async function loadOnlineChart(url) {
     }
 }
 
+function renderSingleChart(labels, values, xLabel, datasetLabel) {
+    const canvas = document.getElementById('onlineChart');
+    if (!canvas) return;
+    sizeCanvas(canvas);
+    const ctx = canvas.getContext('2d');
+    if (onlineChart) { onlineChart.destroy(); onlineChart = null; }
+    onlineChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{
+                label: datasetLabel,
+                data: values,
+                backgroundColor: 'rgba(155, 127, 212, 0.55)',
+                borderColor: '#9b7fd4',
+                borderWidth: 1
+            }]
+        },
+        options: chartOptions(xLabel)
+    });
+}
+
+function sizeCanvas(canvas) {
+    const wrap = canvas.closest('.chart-canvas-wrap') || canvas.parentElement;
+    if (wrap) {
+        canvas.width = Math.max(280, wrap.clientWidth - 8);
+        canvas.height = Math.min(320, Math.max(220, window.innerWidth < 768 ? 240 : 300));
+    }
+}
+
+function chartOptions(xLabel) {
+    return {
+        responsive: false,
+        maintainAspectRatio: false,
+        animation: false,
+        plugins: {
+            legend: {
+                position: 'top',
+                labels: { color: '#c4b5e0', padding: 12, font: { size: 11 } }
+            }
+        },
+        scales: {
+            x: {
+                title: { display: true, text: xLabel, color: '#aaaaaa', font: { size: 11 } },
+                ticks: { color: '#aaaaaa', maxRotation: 45, font: { size: 9 }, autoSkip: true, maxTicksLimit: 20 },
+                grid: { color: 'rgba(255,255,255,0.05)' }
+            },
+            y: {
+                beginAtZero: true,
+                title: { display: true, text: 'Игроки', color: '#aaaaaa', font: { size: 11 } },
+                ticks: { color: '#aaaaaa', stepSize: 1, precision: 0, font: { size: 10 } },
+                grid: { color: 'rgba(255,255,255,0.05)' }
+            }
+        }
+    };
+}
+
 function renderChart(labels, avgValues, maxValues, xLabel) {
     const canvas = document.getElementById('onlineChart');
     if (!canvas) return;
-    
-    const container = canvas.parentElement;
-    if (container) {
-        canvas.width = container.clientWidth - 40;
-        canvas.height = 300;
-    }
-    
+    sizeCanvas(canvas);
     const ctx = canvas.getContext('2d');
-    
-    if (onlineChart) {
-        onlineChart.destroy();
-        onlineChart = null;
-    }
-    
+    if (onlineChart) { onlineChart.destroy(); onlineChart = null; }
     onlineChart = new Chart(ctx, {
         type: 'line',
         data: {
-            labels: labels,
+            labels,
             datasets: [
                 {
                     label: 'Средний',
@@ -117,57 +178,7 @@ function renderChart(labels, avgValues, maxValues, xLabel) {
                 }
             ]
         },
-        options: {
-            responsive: false,
-            maintainAspectRatio: false,
-            animation: false,
-            plugins: {
-                legend: {
-                    position: 'top',
-                    labels: {
-                        color: '#c4b5e0',
-                        padding: 15,
-                        usePointStyle: true,
-                        pointStyleWidth: 8,
-                        font: { size: 11 }
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    title: { 
-                        display: true, 
-                        text: xLabel, 
-                        color: '#aaaaaa',
-                        font: { size: 11 }
-                    },
-                    ticks: { 
-                        color: '#aaaaaa',
-                        maxRotation: 45,
-                        font: { size: 9 },
-                        autoSkip: true,
-                        maxTicksLimit: 24
-                    },
-                    grid: { color: 'rgba(255,255,255,0.05)' }
-                },
-                y: {
-                    beginAtZero: true,
-                    title: { 
-                        display: true, 
-                        text: 'Игроки', 
-                        color: '#aaaaaa',
-                        font: { size: 11 }
-                    },
-                    ticks: { 
-                        color: '#aaaaaa',
-                        stepSize: 1,
-                        precision: 0,
-                        font: { size: 10 }
-                    },
-                    grid: { color: 'rgba(255,255,255,0.05)' }
-                }
-            }
-        }
+        options: chartOptions(xLabel)
     });
 }
 

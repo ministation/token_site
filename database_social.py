@@ -5,11 +5,53 @@ import json
 import os
 SOCIAL_DB_PATH = os.getenv("SOCIAL_DB_PATH", "social.db")
 
+_pm_schema_cache: tuple[str, str, str | None] | None = None
+
+
 def get_db():
     """Возвращает соединение с SQLite"""
     conn = sqlite3.connect(SOCIAL_DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
+
+
+def _table_columns(cursor, table: str) -> set[str]:
+    return {row[1] for row in cursor.execute(f"PRAGMA table_info({table})").fetchall()}
+
+
+def get_pm_table_info() -> tuple[str, str, str | None]:
+    """Возвращает (имя таблицы, колонка текста, колонка read)."""
+    global _pm_schema_cache
+    if _pm_schema_cache:
+        return _pm_schema_cache
+
+    conn = get_db()
+    cursor = conn.cursor()
+    for table in ("private_messages", "pm_messages"):
+        cols = _table_columns(cursor, table)
+        if not cols:
+            continue
+        if "content" not in cols:
+            if "message" in cols:
+                cursor.execute(f"ALTER TABLE {table} ADD COLUMN content TEXT")
+                cursor.execute(f"UPDATE {table} SET content = message WHERE content IS NULL")
+            elif "text" in cols:
+                cursor.execute(f"ALTER TABLE {table} ADD COLUMN content TEXT")
+                cursor.execute(f"UPDATE {table} SET content = text WHERE content IS NULL")
+        cols = _table_columns(cursor, table)
+        content_col = "content" if "content" in cols else (
+            "message" if "message" in cols else "text"
+        )
+        read_col = "read" if "read" in cols else None
+        conn.commit()
+        conn.close()
+        _pm_schema_cache = (table, content_col, read_col)
+        return _pm_schema_cache
+
+    conn.close()
+    _pm_schema_cache = ("private_messages", "content", "read")
+    return _pm_schema_cache
+
 
 def init_social_db():
     """Создает таблицы для соцсети, если их нет"""
@@ -112,6 +154,7 @@ def init_social_db():
     """)
     conn.commit()
     conn.close()
+    get_pm_table_info()
 
 # Инициализация при импорте
 init_social_db()
@@ -414,10 +457,13 @@ def get_following(player_id: str, limit: int = 20) -> List[Dict]:
     return [dict(row) for row in rows]
 
 def send_private_message(sender_id: str, receiver_id: str, content: str) -> int:
+    if sender_id == receiver_id:
+        raise ValueError("Нельзя отправить сообщение самому себе")
+    table, content_col, _ = get_pm_table_info()
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute(
-        "INSERT INTO private_messages (sender_id, receiver_id, content) VALUES (?, ?, ?)",
+        f"INSERT INTO {table} (sender_id, receiver_id, {content_col}) VALUES (?, ?, ?)",
         (sender_id, receiver_id, content)
     )
     conn.commit()
@@ -425,11 +471,15 @@ def send_private_message(sender_id: str, receiver_id: str, content: str) -> int:
     conn.close()
     return msg_id
 
+
 def get_conversation(user_id: str, other_id: str, limit: int = 50) -> List[Dict]:
+    table, content_col, _ = get_pm_table_info()
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("""
-        SELECT * FROM private_messages
+    cursor.execute(f"""
+        SELECT id, sender_id, receiver_id, {content_col} as content, created_at,
+               COALESCE(read, 0) as read
+        FROM {table}
         WHERE (sender_id = ? AND receiver_id = ?)
            OR (sender_id = ? AND receiver_id = ?)
         ORDER BY created_at DESC
@@ -439,32 +489,70 @@ def get_conversation(user_id: str, other_id: str, limit: int = 50) -> List[Dict]
     conn.close()
     return messages
 
+
 def get_user_dialogs(user_id: str) -> List[Dict]:
+    table, content_col, read_col = get_pm_table_info()
+    read_expr = f"COALESCE({read_col}, 0)" if read_col else "0"
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("""
-        SELECT other_id, MAX(created_at) as last_time, content as last_msg,
-               SUM(CASE WHEN sender_id != ? AND read = 0 THEN 1 ELSE 0 END) as unread
-        FROM (
-            SELECT receiver_id as other_id, created_at, content, read, sender_id
-            FROM private_messages WHERE sender_id = ?
+    cursor.execute(f"""
+        WITH msgs AS (
+            SELECT receiver_id AS other_id, created_at, {content_col} AS body,
+                   {read_expr} AS is_read, sender_id
+            FROM {table} WHERE sender_id = ?
             UNION ALL
-            SELECT sender_id as other_id, created_at, content, read, sender_id
-            FROM private_messages WHERE receiver_id = ?
-        ) GROUP BY other_id
+            SELECT sender_id AS other_id, created_at, {content_col} AS body,
+                   {read_expr} AS is_read, sender_id
+            FROM {table} WHERE receiver_id = ?
+        ),
+        filtered AS (
+            SELECT * FROM msgs WHERE other_id != ?
+        )
+        SELECT
+            f.other_id,
+            MAX(f.created_at) AS last_time,
+            (SELECT body FROM filtered f2
+             WHERE f2.other_id = f.other_id
+             ORDER BY f2.created_at DESC LIMIT 1) AS last_msg,
+            SUM(CASE WHEN f.sender_id != ? AND f.is_read = 0 THEN 1 ELSE 0 END) AS unread
+        FROM filtered f
+        GROUP BY f.other_id
         ORDER BY last_time DESC
-    """, (user_id, user_id, user_id))
+    """, (user_id, user_id, user_id, user_id))
     dialogs = []
     for row in cursor.fetchall():
         d = dict(row)
-        # Получаем ник собеседника
-        cursor2 = conn.cursor()
-        cursor2.execute("SELECT game_nickname FROM social_users WHERE player_id = ?", (d["other_id"],))
-        other = cursor2.fetchone()
-        d["nickname"] = other["game_nickname"] if other else "Unknown"
+        cursor.execute(
+            "SELECT game_nickname, discord_username FROM social_users WHERE player_id = ?",
+            (d["other_id"],)
+        )
+        other = cursor.fetchone()
+        d["nickname"] = (
+            other["game_nickname"] or other["discord_username"] if other else "Игрок"
+        )
         dialogs.append(d)
     conn.close()
     return dialogs
+
+
+def search_message_users(query: str, exclude_player_id: str, limit: int = 20) -> List[Dict]:
+    if len(query.strip()) < 2:
+        return []
+    conn = get_db()
+    cursor = conn.cursor()
+    like = f"%{query.strip()}%"
+    cursor.execute("""
+        SELECT player_id, game_nickname, discord_username, discord_avatar
+        FROM social_users
+        WHERE player_id != ?
+          AND (LOWER(game_nickname) LIKE LOWER(?)
+               OR LOWER(discord_username) LIKE LOWER(?))
+        ORDER BY game_nickname
+        LIMIT ?
+    """, (exclude_player_id, like, like, limit))
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return rows
 
 import json
 from datetime import datetime

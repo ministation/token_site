@@ -1,4 +1,5 @@
 let currentPmPartnerId = null;
+let pmSearchTimeout = null;
 
 async function loadDialogs() {
     if (!currentUser?.player) {
@@ -9,7 +10,7 @@ async function loadDialogs() {
         const dialogs = await apiCall('GET', '/api/messages/dialogs');
         const container = document.getElementById('dialogsList');
         if (!dialogs.length) {
-            container.innerHTML = '<p class="empty-state">Нет диалогов</p>';
+            container.innerHTML = '<p class="empty-state">Нет диалогов — найдите игрока выше</p>';
             return;
         }
         container.innerHTML = dialogs.map(d => `
@@ -25,10 +26,53 @@ async function loadDialogs() {
     }
 }
 
+function setupPmUserSearch() {
+    const input = document.getElementById('pmUserSearch');
+    if (!input || input.dataset.bound) return;
+    input.dataset.bound = '1';
+    input.addEventListener('input', () => {
+        clearTimeout(pmSearchTimeout);
+        pmSearchTimeout = setTimeout(() => searchPmUsers(input.value), 300);
+    });
+}
+
+async function searchPmUsers(query) {
+    const container = document.getElementById('pmUserResults');
+    if (!container) return;
+    if (!query || query.trim().length < 2) {
+        container.innerHTML = '';
+        return;
+    }
+    if (!currentUser?.player) {
+        container.innerHTML = '<p class="error">Войдите через Discord</p>';
+        return;
+    }
+    try {
+        const users = await apiCall('GET', '/api/messages/users?q=' + encodeURIComponent(query.trim()));
+        if (!users.length) {
+            container.innerHTML = '<p class="empty-state">Никого не найдено</p>';
+            return;
+        }
+        container.innerHTML = users.map(u => `
+            <button type="button" class="pm-user-item"
+                onclick='startConversationWith(${JSON.stringify(u.player_id)}, ${JSON.stringify(u.game_nickname || u.discord_username || 'Игрок')})'>
+                <span class="pm-user-name">${escapeHtml(u.game_nickname || u.discord_username)}</span>
+                <span class="pm-user-sub">@${escapeHtml(u.discord_username || '')}</span>
+            </button>
+        `).join('');
+    } catch (e) {
+        container.innerHTML = '<p class="error">Ошибка поиска</p>';
+    }
+}
+
 async function openConversation(partnerId, nickname) {
     currentPmPartnerId = partnerId;
     const title = document.getElementById('conversationTitle');
     if (title) title.textContent = nickname || 'Диалог';
+    const results = document.getElementById('pmUserResults');
+    if (results) results.innerHTML = '';
+    const search = document.getElementById('pmUserSearch');
+    if (search) search.value = '';
     await loadDialogs();
     await loadConversation(partnerId);
 }
@@ -39,14 +83,15 @@ async function loadConversation(partnerId) {
     try {
         const messages = await apiCall('GET', `/api/messages/conversation/${partnerId}`);
         if (!messages.length) {
-            container.innerHTML = '<p class="empty-state">Начните переписку</p>';
+            container.innerHTML = '<p class="empty-state">Напишите первое сообщение</p>';
             return;
         }
         const myId = currentUser.player.player_id;
+        const textKey = (m) => m.content ?? m.message ?? m.text ?? '';
         container.innerHTML = messages.reverse().map(m => {
             const own = m.sender_id === myId;
             return `<div class="pm-message ${own ? 'own' : ''}">
-                <div class="pm-bubble">${escapeHtml(m.content)}</div>
+                <div class="pm-bubble">${escapeHtml(textKey(m))}</div>
                 <div class="pm-time">${new Date(m.created_at).toLocaleString()}</div>
             </div>`;
         }).join('');
@@ -58,7 +103,7 @@ async function loadConversation(partnerId) {
 
 async function sendPrivateMessage() {
     if (!currentPmPartnerId) {
-        alert('Выберите диалог');
+        alert('Выберите диалог или найдите игрока');
         return;
     }
     const input = document.getElementById('pmInput');
@@ -82,5 +127,9 @@ function startConversationWith(playerId, nickname) {
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
     const btn = document.querySelector('.nav-btn[data-section="messages"]');
     if (btn) btn.classList.add('active');
+    if (typeof closeMobileNav === 'function') closeMobileNav();
+    setupPmUserSearch();
     openConversation(playerId, nickname);
 }
+
+document.addEventListener('DOMContentLoaded', setupPmUserSearch);

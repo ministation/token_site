@@ -330,21 +330,23 @@ async def get_playtime_stats():
     async with pg.acquire() as conn:
         row = await conn.fetchrow("""
             WITH player_totals AS (
-                SELECT player_id, SUM(time_spent) as total_time
+                SELECT player_id, SUM(time_spent) AS total_time
                 FROM play_time
                 WHERE tracker = 'Overall'
                 GROUP BY player_id
+                HAVING SUM(time_spent) > interval '5 hours'
             )
             SELECT
-                COUNT(*) FILTER (WHERE total_time < interval '50 hours') as newbies,
-                COUNT(*) FILTER (WHERE total_time >= interval '50 hours' AND total_time <= interval '400 hours') as regulars,
-                COUNT(*) FILTER (WHERE total_time > interval '400 hours') as veterans,
-                COUNT(*) as total
+                COUNT(*) FILTER (WHERE total_time < interval '50 hours') AS newbies,
+                COUNT(*) FILTER (WHERE total_time >= interval '50 hours'
+                                 AND total_time <= interval '400 hours') AS regulars,
+                COUNT(*) FILTER (WHERE total_time > interval '400 hours') AS veterans,
+                COUNT(*) AS total
             FROM player_totals
         """)
         return {
-            "newbies": row["newbies"],
-            "regulars": row["regulars"],
-            "veterans": row["veterans"],
-            "total": row["total"]
+            "newbies": row["newbies"] or 0,
+            "regulars": row["regulars"] or 0,
+            "veterans": row["veterans"] or 0,
+            "total": row["total"] or 0,
         }
