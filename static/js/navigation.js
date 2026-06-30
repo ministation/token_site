@@ -1,10 +1,21 @@
 function setupNavigation() {
+    const navToggle = document.getElementById('navToggle');
+    const mainNav = document.getElementById('mainNav');
+
+    if (navToggle && mainNav) {
+        navToggle.addEventListener('click', () => {
+            const open = mainNav.classList.toggle('open');
+            navToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        });
+    }
+
     document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const section = btn.dataset.section;
             showSection(section);
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
+            closeMobileNav();
 
             if (section === 'profile') {
                 if (currentUser?.player) {
@@ -34,10 +45,18 @@ function setupNavigation() {
                     alert('Войдите и привяжите Discord к игровому аккаунту');
                     return;
                 }
+                if (typeof setupPmUserSearch === 'function') setupPmUserSearch();
                 if (typeof loadDialogs === 'function') loadDialogs();
             }
         });
     });
+}
+
+function closeMobileNav() {
+    const mainNav = document.getElementById('mainNav');
+    const navToggle = document.getElementById('navToggle');
+    if (mainNav) mainNav.classList.remove('open');
+    if (navToggle) navToggle.setAttribute('aria-expanded', 'false');
 }
 
 function showSection(sectionId) {
