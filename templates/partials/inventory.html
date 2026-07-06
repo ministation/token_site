@@ -1,6 +1,19 @@
 <div class="card inventory-card">
     <h2><i class="fa-solid fa-box-open"></i> Инвентарь</h2>
-    <p class="inventory-hint">Ваши билеты и уровень донат-подписки</p>
+    <p class="inventory-hint">Ваши билеты, подписка и профиль</p>
+
+    <div class="profile-avatar-section" id="avatarSection" style="display:none;">
+        <h3><i class="fa-solid fa-user-circle"></i> Аватар</h3>
+        <div class="avatar-upload-row">
+            <img id="profileAvatarPreview" src="/static/default_avatar.png" alt="" class="profile-avatar-preview">
+            <div>
+                <input type="file" id="avatarUpload" accept="image/png,image/jpeg,image/webp,image/gif">
+                <button type="button" onclick="uploadAvatar()"><i class="fa-solid fa-upload"></i> Сменить аватар</button>
+                <p class="avatar-hint">Сохраняется на сервере, Discord больше не подгружается автоматически</p>
+            </div>
+        </div>
+        <div id="avatarUploadResult" class="result"></div>
+    </div>
 
     <div id="inventoryContent">
         <p class="empty-state">Загрузка...</p>

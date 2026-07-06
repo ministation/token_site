@@ -62,6 +62,12 @@ function setupNavigation() {
                 if (typeof loadBans === 'function') loadBans();
             } else if (section === 'online') {
                 if (typeof initStatsSection === 'function') initStatsSection();
+            } else if (section === 'admin') {
+                if (!currentUser?.is_admin) {
+                    alert('Доступ только для администраторов');
+                    return;
+                }
+                if (typeof loadAdminStats === 'function') loadAdminStats();
             }
         });
     });

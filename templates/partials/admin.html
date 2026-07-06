@@ -1,0 +1,40 @@
+<div class="card admin-panel">
+    <h2><i class="fa-solid fa-shield-halved"></i> Админ-панель</h2>
+    <p class="admin-hint">Управление сайтом — только для администраторов</p>
+
+    <div class="admin-tabs">
+        <button type="button" class="tab active" onclick="showAdminTab('stats', this)">Статистика</button>
+        <button type="button" class="tab" onclick="showAdminTab('posts', this)">Посты</button>
+        <button type="button" class="tab" onclick="showAdminTab('bans', this)">Все баны</button>
+        <button type="button" class="tab" onclick="showAdminTab('admins', this)">Админы</button>
+    </div>
+
+    <div id="adminStatsTab" class="admin-tab-content">
+        <div id="adminStatsContent"><p class="empty-state">Загрузка...</p></div>
+    </div>
+
+    <div id="adminPostsTab" class="admin-tab-content" style="display:none;">
+        <p class="admin-hint">Удаляйте посты кнопкой в ленте на главной или здесь по ID:</p>
+        <div class="admin-inline-form">
+            <input type="number" id="adminDeletePostId" placeholder="ID поста" min="1">
+            <button type="button" onclick="adminDeletePostById()"><i class="fa-solid fa-trash"></i> Удалить</button>
+        </div>
+        <div id="adminDeletePostResult" class="result"></div>
+    </div>
+
+    <div id="adminBansTab" class="admin-tab-content" style="display:none;">
+        <div id="adminBansContent"><p class="empty-state">Загрузка...</p></div>
+        <div class="bans-load-more">
+            <button type="button" onclick="loadAdminBans(true)"><i class="fa-solid fa-angles-down"></i> Загрузить ещё</button>
+        </div>
+    </div>
+
+    <div id="adminAdminsTab" class="admin-tab-content" style="display:none;">
+        <div class="admin-inline-form">
+            <input type="text" id="adminGrantUsername" placeholder="Discord-ник нового админа">
+            <button type="button" onclick="grantAdmin()"><i class="fa-solid fa-user-plus"></i> Назначить</button>
+        </div>
+        <div id="adminGrantResult" class="result"></div>
+        <div id="adminListContent"><p class="empty-state">Загрузка...</p></div>
+    </div>
+</div>

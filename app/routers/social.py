@@ -2,8 +2,9 @@ import os
 import shutil
 import datetime
 from fastapi import APIRouter, Request, HTTPException, UploadFile, File, Form
-from app.dependencies import get_current_user, get_current_player, get_current_social_user, get_optional_social_user
+from app.dependencies import get_current_user, get_current_player, get_current_social_user, get_optional_social_user, get_current_admin
 from app.models.social import ProfileUpdate, CommentCreate
+from app.services.avatars import resolve_avatar_url, save_custom_avatar
 from app.services.social import (
     get_social_user_by_player_id, update_social_user, create_post, delete_post,
     toggle_like, get_like_count, add_comment, get_comments, delete_comment,
@@ -18,15 +19,8 @@ from app.services.bank import get_balance_by_player_id
 router = APIRouter(prefix="/api/social", tags=["social"])
 
 
-def avatar_url(avatar_hash, discord_id=None):
-    """Преобразует хеш аватара Discord в полный URL."""
-    if not avatar_hash:
-        return "/static/default_avatar.png"
-    if avatar_hash.startswith("http"):
-        return avatar_hash
-    if discord_id:
-        return f"https://cdn.discordapp.com/avatars/{discord_id}/{avatar_hash}.png"
-    return "/static/default_avatar.png"
+def profile_avatar(row: dict) -> str:
+    return resolve_avatar_url(row)
 
 
 # ==================== ПРОФИЛЬ ====================
@@ -44,7 +38,7 @@ async def api_get_profile(request: Request, player_id: str):
     if not profile:
         raise HTTPException(status_code=404, detail="Профиль не найден")
 
-    avatar = avatar_url(profile.get("discord_avatar"), profile.get("discord_id"))
+    avatar = profile_avatar(profile)
 
     counts = get_follow_counts(player_id)
     following = False
@@ -108,7 +102,7 @@ async def api_feed(request: Request, limit: int = 20, offset: int = 0):
             "author_nickname": p["game_nickname"],
             "author_discord_username": p["discord_username"],
             "author_discord_id": p.get("discord_id", ""),
-            "author_avatar": avatar_url(p["discord_avatar"], p.get("discord_id")),
+            "author_avatar": profile_avatar(p),
             "content": p["content"],
             "image_url": p.get("image_url"),
             "like_count": p["like_count"],
@@ -140,7 +134,7 @@ async def api_user_posts(request: Request, player_id: str, limit: int = 20, offs
             "author_nickname": p["game_nickname"],
             "author_discord_username": p["discord_username"],
             "author_discord_id": p.get("discord_id", ""),
-            "author_avatar": avatar_url(p["discord_avatar"], p.get("discord_id")),
+            "author_avatar": profile_avatar(p),
             "content": p["content"],
             "image_url": p.get("image_url"),
             "like_count": p["like_count"],
@@ -155,9 +149,33 @@ async def api_user_posts(request: Request, player_id: str, limit: int = 20, offs
 async def api_delete_post(request: Request, post_id: int):
     user = await get_current_social_user(request)
     success = delete_post(post_id, user['social_id'])
+    if not success and user.get("is_admin"):
+        success = social_db.admin_delete_post(post_id)
     if not success:
         raise HTTPException(status_code=404, detail="Пост не найден или нет прав")
     return {"success": True}
+
+
+@router.post("/profile/avatar")
+async def api_upload_avatar(request: Request, image: UploadFile = File(...)):
+    user = await get_current_social_user(request)
+    if not image.filename:
+        raise HTTPException(status_code=400, detail="Файл не выбран")
+    ext = os.path.splitext(image.filename)[1].lower()
+    if ext not in (".png", ".jpg", ".jpeg", ".webp", ".gif"):
+        raise HTTPException(status_code=400, detail="Допустимы PNG, JPG, WEBP, GIF")
+    data = await image.read()
+    if len(data) > 2 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Максимум 2 МБ")
+    path = save_custom_avatar(user["social_id"], user["discord_id"], data, ext)
+    from app.core.sessions import get_session, set_session
+    token = request.cookies.get("session_token")
+    if token:
+        session = get_session(token)
+        if session:
+            session["avatar"] = path
+            set_session(token, session)
+    return {"success": True, "avatar": path}
 
 
 # ==================== ЛАЙКИ ====================
@@ -189,7 +207,7 @@ async def api_get_comments(post_id: int):
             "post_id": c["post_id"],
             "author_player_id": c["author_player_id"],
             "author_nickname": c.get("game_nickname", "Unknown"),
-            "author_avatar": avatar_url(c.get("discord_avatar")),
+            "author_avatar": profile_avatar(c),
             "content": c["content"],
             "created_at": c["created_at"]
         })
@@ -261,7 +279,7 @@ async def api_social_search(q: str = "", limit: int = 50):
                 "game_nickname": r.get("game_nickname", "Unknown"),
                 "nickname": r.get("game_nickname", "Unknown"),
                 "discord_username": r.get("discord_username"),
-                "discord_avatar": avatar_url(r.get("discord_avatar"), r.get("discord_id")),
+                "discord_avatar": profile_avatar(r),
                 "balance": balance,
             })
         return enriched

@@ -1,10 +1,15 @@
 async function loadInventory() {
     const container = document.getElementById('inventoryContent');
     if (!container) return;
+    const avatarSection = document.getElementById('avatarSection');
+    const avatarPreview = document.getElementById('profileAvatarPreview');
     if (!currentUser?.authenticated) {
         container.innerHTML = '<p class="empty-state">Войдите через Discord</p>';
+        if (avatarSection) avatarSection.style.display = 'none';
         return;
     }
+    if (avatarSection) avatarSection.style.display = 'block';
+    if (avatarPreview && currentUser.avatar) avatarPreview.src = currentUser.avatar;
     container.innerHTML = '<p class="empty-state">Загрузка...</p>';
     try {
         const data = await apiCall('GET', '/api/inventory');
@@ -55,5 +60,25 @@ async function loadInventory() {
         container.innerHTML = html;
     } catch (e) {
         container.innerHTML = `<p class="error">${escapeHtml(e.message)}</p>`;
+    }
+}
+
+async function uploadAvatar() {
+    const input = document.getElementById('avatarUpload');
+    const result = document.getElementById('avatarUploadResult');
+    if (!input?.files?.[0]) { alert('Выберите изображение'); return; }
+    const formData = new FormData();
+    formData.append('image', input.files[0]);
+    try {
+        const data = await apiCall('POST', '/api/social/profile/avatar', formData);
+        if (currentUser) currentUser.avatar = data.avatar;
+        const preview = document.getElementById('profileAvatarPreview');
+        if (preview) preview.src = data.avatar + '?t=' + Date.now();
+        const panelImg = document.querySelector('#userPanel img');
+        if (panelImg) panelImg.src = data.avatar + '?t=' + Date.now();
+        if (result) result.innerHTML = '<p class="success">Аватар обновлён</p>';
+        input.value = '';
+    } catch (e) {
+        if (result) result.innerHTML = `<p class="error">${escapeHtml(e.message)}</p>`;
     }
 }

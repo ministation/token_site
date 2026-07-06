@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request, HTTPException, Query
 from app.dependencies import get_current_social_user
 from app.models.chat import ChatMessage
 from app.services.chat import get_chat_messages, add_chat_message
+from app.services.avatars import resolve_avatar_url
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
@@ -20,12 +21,7 @@ async def post_chat(request: Request, msg: ChatMessage):
         raise HTTPException(status_code=400, detail="Пустое сообщение")
 
     social = user["social"]
-    avatar = None
-    if social.get("discord_avatar") and social.get("discord_id"):
-        avatar = f"https://cdn.discordapp.com/avatars/{social['discord_id']}/{social['discord_avatar']}.png"
-    elif user.get("avatar"):
-        avatar = user["avatar"]
-
+    avatar = resolve_avatar_url(social)
     nickname = social.get("game_nickname") or social.get("discord_username") or user.get("username", "Игрок")
     msg_data = add_chat_message(user["social_id"], nickname, avatar, msg.message)
     return {"success": True, "message": msg_data}

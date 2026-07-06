@@ -171,6 +171,27 @@ def init_social_db():
     conn.commit()
     conn.close()
     get_pm_table_info()
+    _migrate_schema()
+
+
+def _migrate_schema():
+    conn = get_db()
+    cursor = conn.cursor()
+    user_cols = _table_columns(cursor, "social_users")
+    if "avatar_path" not in user_cols:
+        cursor.execute("ALTER TABLE social_users ADD COLUMN avatar_path TEXT")
+    if "avatar_custom" not in user_cols:
+        cursor.execute("ALTER TABLE social_users ADD COLUMN avatar_custom INTEGER DEFAULT 0")
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS site_admins (
+            discord_id TEXT PRIMARY KEY,
+            discord_username TEXT,
+            granted_by TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    conn.commit()
+    conn.close()
 
 # Инициализация при импорте
 init_social_db()
@@ -207,10 +228,15 @@ def get_or_create_social_user(player_id: str, user_uuid: str, discord_id: str,
         old_player_id = row["player_id"]
         cursor.execute("""
             UPDATE social_users 
-            SET player_id = ?, user_uuid = ?, discord_username = ?, discord_avatar = ?,
+            SET player_id = ?, user_uuid = ?, discord_username = ?,
                 game_nickname = ?, updated_at = CURRENT_TIMESTAMP
             WHERE discord_id = ?
-        """, (player_id, user_uuid, discord_username, discord_avatar, game_nickname, discord_id))
+        """, (player_id, user_uuid, discord_username, game_nickname, discord_id))
+        if discord_avatar and not (row["avatar_custom"] if "avatar_custom" in row.keys() else 0):
+            cursor.execute(
+                "UPDATE social_users SET discord_avatar = ? WHERE discord_id = ?",
+                (discord_avatar, discord_id)
+            )
         conn.commit()
         if old_player_id != player_id:
             _migrate_user_id_refs(old_player_id, player_id)
@@ -258,6 +284,117 @@ def get_social_user_by_discord_id(discord_id: str) -> Optional[Dict]:
     row = cursor.fetchone()
     conn.close()
     return dict(row) if row else None
+
+
+def get_social_user_by_discord_username(username: str) -> Optional[Dict]:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT * FROM social_users WHERE LOWER(discord_username) = LOWER(?) LIMIT 1",
+        (username.strip().lstrip("@"),)
+    )
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def update_user_avatar(discord_id: str, avatar_path: str,
+                       discord_hash: str | None = None, custom: bool | None = None) -> bool:
+    conn = get_db()
+    cursor = conn.cursor()
+    fields = ["avatar_path = ?", "updated_at = CURRENT_TIMESTAMP"]
+    values: list = [avatar_path]
+    if discord_hash is not None:
+        fields.append("discord_avatar = ?")
+        values.append(discord_hash)
+    if custom is not None:
+        fields.append("avatar_custom = ?")
+        values.append(1 if custom else 0)
+    values.append(discord_id)
+    cursor.execute(f"UPDATE social_users SET {', '.join(fields)} WHERE discord_id = ?", values)
+    conn.commit()
+    ok = cursor.rowcount > 0
+    conn.close()
+    return ok
+
+
+def is_site_admin(discord_id: str) -> bool:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT 1 FROM site_admins WHERE discord_id = ?", (discord_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return row is not None
+
+
+def add_site_admin(discord_id: str, discord_username: str, granted_by: str) -> bool:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO site_admins (discord_id, discord_username, granted_by)
+        VALUES (?, ?, ?)
+        ON CONFLICT(discord_id) DO UPDATE SET
+            discord_username = excluded.discord_username,
+            granted_by = excluded.granted_by
+    """, (discord_id, discord_username, granted_by))
+    conn.commit()
+    conn.close()
+    return True
+
+
+def remove_site_admin(discord_id: str) -> bool:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM site_admins WHERE discord_id = ?", (discord_id,))
+    conn.commit()
+    ok = cursor.rowcount > 0
+    conn.close()
+    return ok
+
+
+def list_site_admins() -> List[Dict]:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM site_admins ORDER BY created_at ASC")
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return rows
+
+
+def seed_admin_by_username(username: str, granted_by: str = "config") -> bool:
+    user = get_social_user_by_discord_username(username)
+    if not user:
+        return False
+    return add_site_admin(user["discord_id"], user.get("discord_username") or username, granted_by)
+
+
+def get_site_stats() -> Dict:
+    conn = get_db()
+    cursor = conn.cursor()
+    stats = {}
+    for table, key in [
+        ("social_users", "users"),
+        ("posts", "posts"),
+        ("comments", "comments"),
+        ("likes", "likes"),
+        ("follows", "follows"),
+        ("global_chat_messages", "chat_messages"),
+        ("sessions", "sessions"),
+        ("site_admins", "admins"),
+    ]:
+        try:
+            cursor.execute(f"SELECT COUNT(*) FROM {table}")
+            stats[key] = cursor.fetchone()[0]
+        except sqlite3.OperationalError:
+            stats[key] = 0
+    table, _, _ = get_pm_table_info()
+    try:
+        cursor.execute(f"SELECT COUNT(*) FROM {table}")
+        stats["private_messages"] = cursor.fetchone()[0]
+    except sqlite3.OperationalError:
+        stats["private_messages"] = 0
+    conn.close()
+    return stats
 
 def update_social_user(player_id: str, bio: str = None, game_nickname: str = None) -> bool:
     conn = get_db()
@@ -312,6 +449,7 @@ def get_post_by_id(post_id: int) -> Optional[Dict]:
     cursor = conn.cursor()
     cursor.execute("""
         SELECT p.*, su.game_nickname, su.discord_username, su.discord_avatar, su.discord_id,
+               su.avatar_path, su.avatar_custom,
                (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as like_count,
                (SELECT COUNT(*) FROM comments WHERE post_id = p.id) as comment_count
         FROM posts p
@@ -337,6 +475,7 @@ def get_all_posts(viewer_id: str | None = None, limit: int = 30, offset: int = 0
     params: list = ([viewer_id] if viewer_id else []) + [limit, offset]
     cursor.execute(f"""
         SELECT p.*, su.game_nickname, su.discord_username, su.discord_avatar, su.discord_id,
+               su.avatar_path, su.avatar_custom,
                (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as like_count,
                (SELECT COUNT(*) FROM comments WHERE post_id = p.id) as comment_count,
                {liked_expr} as liked_by_me
@@ -354,6 +493,7 @@ def get_user_posts(player_id: str, limit: int = 30, offset: int = 0) -> List[Dic
     cursor = conn.cursor()
     cursor.execute("""
         SELECT p.*, su.game_nickname, su.discord_username, su.discord_avatar, su.discord_id,
+               su.avatar_path, su.avatar_custom,
                (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as like_count,
                (SELECT COUNT(*) FROM comments WHERE post_id = p.id) as comment_count,
                EXISTS(SELECT 1 FROM likes WHERE post_id = p.id AND player_id = ?) as liked_by_me
@@ -371,6 +511,16 @@ def delete_post(post_id: int, author_player_id: str) -> bool:
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("DELETE FROM posts WHERE id = ? AND author_player_id = ?", (post_id, author_player_id))
+    conn.commit()
+    affected = cursor.rowcount
+    conn.close()
+    return affected > 0
+
+
+def admin_delete_post(post_id: int) -> bool:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM posts WHERE id = ?", (post_id,))
     conn.commit()
     affected = cursor.rowcount
     conn.close()
@@ -419,7 +569,7 @@ def get_comments(post_id: int, limit: int = 50) -> List[Dict]:
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT c.*, su.game_nickname, su.discord_username, su.discord_avatar
+        SELECT c.*, su.game_nickname, su.discord_username, su.discord_avatar, su.avatar_path
         FROM comments c
         JOIN social_users su ON c.author_player_id = su.player_id
         WHERE c.post_id = ?

@@ -20,6 +20,7 @@ async function checkAuth() {
                 currentUser.social_id = data.social_id;
             }
             updateAuthUI();
+            if (typeof initAdminPanel === 'function') initAdminPanel();
         } else {
             document.getElementById('loginBtn').style.display = '';
             document.getElementById('userPanel').style.display = 'none';

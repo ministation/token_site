@@ -1623,6 +1623,54 @@ html[data-theme="dark"] .status-meta {
     cursor: default;
     pointer-events: none;
 }
+.post-delete-btn { color: var(--danger) !important; }
+.post-delete-btn:hover { background: rgba(217, 69, 58, 0.12) !important; }
+
+/* === Admin panel === */
+.admin-panel .admin-hint { color: var(--muted); font-size: 0.85rem; margin-bottom: 14px; }
+.admin-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+.admin-tabs .tab { flex: 1; min-width: 100px; }
+.admin-inline-form { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; align-items: center; }
+.admin-inline-form input { flex: 1; min-width: 140px; margin-bottom: 0; }
+.admin-stats-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+.admin-list-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 10px 12px;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    margin-bottom: 8px;
+}
+.admin-list-item .admin-meta { font-size: 0.78rem; color: var(--muted); flex: 1; }
+.btn-danger-sm {
+    padding: 6px 10px;
+    font-size: 0.58rem;
+    background: var(--danger);
+    border-color: var(--danger-deep);
+    color: #fff;
+}
+.btn-danger-sm:hover { background: var(--danger-deep); color: #fff; }
+
+/* === Avatar upload === */
+.profile-avatar-section {
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+}
+.profile-avatar-section h3 { margin-bottom: 12px; font-size: 0.95rem; }
+.avatar-upload-row { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+.profile-avatar-preview {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid var(--border-strong);
+    flex-shrink: 0;
+}
+.avatar-hint { font-size: 0.78rem; color: var(--dim); margin-top: 8px; max-width: 280px; }
 
 /* === Slot machine unati === */
 .slot-reel img {

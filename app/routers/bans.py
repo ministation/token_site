@@ -1,9 +1,18 @@
-from fastapi import APIRouter, Request, HTTPException
-from app.dependencies import get_current_user
-from app.services.bans import get_player_bans
+from fastapi import Request
+from app.dependencies import get_current_admin
+from app.services.bans import get_all_bans, get_player_bans
 from app.services.bank import find_player_by_discord
+from fastapi import APIRouter, HTTPException
+from app.dependencies import get_current_user
 
 router = APIRouter(prefix="/api/bans", tags=["bans"])
+
+
+@router.get("/all")
+async def api_all_bans(request: Request, limit: int = 50, offset: int = 0):
+    """Все баны — только для администраторов (legacy-совместимость)."""
+    await get_current_admin(request)
+    return await get_all_bans(limit, offset)
 
 
 @router.get("/my")

@@ -46,4 +46,6 @@ SERVER_PORT = int(os.getenv("SERVER_PORT", "8067"))
 # Файлы и загрузки
 SESSIONS_FILE = os.getenv("SESSIONS_FILE", "sessions.json")
 UPLOAD_DIR = os.getenv("UPLOAD_DIR", "static/uploads")
+AVATAR_DIR = os.getenv("AVATAR_DIR", "static/avatars")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+os.makedirs(AVATAR_DIR, exist_ok=True)

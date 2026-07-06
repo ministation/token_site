@@ -73,6 +73,12 @@ function renderPost(post) {
                 <i class="fa-solid fa-comment"></i> <span id="comment-count-${post.id}">${post.comment_count}</span>
            </button>`
         : `<span class="post-action-btn disabled"><i class="fa-solid fa-comment"></i> ${post.comment_count}</span>`;
+    const canDelete = currentUser?.is_admin || (canInteract && post.author_player_id === currentUser?.social_id);
+    const deleteBtn = canDelete
+        ? `<button onclick="deletePost(${post.id})" class="post-action-btn post-delete-btn" title="Удалить">
+                <i class="fa-solid fa-trash"></i>
+           </button>`
+        : '';
     return `
         <div class="post card" data-post-id="${post.id}">
             <div class="post-header">
@@ -88,6 +94,7 @@ function renderPost(post) {
             <div class="post-actions">
                 ${likeBtn}
                 ${commentBtn}
+                ${deleteBtn}
             </div>
             <div id="comments-${post.id}" class="comments-section" style="display:none;"></div>
         </div>
@@ -144,4 +151,15 @@ async function addComment(postId) {
         const span = document.getElementById('comment-count-' + postId);
         if (span) span.textContent = parseInt(span.textContent) + 1;
     } catch (e) {}
+}
+
+async function deletePost(postId) {
+    if (!confirm('Удалить этот пост?')) return;
+    try {
+        await apiCall('DELETE', '/api/social/posts/' + postId);
+        const el = document.querySelector('.post[data-post-id="' + postId + '"]');
+        if (el) el.remove();
+    } catch (e) {
+        alert(e.message);
+    }
 }

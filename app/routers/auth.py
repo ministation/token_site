@@ -9,17 +9,30 @@ from app.core.sessions import (
 )
 from app.services.bank import find_player_by_discord
 from app.services.social import get_or_create_social_user
+from app.services.avatars import sync_discord_avatar_for_user, resolve_avatar_url
+import database_social as social_db
 
 
-def check_is_admin(username: str) -> bool:
+def check_is_admin(username: str = "", discord_id: str | None = None) -> bool:
+    if discord_id and social_db.is_site_admin(discord_id):
+        return True
     return username.lower() in [u.lower() for u in ADMIN_USERNAMES]
+
+
+def _ensure_admin_record(discord_id: str, username: str):
+    if check_is_admin(username, discord_id):
+        social_db.add_site_admin(discord_id, username, "config")
+
 
 router = APIRouter(tags=["auth"])
 
 
 def _apply_admin_flag(session_data: dict) -> dict:
     username = session_data.get("username", "")
-    session_data["is_admin"] = username.lower() in [u.lower() for u in ADMIN_USERNAMES]
+    discord_id = session_data.get("discord_id")
+    session_data["is_admin"] = check_is_admin(username, discord_id)
+    if session_data["is_admin"] and discord_id:
+        social_db.add_site_admin(discord_id, username, "config")
     return session_data
 
 
@@ -65,11 +78,9 @@ async def callback(code: str, state: str):
             avatar = user_data.get('avatar')
 
     session_token = generate_session_token()
-    avatar_url = f"https://cdn.discordapp.com/avatars/{discord_id}/{avatar}.png" if avatar else None
     session_data = {
         'discord_id': discord_id,
         'username': username,
-        'avatar': avatar_url,
         'created': datetime.datetime.now().isoformat()
     }
 
@@ -94,6 +105,11 @@ async def callback(code: str, state: str):
             discord_avatar=avatar,
             game_nickname=username
         )
+
+    cached_avatar = await sync_discord_avatar_for_user(discord_id, avatar)
+    session_data['avatar'] = cached_avatar or resolve_avatar_url(
+        social_db.get_social_user_by_discord_id(discord_id)
+    )
 
     _apply_admin_flag(session_data)
     set_session(session_token, session_data)
@@ -127,7 +143,6 @@ async def api_me(request: Request):
     session = get_session(session_token)
     if not session:
         return {"authenticated": False}
-    import database_social as social_db
     from app.services.bank import find_player_by_discord
 
     # Обновить привязку к игре, если появилась после входа
@@ -167,6 +182,10 @@ async def api_me(request: Request):
                 game_nickname=session['username']
             )
         social = social_db.get_social_user_by_discord_id(session['discord_id'])
+    if social and not social.get("avatar_custom") and social.get("discord_avatar"):
+        cached = await sync_discord_avatar_for_user(session["discord_id"], social.get("discord_avatar"))
+        if cached:
+            social = social_db.get_social_user_by_discord_id(session['discord_id'])
     result = {
         "authenticated": True,
         "username": session['username'],
@@ -176,5 +195,10 @@ async def api_me(request: Request):
     }
     if social:
         result["social_id"] = social["player_id"]
-    result["is_admin"] = check_is_admin(session.get("username", ""))
+        result["avatar"] = resolve_avatar_url(social)
+    else:
+        result["avatar"] = "/static/default_avatar.png"
+    result["is_admin"] = check_is_admin(session.get("username", ""), session.get("discord_id"))
+    if result["is_admin"]:
+        social_db.add_site_admin(session["discord_id"], session.get("username", ""), "config")
     return result
