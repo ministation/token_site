@@ -23,8 +23,12 @@ async function apiCall(method, url, body = null) {
     }
     const res = await fetch(`${API_BASE}${url}`, options);
     if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.detail || 'Ошибка запроса');
+        let detail = 'Ошибка запроса';
+        try {
+            const err = await res.json();
+            if (err && err.detail) detail = err.detail;
+        } catch (e) { /* ответ не в формате JSON (например, страница ошибки) */ }
+        throw new Error(detail);
     }
     return await res.json();
 }

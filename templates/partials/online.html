@@ -2,10 +2,10 @@
     <h2><i class="fa-solid fa-chart-line"></i> Статистика онлайна</h2>
 
     <div class="chart-controls">
-        <button class="chart-tab active" onclick="switchOnlineMode('day')">День</button>
-        <button class="chart-tab" onclick="switchOnlineMode('week')">Неделя</button>
-        <button class="chart-tab" onclick="switchOnlineMode('month')">Месяц</button>
-        <button class="chart-tab" onclick="switchOnlineMode('weekly-hours')">По часам</button>
+        <button class="chart-tab active" data-mode="day" onclick="switchOnlineMode('day', this)">День</button>
+        <button class="chart-tab" data-mode="week" onclick="switchOnlineMode('week', this)">Неделя</button>
+        <button class="chart-tab" data-mode="month" onclick="switchOnlineMode('month', this)">Месяц</button>
+        <button class="chart-tab" data-mode="weekly-hours" onclick="switchOnlineMode('weekly-hours', this)">По часам</button>
         <input type="date" id="dayPicker" onchange="loadDailyOnline(this.value)">
     </div>
 

@@ -1,94 +1,75 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Мини-станция</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="/static/style.css">
     <link rel="icon" type="image/png" href="/static/coin.png">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
+    <header class="topbar">
+        <div class="topbar-inner">
             <div class="logo">
-                <img src="/static/coin.png" alt="Coin">
+                <img src="/static/logo.png" alt="Логотип" onerror="this.src='/static/coin.png'">
                 <h1>Мини-станция</h1>
             </div>
+            <button type="button" class="nav-toggle" id="navToggle" aria-label="Меню" aria-expanded="false">
+                <i class="fa-solid fa-bars"></i> Меню
+            </button>
             <div id="userInfo">
                 <button id="loginBtn" onclick="login()">
-                    <img src="/static/discord.png" alt="" class="btn-icon">
+                    <i class="fa-brands fa-discord"></i>
                     Войти через Discord
                 </button>
                 <div id="userPanel" style="display:none;"></div>
             </div>
         </div>
+    </header>
 
-        <div class="nav-bar">
-            <button type="button" class="nav-toggle" id="navToggle" aria-label="Меню" aria-expanded="false">
-                <i class="fa-solid fa-bars"></i> Меню
-            </button>
-            <nav class="main-nav" id="mainNav" aria-label="Основная навигация">
-            <button class="nav-btn active" data-section="home"><i class="fa-solid fa-house"></i> Главная</button>
-            <button class="nav-btn" data-section="economy"><i class="fa-solid fa-coins"></i> Монетки</button>
-            <button class="nav-btn" data-section="bans"><i class="fa-solid fa-gavel"></i> Наказания</button>
-            <button class="nav-btn" data-section="online"><i class="fa-solid fa-chart-line"></i> Статистика</button>
-            <button class="nav-btn" data-section="messages"><i class="fa-solid fa-envelope"></i> Сообщения</button>
-            </nav>
-        </div>
+    <div class="layout">
+        <aside class="sidebar" id="mainNav" aria-label="Основная навигация">
+            <div class="side-group">
+                <div class="side-group-title"><i class="fa-solid fa-compass"></i> Навигация</div>
+                <button class="nav-btn active" data-section="home"><i class="fa-solid fa-house"></i> Главная</button>
+                <button class="nav-btn" data-section="economy"><i class="fa-solid fa-coins"></i> Монетки</button>
+                <button class="nav-btn" data-section="bans"><i class="fa-solid fa-gavel"></i> Наказания</button>
+                <button class="nav-btn" data-section="online"><i class="fa-solid fa-chart-line"></i> Статистика</button>
+                <button class="nav-btn" data-section="messages"><i class="fa-solid fa-envelope"></i> Сообщения</button>
+            </div>
+            <div class="side-group">
+                <div class="side-group-title"><i class="fa-solid fa-link"></i> Ссылки</div>
+                <a class="side-link" href="https://ministation.ru/" target="_blank" rel="noopener"><i class="fa-solid fa-globe"></i> Сайт</a>
+                <a class="side-link" href="https://wiki.ministation.ru" target="_blank" rel="noopener"><i class="fa-solid fa-book"></i> Вики</a>
+                <a class="side-link" href="https://discord.gg/mini-station" target="_blank" rel="noopener"><i class="fa-brands fa-discord"></i> Discord</a>
+                <a class="side-link" href="https://t.me/mini_station" target="_blank" rel="noopener"><i class="fa-brands fa-telegram"></i> Telegram</a>
+            </div>
+        </aside>
 
-        <div id="homeSection" class="section active">
-            {% include 'partials/home.html' %}
-        </div>
-        <div id="economySection" class="section">
-            {% include 'partials/economy.html' %}
-        </div>
-        <div id="bansSection" class="section">
-            {% include 'partials/bans.html' %}
-        </div>
-        <div id="onlineSection" class="section">
-            {% include 'partials/online.html' %}
-        </div>
-        <div id="messagesSection" class="section">
-            {% include 'partials/messages.html' %}
-        </div>
+        <main class="content">
+            <div id="homeSection" class="section active">
+                {% include 'partials/home.html' %}
+            </div>
+            <div id="economySection" class="section">
+                {% include 'partials/economy.html' %}
+            </div>
+            <div id="bansSection" class="section">
+                {% include 'partials/bans.html' %}
+            </div>
+            <div id="onlineSection" class="section">
+                {% include 'partials/online.html' %}
+            </div>
+            <div id="messagesSection" class="section">
+                {% include 'partials/messages.html' %}
+            </div>
 
-        <datalist id="playersList"></datalist>
+            <datalist id="playersList"></datalist>
+        </main>
     </div>
 
-    <script>
-        const API_BASE = '';
-        const COIN_ICON = '<img src="/static/coin.png" class="coin-icon-result" alt="">';
-        let currentUser = null;
-        let currentPlayerId = null;
-
-        function escapeHtml(text) {
-            if (!text) return '';
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        async function apiCall(method, url, body = null) {
-            const options = { method, headers: {} };
-            if (body) {
-                if (body instanceof FormData) {
-                    options.body = body;
-                } else {
-                    options.headers['Content-Type'] = 'application/json';
-                    options.body = JSON.stringify(body);
-                }
-            }
-            const res = await fetch(`${API_BASE}${url}`, options);
-            if (!res.ok) {
-                const err = await res.json();
-                throw new Error(err.detail || 'Ошибка запроса');
-            }
-            return await res.json();
-        }
-    </script>
-
+    <script src="/static/js/common.js"></script>
     <script src="/static/js/auth.js"></script>
     <script src="/static/js/navigation.js"></script>
     <script src="/static/js/bank.js"></script>
@@ -121,8 +102,8 @@
                     ],
                     datasets: [{
                         data: [data.newbies || 0, data.regulars || 0, data.veterans || 0],
-                        backgroundColor: ['#6ecf8a', '#e8c060', '#e88a9a'],
-                        borderColor: 'rgba(10, 10, 20, 0.5)',
+                        backgroundColor: ['#6fbf73', '#caa53d', '#b8483a'],
+                        borderColor: 'rgba(36, 29, 22, 0.8)',
                         borderWidth: 2
                     }]
                 },
@@ -132,7 +113,7 @@
                     plugins: {
                         legend: {
                             position: 'bottom',
-                            labels: { color: '#c4b5e0', padding: 10, font: { size: 11 }, boxWidth: 12 }
+                            labels: { color: '#ece2ca', padding: 10, font: { size: 11 }, boxWidth: 12 }
                         }
                     }
                 }
