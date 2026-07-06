@@ -53,7 +53,7 @@ async function transfer() {
     if (amount < 1) { resultDiv.innerHTML = '<p class="error">Сумма >= 1</p>'; return; }
     try {
         const data = await apiCall('POST', '/api/transfer', { receiver_nick: receiver, amount });
-        resultDiv.innerHTML = `<p class="success">✅ Переведено ${data.amount} ${COIN_ICON} игроку ${escapeHtml(data.receiver)}. Ваш баланс: ${data.new_balance} ${COIN_ICON}</p>`;
+        resultDiv.innerHTML = `<p class="success">Переведено ${data.amount} ${COIN_ICON} игроку ${escapeHtml(data.receiver)}. Ваш баланс: ${data.new_balance} ${COIN_ICON}</p>`;
         loadMyBalance();
         loadTop();
     } catch (e) {
@@ -66,7 +66,7 @@ function startSlotAnimation() {
     const slotResult = document.getElementById('slotResult');
     if (!slotMachine || !slotResult) return;
     slotMachine.style.display = 'flex';
-    slotResult.innerHTML = '🎲 Крутим...';
+    slotResult.innerHTML = 'Крутим...';
     document.querySelectorAll('.slot-reel').forEach(r => r.classList.add('slot-spinning'));
     let spins = 0;
     slotInterval = setInterval(() => {
@@ -95,7 +95,7 @@ function stopSlotAnimation(prize) {
         if (el) el.innerHTML = `<img src="/static/slots/${symbols[i]}.png" alt="">`;
     });
     const slotResult = document.getElementById('slotResult');
-    if (slotResult) slotResult.innerHTML = prize >= 15 ? `🎉 ДЖЕКПОТ! ${prize} ${COIN_ICON}` : `✨ Выигрыш: ${prize} ${COIN_ICON}`;
+    if (slotResult) slotResult.innerHTML = prize >= 15 ? `ДЖЕКПОТ! ${prize} ${COIN_ICON}` : `Выигрыш: ${prize} ${COIN_ICON}`;
 }
 
 async function playLottery() {
@@ -106,7 +106,7 @@ async function playLottery() {
         const data = await apiCall('POST', '/api/lottery');
         setTimeout(() => {
             stopSlotAnimation(data.prize);
-            resultDiv.innerHTML = `<p class="success">🎉 Выигрыш: ${data.prize} ${COIN_ICON}! Новый баланс: ${data.new_balance} ${COIN_ICON}</p>`;
+            resultDiv.innerHTML = `<p class="success">Выигрыш: ${data.prize} ${COIN_ICON}! Новый баланс: ${data.new_balance} ${COIN_ICON}</p>`;
             loadMyBalance();
             loadTop();
         }, 1500);

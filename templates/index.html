@@ -1,10 +1,14 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Мини-станция</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Exo+2:wght@400;600;700&display=swap">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="/static/js/theme.js"></script>
     <link rel="stylesheet" href="/static/style.css">
     <link rel="icon" type="image/png" href="/static/coin.png">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
@@ -14,12 +18,15 @@
         <div class="topbar-inner">
             <div class="logo">
                 <img src="/static/logo.png" alt="Логотип" onerror="this.src='/static/coin.png'">
-                <h1>Мини-станция</h1>
+                <h1>Мини<span>-</span>станция</h1>
             </div>
             <button type="button" class="nav-toggle" id="navToggle" aria-label="Меню" aria-expanded="false">
                 <i class="fa-solid fa-bars"></i> Меню
             </button>
             <div id="userInfo">
+                <button type="button" class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Сменить тему">
+                    <i class="fa-solid fa-moon"></i>
+                </button>
                 <button id="loginBtn" onclick="login()">
                     <i class="fa-brands fa-discord"></i>
                     Войти через Discord
@@ -102,8 +109,8 @@
                     ],
                     datasets: [{
                         data: [data.newbies || 0, data.regulars || 0, data.veterans || 0],
-                        backgroundColor: ['#6fbf73', '#caa53d', '#b8483a'],
-                        borderColor: 'rgba(36, 29, 22, 0.8)',
+                        backgroundColor: [cssVar('--success'), cssVar('--gold'), cssVar('--accent')],
+                        borderColor: cssVar('--panel'),
                         borderWidth: 2
                     }]
                 },
@@ -113,7 +120,7 @@
                     plugins: {
                         legend: {
                             position: 'bottom',
-                            labels: { color: '#ece2ca', padding: 10, font: { size: 11 }, boxWidth: 12 }
+                            labels: { color: cssVar('--chart-text'), padding: 10, font: { size: 11 }, boxWidth: 12 }
                         }
                     }
                 }
@@ -153,6 +160,8 @@
             }
         } catch (e) {}
     }
+
+    window.addEventListener('themechange', loadPlaytimeChart);
 
     loadServerStatus();
     loadPlaytimeChart();

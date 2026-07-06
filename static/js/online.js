@@ -102,8 +102,8 @@ function renderSingleChart(labels, values, xLabel, datasetLabel) {
             datasets: [{
                 label: datasetLabel,
                 data: values,
-                backgroundColor: 'rgba(202, 165, 61, 0.55)',
-                borderColor: '#caa53d',
+                backgroundColor: 'rgba(30, 111, 217, 0.45)',
+                borderColor: cssVar('--accent'),
                 borderWidth: 1
             }]
         },
@@ -120,6 +120,8 @@ function sizeCanvas(canvas) {
 }
 
 function chartOptions(xLabel) {
+    const text = cssVar('--chart-text');
+    const grid = cssVar('--chart-grid');
     return {
         responsive: false,
         maintainAspectRatio: false,
@@ -127,20 +129,20 @@ function chartOptions(xLabel) {
         plugins: {
             legend: {
                 position: 'top',
-                labels: { color: '#ece2ca', padding: 12, font: { size: 11 } }
+                labels: { color: text, padding: 12, font: { size: 11 } }
             }
         },
         scales: {
             x: {
-                title: { display: true, text: xLabel, color: '#aaaaaa', font: { size: 11 } },
-                ticks: { color: '#aaaaaa', maxRotation: 45, font: { size: 9 }, autoSkip: true, maxTicksLimit: 20 },
-                grid: { color: 'rgba(255,255,255,0.05)' }
+                title: { display: true, text: xLabel, color: text, font: { size: 11 } },
+                ticks: { color: text, maxRotation: 45, font: { size: 9 }, autoSkip: true, maxTicksLimit: 20 },
+                grid: { color: grid }
             },
             y: {
                 beginAtZero: true,
-                title: { display: true, text: 'Игроки', color: '#aaaaaa', font: { size: 11 } },
-                ticks: { color: '#aaaaaa', stepSize: 1, precision: 0, font: { size: 10 } },
-                grid: { color: 'rgba(255,255,255,0.05)' }
+                title: { display: true, text: 'Игроки', color: text, font: { size: 11 } },
+                ticks: { color: text, stepSize: 1, precision: 0, font: { size: 10 } },
+                grid: { color: grid }
             }
         }
     };
@@ -160,8 +162,8 @@ function renderChart(labels, avgValues, maxValues, xLabel) {
                 {
                     label: 'Средний',
                     data: avgValues,
-                    borderColor: '#caa53d',
-                    backgroundColor: 'rgba(202, 165, 61, 0.12)',
+                    borderColor: cssVar('--accent'),
+                    backgroundColor: 'rgba(30, 111, 217, 0.10)',
                     tension: 0.35,
                     fill: true,
                     pointRadius: 2,
@@ -170,8 +172,8 @@ function renderChart(labels, avgValues, maxValues, xLabel) {
                 {
                     label: 'Максимум',
                     data: maxValues,
-                    borderColor: '#6fbf73',
-                    backgroundColor: 'rgba(111, 191, 115, 0.08)',
+                    borderColor: cssVar('--accent-2'),
+                    backgroundColor: 'rgba(11, 167, 180, 0.08)',
                     tension: 0.35,
                     fill: false,
                     pointRadius: 2,
@@ -190,3 +192,8 @@ function destroyOnlineChart() {
         isInitialized = false;
     }
 }
+
+// Перерисовка графика в цветах новой темы после переключения
+window.addEventListener('themechange', () => {
+    if (isInitialized) switchOnlineMode(currentOnlineMode);
+});
