@@ -43,7 +43,11 @@ async function checkAuth() {
 function updateAuthUI() {
     const postCard = document.getElementById('createPostCard');
     if (postCard) {
-        postCard.style.display = currentUser?.authenticated ? 'block' : 'none';
+        const canPostHere = currentUser?.authenticated
+            && (typeof currentForumCategory === 'undefined'
+                || currentForumCategory !== 'news'
+                || currentUser?.is_admin);
+        postCard.style.display = canPostHere ? 'block' : 'none';
     }
     if (typeof updateForumStaffOptions === 'function') updateForumStaffOptions();
     if (typeof syncPostFormWithForum === 'function') syncPostFormWithForum();

@@ -2,7 +2,7 @@ let currentForumCategory = 'news';
 let currentForumTopic = '';
 
 const FORUM_HINTS = {
-    news: 'Официальные новости и объявления проекта',
+    news: 'Официальные новости проекта — публикуют администраторы, читать могут все',
     forum: 'Общие темы, вопросы и обсуждения сообщества',
     discussion: 'Обсуждения по конкретным темам — выберите категорию ниже',
 };
@@ -35,7 +35,11 @@ function updatePostFormFields() {
 function syncPostFormWithForum() {
     const categorySelect = document.getElementById('postCategory');
     if (!categorySelect) return;
-    categorySelect.value = currentForumCategory;
+    let category = currentForumCategory;
+    if (category === 'news' && !currentUser?.is_admin) {
+        category = 'forum';
+    }
+    categorySelect.value = category;
     updatePostFormFields();
     if (currentForumCategory === 'discussion') {
         const topicSelect = document.getElementById('postTopic');
@@ -48,7 +52,7 @@ function syncPostFormWithForum() {
 function updateForumStaffOptions() {
     const newsOption = document.getElementById('postCategoryNews');
     if (newsOption) {
-        const canNews = currentUser?.is_moderator;
+        const canNews = currentUser?.is_admin;
         newsOption.hidden = !canNews;
         if (!canNews && document.getElementById('postCategory')?.value === 'news') {
             document.getElementById('postCategory').value = 'forum';
@@ -70,6 +74,7 @@ function switchForumSection(category, btn) {
     const hint = document.getElementById('forumSectionHint');
     if (hint) hint.textContent = FORUM_HINTS[category] || '';
     syncPostFormWithForum();
+    if (typeof updateAuthUI === 'function') updateAuthUI();
     loadFeed();
 }
 
@@ -158,6 +163,7 @@ function renderPosts(posts, containerId) {
 }
 
 function renderPostBadges(post) {
+    if (post.category === 'news') return '';
     const parts = [];
     if (post.category_label) {
         parts.push(`<span class="forum-badge forum-badge-${post.category || 'forum'}">${escapeHtml(post.category_label)}</span>`);
@@ -169,6 +175,8 @@ function renderPostBadges(post) {
 }
 
 function renderPost(post) {
+    if (post.category === 'news') return renderNewsPost(post);
+
     const likedClass = post.liked_by_me ? 'liked' : '';
     const imageHtml = post.image_url ? `<img src="${post.image_url}" class="post-image" alt="">` : '';
     const avatarUrl = post.author_avatar || '/static/default_avatar.png';
@@ -213,6 +221,48 @@ function renderPost(post) {
             </div>
             <div id="comments-${post.id}" class="comments-section" style="display:none;"></div>
         </div>
+    `;
+}
+
+function renderNewsPost(post) {
+    const imageHtml = post.image_url ? `<img src="${post.image_url}" class="post-image" alt="">` : '';
+    const canInteract = currentUser?.authenticated;
+    const titleHtml = post.title
+        ? `<h3 class="forum-post-title news-post-title">${escapeHtml(post.title)}</h3>`
+        : '';
+    const date = new Date(post.created_at).toLocaleString('ru-RU', {
+        day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+    const likeBtn = canInteract
+        ? `<button onclick="toggleLike(${post.id})" class="post-action-btn ${post.liked_by_me ? 'liked' : ''}">
+                <i class="fa-solid fa-heart"></i> <span id="like-count-${post.id}">${post.like_count}</span>
+           </button>`
+        : `<span class="post-action-btn disabled"><i class="fa-solid fa-heart"></i> ${post.like_count}</span>`;
+    const commentBtn = canInteract
+        ? `<button onclick="toggleComments(${post.id})" class="post-action-btn">
+                <i class="fa-solid fa-comment"></i> <span id="comment-count-${post.id}">${post.comment_count}</span>
+           </button>`
+        : `<span class="post-action-btn disabled"><i class="fa-solid fa-comment"></i> ${post.comment_count}</span>`;
+    const deleteBtn = currentUser?.is_admin
+        ? `<button onclick="deletePost(${post.id})" class="post-action-btn post-delete-btn" title="Удалить">
+                <i class="fa-solid fa-trash"></i></button>`
+        : '';
+    return `
+        <article class="post card forum-post forum-post-news" data-post-id="${post.id}">
+            <div class="news-post-header">
+                <span class="news-post-label"><i class="fa-solid fa-bullhorn"></i> Новость</span>
+                <time class="news-post-date">${date}</time>
+            </div>
+            ${titleHtml}
+            <div class="post-content news-post-content">${escapeHtml(post.content)}</div>
+            ${imageHtml}
+            <div class="post-actions">
+                ${likeBtn}
+                ${commentBtn}
+                ${deleteBtn}
+            </div>
+            <div id="comments-${post.id}" class="comments-section" style="display:none;"></div>
+        </article>
     `;
 }
 

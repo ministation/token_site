@@ -23,16 +23,11 @@ def profile_avatar(row: dict) -> str:
     return resolve_avatar_url(row)
 
 
-def serialize_post(p: dict) -> dict:
+def serialize_post(p: dict, *, anonymize: bool = False) -> dict:
     category = p.get("category") or "forum"
     topic = p.get("topic")
-    return {
+    data = {
         "id": p["id"],
-        "author_player_id": p["author_player_id"],
-        "author_nickname": p["game_nickname"],
-        "author_discord_username": p["discord_username"],
-        "author_discord_id": p.get("discord_id", ""),
-        "author_avatar": profile_avatar(p),
         "title": p.get("title") or "",
         "content": p["content"],
         "image_url": p.get("image_url"),
@@ -45,6 +40,19 @@ def serialize_post(p: dict) -> dict:
         "liked_by_me": bool(p.get("liked_by_me")),
         "created_at": p["created_at"],
     }
+    if anonymize or category == "news":
+        data["author_player_id"] = ""
+        data["author_nickname"] = ""
+        data["author_discord_username"] = ""
+        data["author_discord_id"] = ""
+        data["author_avatar"] = None
+    else:
+        data["author_player_id"] = p["author_player_id"]
+        data["author_nickname"] = p["game_nickname"]
+        data["author_discord_username"] = p["discord_username"]
+        data["author_discord_id"] = p.get("discord_id", "")
+        data["author_avatar"] = profile_avatar(p)
+    return data
 
 
 # ==================== ПРОФИЛЬ ====================
@@ -114,8 +122,8 @@ async def api_create_post(
     category = (category or "forum").strip().lower()
     if category not in social_db.VALID_CATEGORIES:
         category = "forum"
-    if category == "news" and not user.get("is_moderator"):
-        raise HTTPException(status_code=403, detail="Новости могут публиковать только администрация и модераторы")
+    if category == "news" and not user.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Новости могут публиковать только администраторы")
     topic_val = (topic or "").strip().lower() or None
     if category != "discussion":
         topic_val = None

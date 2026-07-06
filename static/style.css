@@ -1436,6 +1436,45 @@ html[data-theme="dark"] .status-meta {
 
 #feedContainer .forum-post { margin-bottom: 12px; }
 
+.forum-post-news {
+    border-left: 4px solid var(--gold);
+    background: linear-gradient(135deg, var(--panel) 0%, var(--panel-2) 100%);
+}
+
+.news-post-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+
+.news-post-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--gold);
+}
+
+.news-post-date {
+    font-size: 0.8rem;
+    color: var(--dim);
+}
+
+.news-post-title {
+    margin-top: 0;
+}
+
+.news-post-content {
+    font-size: 1rem;
+    line-height: 1.65;
+}
+
 /* === Server widget === */
 .server-widget {
     margin-bottom: 16px;
