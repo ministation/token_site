@@ -5,7 +5,7 @@ import json
 import os
 SOCIAL_DB_PATH = os.getenv("SOCIAL_DB_PATH", "social.db")
 
-_pm_schema_cache: tuple[str, str, str | None] | None = None
+_pm_schema_cache: tuple[str, list[str], str | None] | None = None
 
 
 def get_db():
@@ -19,8 +19,20 @@ def _table_columns(cursor, table: str) -> set[str]:
     return {row[1] for row in cursor.execute(f"PRAGMA table_info({table})").fetchall()}
 
 
-def get_pm_table_info() -> tuple[str, str, str | None]:
-    """Возвращает (имя таблицы, колонка текста, колонка read)."""
+def _pm_text_columns_from_cols(cols: set[str]) -> list[str]:
+    return [c for c in ("content", "message", "text") if c in cols]
+
+
+def _pm_body_sql(text_cols: list[str]) -> str:
+    if not text_cols:
+        return "''"
+    if len(text_cols) == 1:
+        return text_cols[0]
+    return f"COALESCE({', '.join(text_cols)})"
+
+
+def get_pm_table_info() -> tuple[str, list[str], str | None]:
+    """Возвращает (имя таблицы, колонки текста, колонка read)."""
     global _pm_schema_cache
     if _pm_schema_cache:
         return _pm_schema_cache
@@ -32,26 +44,18 @@ def get_pm_table_info() -> tuple[str, str, str | None]:
         if not cols:
             continue
         
-        # Определяем колонку с текстом сообщения
-        if "content" in cols:
-            content_col = "content"
-        elif "message" in cols:
-            content_col = "message"
-        elif "text" in cols:
-            content_col = "text"
-        else:
-            continue  # таблица есть, но нет текстовой колонки — странно
-        
-        # Определяем колонку read
+        text_cols = _pm_text_columns_from_cols(cols)
+        if not text_cols:
+            continue
+
         read_col = "read" if "read" in cols else None
-        
+
         conn.close()
-        _pm_schema_cache = (table, content_col, read_col)
+        _pm_schema_cache = (table, text_cols, read_col)
         return _pm_schema_cache
 
-    # Если таблиц вообще нет — создаём private_messages при следующей инициализации
     conn.close()
-    _pm_schema_cache = ("private_messages", "content", "read")
+    _pm_schema_cache = ("private_messages", ["content"], "read")
     return _pm_schema_cache
 
 def init_social_db():
@@ -515,12 +519,15 @@ def get_following(player_id: str, limit: int = 20) -> List[Dict]:
 def send_private_message(sender_id: str, receiver_id: str, content: str) -> int:
     if sender_id == receiver_id:
         raise ValueError("Нельзя отправить сообщение самому себе")
-    table, content_col, _ = get_pm_table_info()
+    table, text_cols, _ = get_pm_table_info()
+    insert_cols = ["sender_id", "receiver_id"] + text_cols
+    placeholders = ", ".join(["?"] * len(insert_cols))
+    values = [sender_id, receiver_id] + [content] * len(text_cols)
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute(
-        f"INSERT INTO {table} (sender_id, receiver_id, {content_col}) VALUES (?, ?, ?)",
-        (sender_id, receiver_id, content)
+        f"INSERT INTO {table} ({', '.join(insert_cols)}) VALUES ({placeholders})",
+        values
     )
     conn.commit()
     msg_id = cursor.lastrowid
@@ -529,12 +536,13 @@ def send_private_message(sender_id: str, receiver_id: str, content: str) -> int:
 
 
 def get_conversation(user_id: str, other_id: str, limit: int = 50) -> List[Dict]:
-    table, content_col, read_col = get_pm_table_info()
+    table, text_cols, read_col = get_pm_table_info()
+    body_expr = _pm_body_sql(text_cols)
     read_expr = f"COALESCE({read_col}, 0) as read" if read_col else "0 as read"
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute(f"""
-        SELECT id, sender_id, receiver_id, {content_col} as content, created_at,
+        SELECT id, sender_id, receiver_id, {body_expr} as content, created_at,
                {read_expr}
         FROM {table}
         WHERE (sender_id = ? AND receiver_id = ?)
@@ -564,17 +572,18 @@ def mark_conversation_read(user_id: str, other_id: str) -> int:
 
 
 def get_user_dialogs(user_id: str) -> List[Dict]:
-    table, content_col, read_col = get_pm_table_info()
+    table, text_cols, read_col = get_pm_table_info()
+    body_expr = _pm_body_sql(text_cols)
     read_expr = f"COALESCE({read_col}, 0)" if read_col else "0"
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute(f"""
         WITH msgs AS (
-            SELECT receiver_id AS other_id, created_at, {content_col} AS body,
+            SELECT receiver_id AS other_id, created_at, {body_expr} AS body,
                    {read_expr} AS is_read, sender_id
             FROM {table} WHERE sender_id = ?
             UNION ALL
-            SELECT sender_id AS other_id, created_at, {content_col} AS body,
+            SELECT sender_id AS other_id, created_at, {body_expr} AS body,
                    {read_expr} AS is_read, sender_id
             FROM {table} WHERE receiver_id = ?
         ),
