@@ -46,6 +46,7 @@ function setupNavigation() {
                 if (typeof loadServerStatus === 'function') loadServerStatus();
             } else if (section === 'chat') {
                 if (typeof initGlobalChat === 'function') initGlobalChat();
+                if (typeof loadChatUsers === 'function') loadChatUsers('');
             } else if (section === 'messages') {
                 if (typeof setupPmUserSearch === 'function') setupPmUserSearch();
                 if (typeof loadDialogs === 'function') loadDialogs();

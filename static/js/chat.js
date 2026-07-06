@@ -1,13 +1,70 @@
 let globalChatLastId = 0;
 let globalChatPollInterval = null;
 let globalChatInitialized = false;
+let chatUserSearchTimeout = null;
 
 function initGlobalChat() {
     if (!globalChatInitialized) {
         globalChatInitialized = true;
         loadGlobalChat(true);
+        setupChatUserSearch();
     }
+    loadChatUsers('');
     startGlobalChatPolling();
+}
+
+function setupChatUserSearch() {
+    const input = document.getElementById('chatUserSearch');
+    if (!input || input.dataset.bound) return;
+    input.dataset.bound = '1';
+    input.addEventListener('input', () => {
+        clearTimeout(chatUserSearchTimeout);
+        chatUserSearchTimeout = setTimeout(() => loadChatUsers(input.value.trim()), 250);
+    });
+}
+
+async function loadChatUsers(query) {
+    const container = document.getElementById('chatUsersList');
+    if (!container) return;
+    if (!currentUser?.authenticated) {
+        container.innerHTML = '<p class="empty-state">Войдите, чтобы видеть игроков</p>';
+        return;
+    }
+    try {
+        const users = await apiCall('GET', '/api/messages/users?q=' + encodeURIComponent(query || '') + '&limit=100');
+        if (!users.length) {
+            container.innerHTML = '<p class="empty-state">Никого не найдено</p>';
+            return;
+        }
+        container.innerHTML = users.map(u => `
+            <div class="chat-user-row">
+                <img src="${u.avatar || '/static/default_avatar.png'}" class="chat-user-avatar" alt=""
+                     onerror="this.src='/static/default_avatar.png'">
+                <div class="chat-user-info">
+                    <div class="chat-user-name">${escapeHtml(u.game_nickname || u.discord_username)}</div>
+                    <div class="chat-user-sub">@${escapeHtml(u.discord_username || '')}</div>
+                </div>
+                <button type="button" class="chat-msg-btn" title="Написать"
+                    onclick='messageUserFromChat(${JSON.stringify(u.player_id)}, ${JSON.stringify(u.game_nickname || u.discord_username || 'Игрок')})'>
+                    <i class="fa-solid fa-envelope"></i>
+                </button>
+            </div>
+        `).join('');
+    } catch (e) {
+        container.innerHTML = '<p class="error">Не удалось загрузить список</p>';
+    }
+}
+
+function messageUserFromChat(playerId, nickname) {
+    if (typeof startConversationWith === 'function') {
+        startConversationWith(playerId, nickname);
+    } else {
+        showSection('messages');
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        const btn = document.querySelector('.nav-btn[data-section="messages"]');
+        if (btn) btn.classList.add('active');
+        if (typeof openConversation === 'function') openConversation(playerId, nickname);
+    }
 }
 
 function startGlobalChatPolling() {

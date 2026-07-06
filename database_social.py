@@ -190,6 +190,21 @@ def _migrate_schema():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS ban_appeals (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ban_id INTEGER NOT NULL,
+            player_id TEXT NOT NULL,
+            user_uuid TEXT,
+            ckey TEXT,
+            appeal_text TEXT NOT NULL,
+            status TEXT DEFAULT 'pending',
+            admin_response TEXT,
+            reviewed_by TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
     conn.commit()
     conn.close()
 
@@ -767,32 +782,146 @@ def get_user_dialogs(user_id: str) -> List[Dict]:
     return dialogs
 
 
-def search_message_users(query: str, exclude_player_id: str, limit: int = 30) -> List[Dict]:
+def search_message_users(query: str, exclude_player_id: str, limit: int = 100) -> List[Dict]:
+    return list_platform_users(exclude_player_id, query, limit, 0)
+
+
+def list_platform_users(exclude_player_id: str, query: str = "", limit: int = 100, offset: int = 0) -> List[Dict]:
     conn = get_db()
     cursor = conn.cursor()
     q = query.strip()
     if len(q) >= 1:
         like = f"%{q}%"
         cursor.execute("""
-            SELECT player_id, game_nickname, discord_username, discord_avatar
+            SELECT player_id, game_nickname, discord_username, discord_avatar, avatar_path, updated_at
             FROM social_users
             WHERE player_id != ?
               AND (LOWER(game_nickname) LIKE LOWER(?)
                    OR LOWER(discord_username) LIKE LOWER(?))
-            ORDER BY game_nickname
-            LIMIT ?
-        """, (exclude_player_id, like, like, limit))
+            ORDER BY updated_at DESC
+            LIMIT ? OFFSET ?
+        """, (exclude_player_id, like, like, limit, offset))
     else:
         cursor.execute("""
-            SELECT player_id, game_nickname, discord_username, discord_avatar
+            SELECT player_id, game_nickname, discord_username, discord_avatar, avatar_path, updated_at
             FROM social_users
             WHERE player_id != ?
             ORDER BY updated_at DESC
-            LIMIT ?
-        """, (exclude_player_id, limit))
+            LIMIT ? OFFSET ?
+        """, (exclude_player_id, limit, offset))
     rows = [dict(r) for r in cursor.fetchall()]
     conn.close()
     return rows
+
+
+def list_all_social_users(query: str = "", limit: int = 50, offset: int = 0) -> List[Dict]:
+    conn = get_db()
+    cursor = conn.cursor()
+    q = query.strip()
+    if len(q) >= 1:
+        like = f"%{q}%"
+        cursor.execute("""
+            SELECT player_id, user_uuid, discord_id, discord_username, game_nickname,
+                   avatar_path, created_at, updated_at
+            FROM social_users
+            WHERE LOWER(game_nickname) LIKE LOWER(?)
+               OR LOWER(discord_username) LIKE LOWER(?)
+            ORDER BY updated_at DESC
+            LIMIT ? OFFSET ?
+        """, (like, like, limit, offset))
+    else:
+        cursor.execute("""
+            SELECT player_id, user_uuid, discord_id, discord_username, game_nickname,
+                   avatar_path, created_at, updated_at
+            FROM social_users
+            ORDER BY updated_at DESC
+            LIMIT ? OFFSET ?
+        """, (limit, offset))
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return rows
+
+
+def count_social_users() -> int:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) FROM social_users")
+    n = cursor.fetchone()[0]
+    conn.close()
+    return n
+
+
+def create_ban_appeal(ban_id: int, player_id: str, user_uuid: str | None,
+                      ckey: str | None, appeal_text: str) -> int:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT id FROM ban_appeals
+        WHERE ban_id = ? AND player_id = ? AND status = 'pending'
+    """, (ban_id, player_id))
+    if cursor.fetchone():
+        conn.close()
+        raise ValueError("Обжалование по этому бану уже подано и ожидает рассмотрения")
+    cursor.execute("""
+        INSERT INTO ban_appeals (ban_id, player_id, user_uuid, ckey, appeal_text)
+        VALUES (?, ?, ?, ?, ?)
+    """, (ban_id, player_id, user_uuid, ckey, appeal_text.strip()))
+    conn.commit()
+    appeal_id = cursor.lastrowid
+    conn.close()
+    return appeal_id
+
+
+def get_appeals_by_player(player_id: str) -> List[Dict]:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT * FROM ban_appeals WHERE player_id = ? ORDER BY created_at DESC
+    """, (player_id,))
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return rows
+
+
+def get_appeal_status_map(player_id: str) -> dict[int, dict]:
+    appeals = get_appeals_by_player(player_id)
+    result = {}
+    for a in appeals:
+        bid = a["ban_id"]
+        if bid not in result or a["created_at"] > result[bid]["created_at"]:
+            result[bid] = a
+    return result
+
+
+def list_ban_appeals(status: str | None = None, limit: int = 50, offset: int = 0) -> List[Dict]:
+    conn = get_db()
+    cursor = conn.cursor()
+    if status:
+        cursor.execute("""
+            SELECT * FROM ban_appeals WHERE status = ?
+            ORDER BY created_at DESC LIMIT ? OFFSET ?
+        """, (status, limit, offset))
+    else:
+        cursor.execute("""
+            SELECT * FROM ban_appeals ORDER BY created_at DESC LIMIT ? OFFSET ?
+        """, (limit, offset))
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return rows
+
+
+def update_ban_appeal(appeal_id: int, status: str, admin_response: str, reviewed_by: str) -> bool:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE ban_appeals
+        SET status = ?, admin_response = ?, reviewed_by = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    """, (status, admin_response, reviewed_by, appeal_id))
+    conn.commit()
+    ok = cursor.rowcount > 0
+    conn.close()
+    return ok
 
 
 def add_global_chat_message(author_id: str, author_nickname: str,

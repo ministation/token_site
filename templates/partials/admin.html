@@ -4,7 +4,9 @@
 
     <div class="admin-tabs">
         <button type="button" class="tab active" onclick="showAdminTab('stats', this)">Статистика</button>
+        <button type="button" class="tab" onclick="showAdminTab('users', this)">Игроки</button>
         <button type="button" class="tab" onclick="showAdminTab('posts', this)">Посты</button>
+        <button type="button" class="tab" onclick="showAdminTab('appeals', this)">Обжалования</button>
         <button type="button" class="tab" onclick="showAdminTab('bans', this)">Все баны</button>
         <button type="button" class="tab" onclick="showAdminTab('admins', this)">Админы</button>
     </div>
@@ -13,13 +15,33 @@
         <div id="adminStatsContent"><p class="empty-state">Загрузка...</p></div>
     </div>
 
-    <div id="adminPostsTab" class="admin-tab-content" style="display:none;">
-        <p class="admin-hint">Удаляйте посты кнопкой в ленте на главной или здесь по ID:</p>
+    <div id="adminUsersTab" class="admin-tab-content" style="display:none;">
         <div class="admin-inline-form">
-            <input type="number" id="adminDeletePostId" placeholder="ID поста" min="1">
-            <button type="button" onclick="adminDeletePostById()"><i class="fa-solid fa-trash"></i> Удалить</button>
+            <input type="text" id="adminUserSearch" placeholder="Поиск по нику..." oninput="debounceAdminUserSearch()">
         </div>
-        <div id="adminDeletePostResult" class="result"></div>
+        <div id="adminUsersContent"><p class="empty-state">Загрузка...</p></div>
+        <div class="bans-load-more">
+            <button type="button" onclick="loadAdminUsers(true)"><i class="fa-solid fa-angles-down"></i> Загрузить ещё</button>
+        </div>
+    </div>
+
+    <div id="adminPostsTab" class="admin-tab-content" style="display:none;">
+        <div id="adminPostsList"><p class="empty-state">Загрузка...</p></div>
+        <div class="bans-load-more">
+            <button type="button" onclick="loadAdminPostsList(true)"><i class="fa-solid fa-angles-down"></i> Загрузить ещё</button>
+        </div>
+    </div>
+
+    <div id="adminAppealsTab" class="admin-tab-content" style="display:none;">
+        <div class="admin-inline-form">
+            <select id="adminAppealFilter" onchange="loadAdminAppeals(false)">
+                <option value="">Все</option>
+                <option value="pending" selected>Ожидают</option>
+                <option value="approved">Одобрены</option>
+                <option value="rejected">Отклонены</option>
+            </select>
+        </div>
+        <div id="adminAppealsContent"><p class="empty-state">Загрузка...</p></div>
     </div>
 
     <div id="adminBansTab" class="admin-tab-content" style="display:none;">

@@ -1,18 +1,33 @@
 <div class="card global-chat-card">
     <div class="global-chat-header">
         <h2><i class="fa-solid fa-comments"></i> Общий чат</h2>
-        <p class="chat-hint-inline">Живой чат между всеми авторизованными игроками</p>
+        <p class="chat-hint-inline">Чат и список игроков на платформе</p>
     </div>
-    <div id="globalChatMessages" class="global-chat-messages"></div>
-    <div class="global-chat-input" id="globalChatInputArea" style="display:none;">
-        <input type="text" id="globalChatInput" placeholder="Сообщение в чат..."
-            maxlength="500"
-            onkeydown="if(event.key==='Enter'){event.preventDefault();sendGlobalChatMessage();}">
-        <button type="button" onclick="sendGlobalChatMessage()">
-            <i class="fa-solid fa-paper-plane"></i>
-        </button>
+
+    <div class="chat-with-users-layout" id="chatLayout">
+        <aside class="chat-users-sidebar" id="chatUsersSidebar">
+            <div class="pm-search-box">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="chatUserSearch" placeholder="Игроки на сайте..." autocomplete="off">
+            </div>
+            <div id="chatUsersList" class="chat-users-list">
+                <p class="empty-state">Войдите, чтобы видеть игроков</p>
+            </div>
+        </aside>
+
+        <div class="chat-main-area">
+            <div id="globalChatMessages" class="global-chat-messages"></div>
+            <div class="global-chat-input" id="globalChatInputArea" style="display:none;">
+                <input type="text" id="globalChatInput" placeholder="Сообщение в чат..."
+                    maxlength="500"
+                    onkeydown="if(event.key==='Enter'){event.preventDefault();sendGlobalChatMessage();}">
+                <button type="button" onclick="sendGlobalChatMessage()">
+                    <i class="fa-solid fa-paper-plane"></i>
+                </button>
+            </div>
+            <p class="chat-login-hint" id="globalChatLoginHint">
+                <a href="#" onclick="login(); return false;">Войдите через Discord</a>, чтобы писать в чат
+            </p>
+        </div>
     </div>
-    <p class="chat-login-hint" id="globalChatLoginHint">
-        <a href="#" onclick="login(); return false;">Войдите через Discord</a>, чтобы писать в чат
-    </p>
 </div>

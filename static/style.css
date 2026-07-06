@@ -1653,6 +1653,143 @@ html[data-theme="dark"] .status-meta {
     color: #fff;
 }
 .btn-danger-sm:hover { background: var(--danger-deep); color: #fff; }
+.btn-sm {
+    padding: 6px 10px;
+    font-size: 0.58rem;
+    background: var(--panel-3);
+    border: 1px solid var(--border);
+    color: var(--ink);
+}
+.btn-sm:hover { background: var(--accent); color: #fff; border-color: var(--accent-deep); }
+
+.admin-user-row, .admin-post-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    margin-bottom: 8px;
+}
+.admin-user-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.admin-user-info, .admin-post-body { flex: 1; min-width: 0; }
+.admin-user-name, .admin-post-meta { font-weight: 700; font-size: 0.9rem; }
+.admin-user-sub { font-size: 0.78rem; color: var(--muted); }
+.admin-post-text {
+    margin-top: 6px;
+    font-size: 0.88rem;
+    line-height: 1.45;
+    word-break: break-word;
+    max-height: 4.5em;
+    overflow: hidden;
+}
+
+.appeal-card {
+    padding: 14px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    margin-bottom: 10px;
+    background: var(--panel-2);
+}
+.appeal-pending { border-left: 4px solid var(--gold); }
+.appeal-approved { border-left: 4px solid var(--success); }
+.appeal-rejected { border-left: 4px solid var(--danger); }
+.appeal-header { font-size: 0.85rem; margin-bottom: 8px; color: var(--muted); }
+.appeal-text { font-size: 0.92rem; line-height: 1.5; margin-bottom: 8px; }
+.appeal-response { font-size: 0.85rem; color: var(--muted); margin-bottom: 8px; }
+.appeal-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.appeal-status { font-weight: 700; }
+
+.ban-appeal-btn {
+    margin-top: 10px;
+    font-size: 0.62rem;
+    background: var(--panel-3);
+    border: 1px solid var(--border-strong);
+}
+.ban-appeal-status {
+    margin-top: 10px;
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    background: var(--panel-3);
+}
+.appeal-pending.ban-appeal-status { border-left: 3px solid var(--gold); }
+.appeal-approved.ban-appeal-status { border-left: 3px solid var(--success); }
+.appeal-rejected.ban-appeal-status { border-left: 3px solid var(--danger); }
+
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    background: rgba(10, 15, 30, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+.modal-card {
+    background: var(--panel);
+    border: 2px solid var(--border-strong);
+    border-radius: var(--radius);
+    padding: 20px;
+    width: min(480px, 100%);
+    box-shadow: var(--shadow-hard);
+}
+.modal-card h3 { margin-bottom: 12px; font-size: 0.85rem; }
+.modal-card textarea { width: 100%; margin-bottom: 12px; }
+
+/* === Chat with users === */
+.chat-with-users-layout {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    gap: 12px;
+    min-height: 480px;
+}
+.chat-users-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 0;
+}
+.chat-users-list {
+    flex: 1;
+    overflow-y: auto;
+    max-height: 420px;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+}
+.chat-user-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+}
+.chat-user-row:last-child { border-bottom: none; }
+.chat-user-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.chat-user-info { flex: 1; min-width: 0; }
+.chat-user-name { font-size: 0.82rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chat-user-sub { font-size: 0.72rem; color: var(--muted); }
+.chat-msg-btn {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    flex-shrink: 0;
+    font-size: 0.75rem;
+}
+.chat-main-area {
+    display: flex;
+    flex-direction: column;
+    min-height: 480px;
+}
+
+@media (max-width: 768px) {
+    .chat-with-users-layout { grid-template-columns: 1fr; }
+    .chat-users-list { max-height: 180px; }
+    .global-chat-messages { min-height: 240px; max-height: 320px; }
+}
 
 /* === Avatar upload === */
 .profile-avatar-section {

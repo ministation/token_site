@@ -1,5 +1,17 @@
 <div class="card">
     <h2><i class="fa-solid fa-gavel"></i> Мои наказания</h2>
-    <p class="bans-hint">Показываются только ваши баны — по UUID и ckey игрового аккаунта</p>
+    <p class="bans-hint">Показываются только ваши баны — по UUID и ckey игрового аккаунта. Можно подать обжалование.</p>
     <div id="bansContainer">Загрузка...</div>
+</div>
+
+<div id="appealModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeAppealModal()">
+    <div class="modal-card">
+        <h3><i class="fa-solid fa-scale-balanced"></i> Обжалование бана #<span id="appealBanIdLabel"></span></h3>
+        <textarea id="appealText" rows="5" placeholder="Опишите, почему считаете наказание несправедливым (мин. 10 символов)..."></textarea>
+        <div class="form-actions">
+            <button type="button" onclick="closeAppealModal()">Отмена</button>
+            <button type="button" onclick="submitBanAppeal()"><i class="fa-solid fa-paper-plane"></i> Отправить</button>
+        </div>
+        <div id="appealModalResult" class="result"></div>
+    </div>
 </div>

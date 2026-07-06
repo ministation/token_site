@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Request, HTTPException, Query
 from app.dependencies import get_current_social_user
-from app.services.messages import send_pm, get_pm_conversation, get_pm_dialogs, search_pm_users, mark_pm_read
+from app.services.messages import send_pm, get_pm_conversation, get_pm_dialogs, mark_pm_read
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/api/messages", tags=["messages"])
@@ -18,9 +18,10 @@ async def dialogs(request: Request):
 
 
 @router.get("/users")
-async def message_users(request: Request, q: str = Query("", min_length=0)):
+async def message_users(request: Request, q: str = Query("", min_length=0), limit: int = 100, offset: int = 0):
     user = await get_current_social_user(request)
-    return search_pm_users(q, user['social_id'])
+    from app.services.users import list_platform_users
+    return list_platform_users(user['social_id'], q, limit, offset)
 
 
 @router.get("/conversation/{other_id}")
