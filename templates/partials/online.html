@@ -9,11 +9,16 @@
         <p class="playtime-total" id="playtimeTotal"></p>
     </div>
 
-    <div class="admin-rating-section">
-        <h3 class="stats-subtitle"><i class="fa-solid fa-star"></i> Рейтинг администрации AHelp</h3>
-        <p class="admin-rating-hint">Сортировка: сначала с оценками (по убыванию), затем без оценок по нику</p>
-        <div id="adminRatingList" class="admin-rating-list">
-            <p class="empty-state">Загрузка...</p>
+    <div class="admin-rating-section collapsible-section" id="adminRatingSection">
+        <button type="button" class="collapsible-header stats-subtitle" onclick="toggleAdminRatingPanel(this)" aria-expanded="true">
+            <span><i class="fa-solid fa-star"></i> Рейтинг администрации AHelp</span>
+            <i class="fa-solid fa-chevron-down collapsible-chevron"></i>
+        </button>
+        <div class="collapsible-body" id="adminRatingBody">
+            <p class="admin-rating-hint">Сортировка: сначала с оценками (по убыванию), затем без оценок по нику</p>
+            <div id="adminRatingList" class="admin-rating-list">
+                <p class="empty-state">Загрузка...</p>
+            </div>
         </div>
     </div>
 

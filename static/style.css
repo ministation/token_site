@@ -1400,6 +1400,30 @@ html[data-theme="dark"] .status-meta {
     padding-bottom: 20px;
     border-bottom: 1px solid var(--border);
 }
+.collapsible-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    margin: 16px 0 0;
+    padding: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    font-family: var(--font-pixel);
+    font-size: 0.62rem;
+    color: var(--ink);
+}
+.collapsible-header span i { color: var(--accent); margin-right: 6px; }
+.collapsible-chevron {
+    font-size: 0.75rem;
+    color: var(--muted);
+    transition: transform var(--transition);
+}
+.collapsible-section.collapsed .collapsible-chevron { transform: rotate(-90deg); }
+.collapsible-section.collapsed .collapsible-body { display: none; }
+.collapsible-body { margin-top: 8px; }
 .admin-rating-hint {
     color: var(--muted);
     font-size: 0.82rem;
@@ -1459,6 +1483,17 @@ html[data-theme="dark"] .status-meta {
     align-items: center;
     gap: 4px;
     white-space: nowrap;
+}
+.admin-rating-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+}
+.admin-rating-msg-btn {
+    padding: 6px 10px !important;
+    font-size: 0.55rem !important;
+    min-width: auto;
 }
 .admin-rating-value {
     font-family: var(--font-pixel);

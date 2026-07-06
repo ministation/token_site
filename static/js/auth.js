@@ -28,10 +28,12 @@ async function checkAuth() {
             updateAuthUI();
             if (typeof initAdminPanel === 'function') initAdminPanel();
             if (typeof initModeratorPanel === 'function') initModeratorPanel();
+            if (typeof refreshAdminRatingIfVisible === 'function') refreshAdminRatingIfVisible();
         } else {
             document.getElementById('loginBtn').style.display = '';
             document.getElementById('userPanel').style.display = 'none';
             updateAuthUI();
+            if (typeof refreshAdminRatingIfVisible === 'function') refreshAdminRatingIfVisible();
         }
     } catch (e) {
         console.error('Auth check failed:', e);

@@ -4,6 +4,23 @@ let adminRatingLoaded = false;
 
 const STAR_ICON = '/static/icons/star.png';
 
+function toggleAdminRatingPanel(btn) {
+    const section = btn.closest('.collapsible-section');
+    if (!section) return;
+    const collapsed = section.classList.toggle('collapsed');
+    btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+}
+
+function messageAdminFromStats(playerId, nickname) {
+    if (!currentUser?.authenticated) {
+        alert('Войдите через Discord, чтобы писать сообщения');
+        return;
+    }
+    if (typeof startConversationWith === 'function') {
+        startConversationWith(playerId, nickname);
+    }
+}
+
 async function loadAdminRating() {
     const container = document.getElementById('adminRatingList');
     if (!container) return;
@@ -41,6 +58,14 @@ function renderAdminRatingRow(a) {
            <span class="admin-rating-count">(${a.rating_count})</span>`
         : `<span class="admin-rating-value unknown">?</span>
            <img src="${STAR_ICON}" alt="" class="admin-rating-star">`;
+    const canMsg = a.can_message && a.player_id
+        && currentUser?.authenticated
+        && a.player_id !== currentUser.social_id;
+    const msgBtn = canMsg
+        ? `<button type="button" class="admin-rating-msg-btn" title="Написать"
+            onclick='messageAdminFromStats(${JSON.stringify(a.player_id)}, ${JSON.stringify(a.name)})'>
+            <i class="fa-solid fa-envelope"></i></button>`
+        : '';
     return `
         <div class="admin-rating-row">
             <div class="admin-rating-place">${a.place}</div>
@@ -50,7 +75,10 @@ function renderAdminRatingRow(a) {
                     ${escapeHtml(a.rank_name)}${status}
                 </div>
             </div>
-            <div class="admin-rating-score">${rating}</div>
+            <div class="admin-rating-actions">
+                <div class="admin-rating-score">${rating}</div>
+                ${msgBtn}
+            </div>
         </div>`;
 }
 
@@ -100,6 +128,12 @@ function initStatsSection() {
     if (!playtimeLoaded) loadPlaytimeChart();
     if (!adminRatingLoaded) loadAdminRating();
     if (typeof initOnlineChart === 'function') initOnlineChart();
+}
+
+function refreshAdminRatingIfVisible() {
+    if (!document.getElementById('adminRatingList')) return;
+    adminRatingLoaded = false;
+    loadAdminRating();
 }
 
 window.addEventListener('themechange', () => {

@@ -1,3 +1,4 @@
+import database_social as social_db
 from app.db.database import get_pg_pool
 
 RANK_NAMES: dict[int, str] = {
@@ -58,7 +59,9 @@ async def get_admin_rating_leaderboard() -> list[dict]:
     async with pg.acquire() as conn:
         rows = await conn.fetch("""
             SELECT
+                a.user_id::text AS user_uuid,
                 COALESCE(p.last_seen_user_name, a.user_id::text) AS name,
+                da.discord_id::text AS discord_id,
                 a.ahelp_rating,
                 a.ahelp_rating_count,
                 a.admin_rank_id,
@@ -66,6 +69,7 @@ async def get_admin_rating_leaderboard() -> list[dict]:
                 a.suspended
             FROM admin a
             LEFT JOIN player p ON p.user_id = a.user_id
+            LEFT JOIN discord_auth da ON da.user_id = a.user_id
             ORDER BY
                 CASE WHEN a.ahelp_rating_count > 0 THEN 0 ELSE 1 END,
                 a.ahelp_rating DESC,
@@ -77,9 +81,18 @@ async def get_admin_rating_leaderboard() -> list[dict]:
         rank_id = row["admin_rank_id"]
         count = int(row["ahelp_rating_count"] or 0)
         rating = float(row["ahelp_rating"]) if count > 0 and row["ahelp_rating"] is not None else None
+        player_id = None
+        discord_id = row["discord_id"]
+        if discord_id:
+            social = social_db.get_social_user_by_discord_id(discord_id)
+            if social:
+                player_id = social["player_id"]
         result.append({
             "place": i,
             "name": row["name"],
+            "user_uuid": row["user_uuid"],
+            "player_id": player_id,
+            "can_message": player_id is not None,
             "rank_id": rank_id,
             "rank_name": rank_name(rank_id),
             "rank_color": rank_color(rank_id),
