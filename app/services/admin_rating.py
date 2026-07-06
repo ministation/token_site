@@ -68,16 +68,36 @@ async def get_admin_rating_leaderboard() -> list[dict]:
                 a.deadminned,
                 a.suspended
             FROM admin a
-            LEFT JOIN player p ON p.user_id = a.user_id
-            LEFT JOIN discord_auth da ON da.user_id = a.user_id
+            LEFT JOIN LATERAL (
+                SELECT last_seen_user_name
+                FROM player
+                WHERE user_id = a.user_id
+                ORDER BY last_seen_time DESC NULLS LAST
+                LIMIT 1
+            ) p ON true
+            LEFT JOIN LATERAL (
+                SELECT discord_id
+                FROM discord_auth
+                WHERE user_id = a.user_id
+                ORDER BY discord_id
+                LIMIT 1
+            ) da ON true
             ORDER BY
                 CASE WHEN a.ahelp_rating_count > 0 THEN 0 ELSE 1 END,
-                a.ahelp_rating DESC,
-                COALESCE(p.last_seen_user_name, a.user_id::text) ASC
+                a.ahelp_rating DESC NULLS LAST,
+                COALESCE(p.last_seen_user_name, a.user_id::text) ASC,
+                a.user_id
         """)
 
+    seen_uuids: set[str] = set()
     result = []
-    for i, row in enumerate(rows, start=1):
+    place = 0
+    for row in rows:
+        user_uuid = row["user_uuid"]
+        if user_uuid in seen_uuids:
+            continue
+        seen_uuids.add(user_uuid)
+        place += 1
         rank_id = row["admin_rank_id"]
         count = int(row["ahelp_rating_count"] or 0)
         rating = float(row["ahelp_rating"]) if count > 0 and row["ahelp_rating"] is not None else None
@@ -88,9 +108,9 @@ async def get_admin_rating_leaderboard() -> list[dict]:
             if social:
                 player_id = social["player_id"]
         result.append({
-            "place": i,
+            "place": place,
             "name": row["name"],
-            "user_uuid": row["user_uuid"],
+            "user_uuid": user_uuid,
             "player_id": player_id,
             "can_message": player_id is not None,
             "rank_id": rank_id,
