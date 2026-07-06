@@ -1,10 +1,15 @@
 from __future__ import annotations
 
+import os
 import re
 from typing import Optional
 from urllib.parse import quote
 import asyncpg
 from app.db.database import get_pg_pool
+
+GHOSTS_STATIC_DIR = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "..", "static", "ghosts")
+)
 
 SPONSOR_TIERS = {
     1: {"name": "Унати", "icon": "буст унати.png"},
@@ -50,6 +55,30 @@ GHOST_LABELS: dict[str, str] = {
     "MobGhostGoldUnati": "Золотой унати",
     "MobGhostMagicUnati": "Магический унати",
     "MobGhostGigaUnati": "Гига унати",
+    "pink_ghost_human": "Розовый призрак",
+    "pink": "Розовый призрак",
+    "red_ghost_human": "Красный призрак",
+    "red": "Красный призрак",
+    "gold_ghost_human": "Золотой призрак",
+    "gold": "Золотой призрак",
+    "purple_ghost_human": "Фиолетовый призрак",
+    "purple": "Фиолетовый призрак",
+    "platinum_ghost_human": "Платиновый призрак",
+    "platinum": "Платиновый призрак",
+    "silver_ghost_human": "Серебряный призрак",
+    "silver": "Серебряный призрак",
+    "white_ghost_human": "Белый призрак",
+    "white": "Белый призрак",
+    "frog": "Лягушка",
+    "kitty": "Котик",
+    "parrot": "Попугай",
+    "skeleton": "Скелет",
+    "ian": "Иан",
+    "fire": "Огненный призрак",
+    "discocat": "Диско-кот",
+    "blazeit": "Blaze It",
+    "rainbow": "Радужный призрак",
+    "rooster": "Петух",
 }
 
 GHOST_TABLE_CANDIDATES = [
@@ -63,10 +92,92 @@ GHOST_TABLE_CANDIDATES = [
 ]
 
 _ghost_schema_cache: dict | None = None
+_ghost_image_index: dict[str, str] | None = None
 
 
 def sponsor_icon_url(filename: str) -> str:
     return f"/static/icons/{quote(filename)}"
+
+
+def _build_ghost_image_index() -> dict[str, str]:
+    index: dict[str, str] = {}
+    if not os.path.isdir(GHOSTS_STATIC_DIR):
+        return index
+    for entry in os.listdir(GHOSTS_STATIC_DIR):
+        dirpath = os.path.join(GHOSTS_STATIC_DIR, entry)
+        if not os.path.isdir(dirpath) or not entry.endswith(".rsi"):
+            continue
+        folder = entry[:-4]
+        img_file = None
+        for fname in ("animated.png", "icon.png"):
+            if os.path.isfile(os.path.join(dirpath, fname)):
+                img_file = fname
+                break
+        if not img_file:
+            continue
+        url = f"/static/ghosts/{entry}/{img_file}"
+        keys = {
+            folder.lower(),
+            folder.lower().replace("_", ""),
+        }
+        if "_ghost_human" in folder:
+            keys.add(folder.replace("_ghost_human", "").lower())
+        for key in keys:
+            index[key] = url
+    return index
+
+
+def _ghost_lookup_keys(ghost_id: str) -> list[str]:
+    raw = (ghost_id or "").strip()
+    if not raw:
+        return []
+    snake = re.sub(r"([a-z])([A-Z])", r"\1_\2", raw).lower()
+    keys = [raw.lower(), snake, snake.replace("_", "")]
+    name = raw
+    for prefix in ("MobGhost", "CustomGhost", "GhostHuman", "Ghost", "Mob"):
+        if name.startswith(prefix):
+            name = name[len(prefix):]
+    if name != raw:
+        stripped = re.sub(r"([a-z])([A-Z])", r"\1_\2", name).lower()
+        keys.extend([stripped, stripped.replace("_", "")])
+    if snake.startswith("human"):
+        color = snake.replace("human", "").strip("_")
+        if color:
+            keys.append(color)
+            keys.append(f"{color}_ghost_human")
+    for part in re.split(r"[_\s]+", snake):
+        if part and part not in ("ghost", "human", "mob", "custom"):
+            keys.append(part)
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for key in keys:
+        if key and key not in seen:
+            seen.add(key)
+            ordered.append(key)
+    return ordered
+
+
+def ghost_image_url(ghost_id: str) -> str | None:
+    global _ghost_image_index
+    if _ghost_image_index is None:
+        _ghost_image_index = _build_ghost_image_index()
+    for key in _ghost_lookup_keys(ghost_id):
+        url = _ghost_image_index.get(key)
+        if url:
+            return url
+    return None
+
+
+def _ghost_entry(ghost_id: str, name: str | None = None, amount: int | None = None) -> dict:
+    gid = str(ghost_id)
+    entry = {
+        "ghost_id": gid,
+        "name": name or _format_ghost_name(gid),
+        "icon": ghost_image_url(gid),
+    }
+    if amount is not None and amount > 1:
+        entry["amount"] = amount
+    return entry
 
 
 def _normalize_token_key(token_id: str) -> str:
@@ -347,7 +458,7 @@ async def _ghosts_from_catalog(conn, schema: dict, user_uuids: list[str]) -> lis
                 )
                 for r in rows:
                     gid = str(r["ghost_id"])
-                    ghosts.append({"ghost_id": gid, "name": r["name"] or _format_ghost_name(gid)})
+                    ghosts.append(_ghost_entry(gid, r["name"] or _format_ghost_name(gid)))
                 return ghosts
             except asyncpg.PostgresError:
                 pass
@@ -363,7 +474,7 @@ async def _ghosts_from_catalog(conn, schema: dict, user_uuids: list[str]) -> lis
     )
     for r in rows:
         gid = str(r["ghost_id"])
-        ghosts.append({"ghost_id": gid, "name": _format_ghost_name(gid)})
+        ghosts.append(_ghost_entry(gid))
     return ghosts
 
 
@@ -392,11 +503,7 @@ async def _ghosts_from_tokens(conn, user_uuids: list[str]) -> list[dict]:
         if norm in seen:
             continue
         seen.add(norm)
-        ghosts.append({
-            "ghost_id": gid,
-            "name": _format_ghost_name(gid),
-            "amount": int(r["amount"]),
-        })
+        ghosts.append(_ghost_entry(gid, amount=int(r["amount"])))
     return ghosts
 
 

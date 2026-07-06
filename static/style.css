@@ -1585,11 +1585,19 @@ html[data-theme="dark"] .status-meta {
     text-align: center;
     position: relative;
 }
-.ghost-icon {
+.ghost-icon-fallback {
     font-size: 1.5rem;
     color: #9b59b6;
     margin-bottom: 8px;
     opacity: 0.9;
+}
+.ghost-img {
+    width: 48px;
+    height: 48px;
+    image-rendering: pixelated;
+    margin: 0 auto 8px;
+    display: block;
+    object-fit: contain;
 }
 .ghost-name {
     font-weight: 700;

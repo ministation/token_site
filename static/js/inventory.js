@@ -68,9 +68,12 @@ async function loadInventory() {
             html += '<div class="ghosts-grid">';
             data.custom_ghosts.forEach(g => {
                 const amount = g.amount > 1 ? `<span class="ghost-amount">×${g.amount}</span>` : '';
+                const iconHtml = g.icon
+                    ? `<img src="${g.icon}" alt="" class="ghost-img" onerror="this.replaceWith(Object.assign(document.createElement('i'),{className:'fa-solid fa-ghost ghost-icon-fallback'}))">`
+                    : '<i class="fa-solid fa-ghost ghost-icon-fallback"></i>';
                 html += `
                     <div class="ghost-card">
-                        <div class="ghost-icon"><i class="fa-solid fa-ghost"></i></div>
+                        ${iconHtml}
                         <div class="ghost-name">${escapeHtml(g.name)}</div>
                         ${amount}
                     </div>`;

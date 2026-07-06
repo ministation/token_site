@@ -51,6 +51,8 @@ async def lift_ban(ban_id: int) -> bool:
             await conn.execute("DELETE FROM ban WHERE ban_id = $1", ban_id)
     return True
 
+
+async def get_all_bans(limit: int = 50, offset: int = 0):
     pg = await get_pg_pool()
     async with pg.acquire() as conn:
         rows = await conn.fetch("""
