@@ -1,5 +1,55 @@
-const SLOT_SYMBOLS = ['cherry', 'lemon', 'orange', 'grapes', 'diamond', 'seven'];
+const SLOT_SYMBOLS = [
+    '/static/icons/%D0%B1%D1%83%D1%81%D1%82%20%D1%83%D0%BD%D0%B0%D1%82%D0%B8.png',
+    '/static/icons/%D0%BA%D0%BE%D1%81%D0%BC%D0%B8%D1%87%D0%B5%D1%81%D0%BA%D0%B8%D0%B9%20%D1%83%D0%BD%D0%B0%D1%82%D0%B8.png',
+    '/static/icons/%D0%B7%D0%BE%D0%BB%D0%BE%D1%82%D0%BE%D0%B9%20%D1%83%D0%BD%D0%B0%D1%82%D0%B8.png',
+    '/static/icons/%D0%BC%D0%B0%D0%B3%D0%B8%D1%87%D0%B5%D1%81%D0%BA%D0%B8%D0%B9%20%D1%83%D0%BD%D0%B0%D1%82%D0%B8.png',
+    '/static/icons/%D0%B3%D0%B8%D0%B3%D0%B0%20%D1%83%D0%BD%D0%B0%D1%82%D0%B8.png',
+];
 let slotInterval = null;
+let audioCtx = null;
+
+function getAudioCtx() {
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    return audioCtx;
+}
+
+function playTone(freq, duration, type = 'square', volume = 0.08) {
+    try {
+        const ctx = getAudioCtx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = type;
+        osc.frequency.value = freq;
+        gain.gain.value = volume;
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+        osc.stop(ctx.currentTime + duration);
+    } catch (e) {}
+}
+
+function playSpinTick() {
+    playTone(180 + Math.random() * 80, 0.05, 'square', 0.04);
+}
+
+function playWinSound(prize) {
+    if (prize >= 15) {
+        [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => playTone(f, 0.2, 'sine', 0.12), i * 120));
+    } else if (prize >= 8) {
+        [440, 554, 659].forEach((f, i) => setTimeout(() => playTone(f, 0.15, 'sine', 0.1), i * 100));
+    } else {
+        playTone(330, 0.12, 'sine', 0.08);
+        setTimeout(() => playTone(440, 0.15, 'sine', 0.08), 100);
+    }
+}
+
+function playLoseSound() {
+    playTone(150, 0.2, 'sawtooth', 0.05);
+    setTimeout(() => playTone(100, 0.25, 'sawtooth', 0.04), 150);
+}
 
 function setupAutocomplete() {
     const inputs = ['balanceNick', 'receiverNick'];
@@ -72,8 +122,12 @@ function startSlotAnimation() {
     slotInterval = setInterval(() => {
         ['slot1', 'slot2', 'slot3'].forEach(id => {
             const el = document.getElementById(id);
-            if (el) el.innerHTML = `<img src="/static/slots/${SLOT_SYMBOLS[Math.floor(Math.random() * SLOT_SYMBOLS.length)]}.png" alt="">`;
+            if (el) {
+                const sym = SLOT_SYMBOLS[Math.floor(Math.random() * SLOT_SYMBOLS.length)];
+                el.innerHTML = `<img src="${sym}" alt="">`;
+            }
         });
+        playSpinTick();
         spins++;
         if (spins >= 15) {
             clearInterval(slotInterval);
@@ -86,21 +140,28 @@ function stopSlotAnimation(prize) {
     if (slotInterval) { clearInterval(slotInterval); slotInterval = null; }
     document.querySelectorAll('.slot-reel').forEach(r => r.classList.remove('slot-spinning'));
     let symbols;
-    if (prize >= 15) symbols = ['diamond', 'diamond', 'diamond'];
-    else if (prize >= 8) symbols = ['seven', 'seven', 'cherry'];
-    else if (prize >= 4) symbols = ['grapes', 'grapes', 'lemon'];
-    else symbols = ['cherry', 'lemon', 'orange'];
+    if (prize >= 15) symbols = [SLOT_SYMBOLS[4], SLOT_SYMBOLS[4], SLOT_SYMBOLS[4]];
+    else if (prize >= 8) symbols = [SLOT_SYMBOLS[3], SLOT_SYMBOLS[3], SLOT_SYMBOLS[1]];
+    else if (prize >= 4) symbols = [SLOT_SYMBOLS[2], SLOT_SYMBOLS[2], SLOT_SYMBOLS[0]];
+    else symbols = [SLOT_SYMBOLS[0], SLOT_SYMBOLS[1], SLOT_SYMBOLS[0]];
     ['slot1', 'slot2', 'slot3'].forEach((id, i) => {
         const el = document.getElementById(id);
-        if (el) el.innerHTML = `<img src="/static/slots/${symbols[i]}.png" alt="">`;
+        if (el) el.innerHTML = `<img src="${symbols[i]}" alt="">`;
     });
     const slotResult = document.getElementById('slotResult');
-    if (slotResult) slotResult.innerHTML = prize >= 15 ? `ДЖЕКПОТ! ${prize} ${COIN_ICON}` : `Выигрыш: ${prize} ${COIN_ICON}`;
+    if (slotResult) {
+        slotResult.innerHTML = prize >= 15
+            ? `🎉 ДЖЕКПОТ! ${prize} ${COIN_ICON}`
+            : prize > 0 ? `Выигрыш: ${prize} ${COIN_ICON}` : 'Не повезло...';
+    }
+    if (prize > 0) playWinSound(prize);
+    else playLoseSound();
 }
 
 async function playLottery() {
     const resultDiv = document.getElementById('lotteryResult');
     if (!resultDiv) return;
+    try { const ctx = getAudioCtx(); if (ctx.state === 'suspended') await ctx.resume(); } catch (e) {}
     startSlotAnimation();
     try {
         const data = await apiCall('POST', '/api/lottery');

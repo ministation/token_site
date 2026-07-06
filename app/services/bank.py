@@ -314,15 +314,17 @@ async def search_all_players(query: str, limit: int = 50):
                  "balance": r["balance"]} for r in rows]
     
 async def get_balance_by_player_id(player_uuid: str) -> int:
-    """Возвращает баланс игрока по его player_id (UUID)."""
+    """Возвращает баланс игрока по game player_id (UUID)."""
     pg = await get_pg_pool()
     async with pg.acquire() as conn:
-        row = await conn.fetchrow(
-            "SELECT COALESCE(amount, 0) FROM player_antag_token "
-            "WHERE player_id::text = $1 AND token_id = 'balance'",
-            player_uuid
-        )
-        return row[0] if row else 0
+        row = await conn.fetchrow("""
+            SELECT COALESCE(pat.amount, 0) as balance
+            FROM player p
+            LEFT JOIN player_antag_token pat
+                ON p.user_id = pat.player_id AND pat.token_id = 'balance'
+            WHERE p.player_id::text = $1
+        """, player_uuid)
+        return int(row["balance"]) if row else 0
 
 
 async def get_playtime_stats():

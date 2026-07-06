@@ -140,23 +140,8 @@
         }
 
         async function sendMessageTo(playerId, nickname) {
-            const message = prompt(`Сообщение для ${nickname}:`);
-            if (!message || !message.trim()) return;
-            try {
-                const res = await fetch('/api/messages/send', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ receiver_id: playerId, content: message.trim() })
-                });
-                if (res.ok) {
-                    alert('Сообщение отправлено!');
-                } else {
-                    const err = await res.json();
-                    alert('Ошибка: ' + err.detail);
-                }
-            } catch(e) {
-                alert('Ошибка отправки');
-            }
+            sessionStorage.setItem('openPm', JSON.stringify({ playerId, nickname }));
+            window.location.href = '/';
         }
 
         document.addEventListener('DOMContentLoaded', async () => {

@@ -4,7 +4,7 @@ import database_social as social_db
 def send_pm(sender_id: str, receiver_id: str, content: str):
     receiver = social_db.get_social_user_by_player_id(receiver_id)
     if not receiver:
-        raise ValueError("Получатель не найден. Пользователь должен войти через Discord.")
+        raise ValueError("Получатель не найден")
     return social_db.send_private_message(sender_id, receiver_id, content)
 
 
@@ -16,5 +16,9 @@ def get_pm_dialogs(user_id: str):
     return social_db.get_user_dialogs(user_id)
 
 
-def search_pm_users(query: str, exclude_player_id: str, limit=20):
+def search_pm_users(query: str, exclude_player_id: str, limit=30):
     return social_db.search_message_users(query, exclude_player_id, limit)
+
+
+def mark_pm_read(user_id: str, other_id: str):
+    return social_db.mark_conversation_read(user_id, other_id)

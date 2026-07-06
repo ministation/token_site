@@ -1,24 +1,20 @@
-import datetime
-from typing import List, Dict
-from app.config import MAX_CHAT_MESSAGES
-
-# Хранилище сообщений чата в памяти сервера
-chat_messages: List[Dict] = []
+import database_social as social_db
 
 
-def get_chat_messages() -> List[Dict]:
-    return chat_messages[-50:]  # возвращаем последние 50
+def get_chat_messages(limit: int = 100, after_id: int = 0) -> list[dict]:
+    return social_db.get_global_chat_messages(limit, after_id)
 
 
-def add_chat_message(username: str, avatar: str | None, message: str) -> Dict:
-    msg = {
-        "username": username,
-        "avatar": avatar,
-        "message": message.strip(),
-        "timestamp": datetime.datetime.now().isoformat()
+def add_chat_message(author_id: str, author_nickname: str,
+                     author_avatar: str | None, message: str) -> dict:
+    msg_id = social_db.add_global_chat_message(
+        author_id, author_nickname, author_avatar, message.strip()
+    )
+    messages = social_db.get_global_chat_messages(1, msg_id - 1)
+    return messages[-1] if messages else {
+        "id": msg_id,
+        "author_id": author_id,
+        "author_nickname": author_nickname,
+        "author_avatar": author_avatar,
+        "content": message.strip(),
     }
-    chat_messages.append(msg)
-    # Ограничиваем максимальное число сообщений
-    if len(chat_messages) > MAX_CHAT_MESSAGES:
-        chat_messages.pop(0)
-    return msg

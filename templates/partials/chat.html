@@ -1,0 +1,18 @@
+<div class="card global-chat-card">
+    <div class="global-chat-header">
+        <h2><i class="fa-solid fa-comments"></i> Общий чат</h2>
+        <p class="chat-hint-inline">Живой чат между всеми авторизованными игроками</p>
+    </div>
+    <div id="globalChatMessages" class="global-chat-messages"></div>
+    <div class="global-chat-input" id="globalChatInputArea" style="display:none;">
+        <input type="text" id="globalChatInput" placeholder="Сообщение в чат..."
+            maxlength="500"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();sendGlobalChatMessage();}">
+        <button type="button" onclick="sendGlobalChatMessage()">
+            <i class="fa-solid fa-paper-plane"></i>
+        </button>
+    </div>
+    <p class="chat-login-hint" id="globalChatLoginHint">
+        <a href="#" onclick="login(); return false;">Войдите через Discord</a>, чтобы писать в чат
+    </p>
+</div>

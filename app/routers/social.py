@@ -2,7 +2,7 @@ import os
 import shutil
 import datetime
 from fastapi import APIRouter, Request, HTTPException, UploadFile, File, Form
-from app.dependencies import get_current_user, get_current_player
+from app.dependencies import get_current_user, get_current_player, get_current_social_user, get_optional_social_user
 from app.models.social import ProfileUpdate, CommentCreate
 from app.services.social import (
     get_social_user_by_player_id, update_social_user, create_post, delete_post,
@@ -81,24 +81,25 @@ async def api_create_post(
     content: str = Form(...),
     image: UploadFile | None = File(None)
 ):
-    player = await get_current_player(request)
+    user = await get_current_social_user(request)
     image_url = None
     if image and image.filename:
         file_ext = os.path.splitext(image.filename)[1]
-        filename = f"{player['player_id']}_{int(datetime.datetime.now().timestamp())}{file_ext}"
+        filename = f"{user['social_id']}_{int(datetime.datetime.now().timestamp())}{file_ext}"
         filepath = os.path.join(UPLOAD_DIR, filename)
         with open(filepath, "wb") as buffer:
             shutil.copyfileobj(image.file, buffer)
         image_url = f"/static/uploads/{filename}"
 
-    post_id = create_post(player['player_id'], content, image_url)
+    post_id = create_post(user['social_id'], content, image_url)
     return {"success": True, "post_id": post_id}
 
 
 @router.get("/posts/feed")
 async def api_feed(request: Request, limit: int = 20, offset: int = 0):
-    player = await get_current_player(request)
-    posts = get_feed_posts(player['player_id'], limit, offset)
+    viewer = await get_optional_social_user(request)
+    viewer_id = viewer['social_id'] if viewer else None
+    posts = get_feed_posts(viewer_id, limit, offset)
     result = []
     for p in posts:
         result.append({
@@ -120,12 +121,8 @@ async def api_feed(request: Request, limit: int = 20, offset: int = 0):
 
 @router.get("/posts/user/{player_id}")
 async def api_user_posts(request: Request, player_id: str, limit: int = 20, offset: int = 0):
-    viewer_id = None
-    try:
-        player = await get_current_player(request)
-        viewer_id = player['player_id']
-    except HTTPException:
-        pass
+    viewer = await get_optional_social_user(request)
+    viewer_id = viewer['social_id'] if viewer else None
 
     posts = get_user_posts(player_id, limit, offset)
     result = []
@@ -156,8 +153,8 @@ async def api_user_posts(request: Request, player_id: str, limit: int = 20, offs
 
 @router.delete("/posts/{post_id}")
 async def api_delete_post(request: Request, post_id: int):
-    player = await get_current_player(request)
-    success = delete_post(post_id, player['player_id'])
+    user = await get_current_social_user(request)
+    success = delete_post(post_id, user['social_id'])
     if not success:
         raise HTTPException(status_code=404, detail="Пост не найден или нет прав")
     return {"success": True}
@@ -167,8 +164,8 @@ async def api_delete_post(request: Request, post_id: int):
 
 @router.post("/posts/{post_id}/like")
 async def api_toggle_like(request: Request, post_id: int):
-    player = await get_current_player(request)
-    action = toggle_like(post_id, player['player_id'])
+    user = await get_current_social_user(request)
+    action = toggle_like(post_id, user['social_id'])
     like_count = get_like_count(post_id)
     return {"action": action, "like_count": like_count}
 
@@ -177,8 +174,8 @@ async def api_toggle_like(request: Request, post_id: int):
 
 @router.post("/posts/{post_id}/comments")
 async def api_add_comment(request: Request, post_id: int, comment: CommentCreate):
-    player = await get_current_player(request)
-    comment_id = add_comment(post_id, player['player_id'], comment.content)
+    user = await get_current_social_user(request)
+    comment_id = add_comment(post_id, user['social_id'], comment.content)
     return {"success": True, "comment_id": comment_id}
 
 
@@ -201,8 +198,8 @@ async def api_get_comments(post_id: int):
 
 @router.delete("/comments/{comment_id}")
 async def api_delete_comment(request: Request, comment_id: int):
-    player = await get_current_player(request)
-    success = delete_comment(comment_id, player['player_id'])
+    user = await get_current_social_user(request)
+    success = delete_comment(comment_id, user['social_id'])
     if not success:
         raise HTTPException(status_code=404, detail="Комментарий не найден или нет прав")
     return {"success": True}
@@ -212,10 +209,10 @@ async def api_delete_comment(request: Request, comment_id: int):
 
 @router.post("/follow/{target_player_id}")
 async def api_follow(request: Request, target_player_id: str):
-    player = await get_current_player(request)
-    if player['player_id'] == target_player_id:
+    user = await get_current_social_user(request)
+    if user['social_id'] == target_player_id:
         raise HTTPException(status_code=400, detail="Нельзя подписаться на себя")
-    success = follow_user(player['player_id'], target_player_id)
+    success = follow_user(user['social_id'], target_player_id)
     if not success:
         raise HTTPException(status_code=400, detail="Уже подписаны или ошибка")
     return {"success": True, "following": True}
@@ -223,8 +220,8 @@ async def api_follow(request: Request, target_player_id: str):
 
 @router.delete("/follow/{target_player_id}")
 async def api_unfollow(request: Request, target_player_id: str):
-    player = await get_current_player(request)
-    success = unfollow_user(player['player_id'], target_player_id)
+    user = await get_current_social_user(request)
+    success = unfollow_user(user['social_id'], target_player_id)
     return {"success": success}
 
 

@@ -1,34 +1,7 @@
-<div class="home-dashboard">
-    <div class="status-strip card" id="serverStatus">
-        <span class="status-dot" id="statusDot"></span>
-        <div class="status-strip-main">
-            <span class="status-name" id="statusName">Загрузка...</span>
-            <span class="status-players">
-                <strong id="statusPlayers">0</strong><span class="status-sep">/</span><span id="statusMax">100</span>
-            </span>
-        </div>
-        <div class="status-bar-wrap">
-            <div class="status-bar" id="progressFill"></div>
-        </div>
-        <div class="status-meta-row">
-            <span class="status-meta"><i class="fa-solid fa-map"></i> <span id="statusMap">-</span></span>
-            <span class="status-meta"><i class="fa-solid fa-bullseye"></i> <span id="statusPreset">-</span></span>
-        </div>
-    </div>
-
-    <div class="playtime-compact card">
-        <h3><i class="fa-solid fa-chart-pie"></i> Постоянные <small>(от 5 ч)</small></h3>
-        <div class="playtime-chart-wrap">
-            <canvas id="playtimeCanvas"></canvas>
-        </div>
-        <p class="playtime-total" id="playtimeTotal"></p>
-    </div>
-</div>
-
-<div class="card hero-card hero-compact">
+<div class="card hero-card hero-top">
     <span class="tagline">Космическая станция 14</span>
     <p class="description">
-        Мини-станция — некоммерческий безбашенный проект в SS14: эпичные баталии и ролевой отыгрыш.
+        Мини-станция — это некоммерческий, самый безбашенный проект в игре Космическая станция 14, где ты сможешь как и вдоволь поучаствовать в эпичных баталиях, так и показать свой ролевой отыгрыш.
     </p>
     <div class="social-links">
         <a href="https://ministation.ru/" target="_blank" rel="noopener" class="link-btn website">
@@ -52,7 +25,55 @@
     </div>
 </div>
 
-<div class="card create-post-card">
+<div class="server-widget card" id="serverStatus">
+    <div class="server-widget-header">
+        <div class="server-status-badge" id="serverStatusBadge">
+            <span class="status-dot" id="statusDot"></span>
+            <span id="statusBadgeText">Загрузка...</span>
+        </div>
+        <div class="server-widget-name" id="statusName">Мини-станция</div>
+    </div>
+    <div class="server-widget-body">
+        <div class="server-players-ring">
+            <svg class="players-ring" viewBox="0 0 120 120">
+                <circle class="ring-bg" cx="60" cy="60" r="52"></circle>
+                <circle class="ring-fill" id="playersRing" cx="60" cy="60" r="52"></circle>
+            </svg>
+            <div class="players-count">
+                <strong id="statusPlayers">0</strong>
+                <span class="players-max">/ <span id="statusMax">100</span></span>
+            </div>
+        </div>
+        <div class="server-widget-details">
+            <div class="server-detail">
+                <i class="fa-solid fa-users"></i>
+                <div>
+                    <span class="detail-label">Игроков онлайн</span>
+                    <span class="detail-value" id="statusPlayersText">0</span>
+                </div>
+            </div>
+            <div class="server-detail">
+                <i class="fa-solid fa-map"></i>
+                <div>
+                    <span class="detail-label">Карта</span>
+                    <span class="detail-value" id="statusMap">—</span>
+                </div>
+            </div>
+            <div class="server-detail">
+                <i class="fa-solid fa-bullseye"></i>
+                <div>
+                    <span class="detail-label">Режим</span>
+                    <span class="detail-value" id="statusPreset">—</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="server-bar-wrap">
+        <div class="server-bar" id="progressFill"></div>
+    </div>
+</div>
+
+<div class="card create-post-card" id="createPostCard" style="display:none;">
     <h2><i class="fa-solid fa-pen"></i> Новый пост</h2>
     <div class="post-form">
         <textarea id="postContent" placeholder="Что у вас нового?"></textarea>
@@ -65,5 +86,10 @@
         </div>
         <div id="imagePreview" class="image-preview"></div>
     </div>
+</div>
+
+<div class="card feed-header-card">
+    <h2><i class="fa-solid fa-newspaper"></i> Лента постов</h2>
+    <p class="feed-hint">Общая лента всех игроков сайта</p>
 </div>
 <div id="feedContainer"></div>

@@ -17,15 +17,25 @@ function setupNavigation() {
             btn.classList.add('active');
             closeMobileNav();
 
-            if (section === 'profile') {
-                if (currentUser?.player) {
-                    loadMyProfile();
-                } else {
-                    alert('Привяжите Discord к игровому аккаунту');
-                }
-            } else if (section === 'home') {
+            if (section === 'home') {
                 if (typeof loadFeed === 'function') loadFeed();
                 if (typeof loadServerStatus === 'function') loadServerStatus();
+            } else if (section === 'chat') {
+                if (typeof initGlobalChat === 'function') initGlobalChat();
+            } else if (section === 'messages') {
+                if (!currentUser?.authenticated) {
+                    alert('Войдите через Discord, чтобы писать сообщения');
+                    return;
+                }
+                if (typeof setupPmUserSearch === 'function') setupPmUserSearch();
+                if (typeof loadDialogs === 'function') loadDialogs();
+                if (typeof startPmPolling === 'function') startPmPolling();
+            } else if (section === 'inventory') {
+                if (!currentUser?.authenticated) {
+                    alert('Войдите через Discord, чтобы видеть инвентарь');
+                    return;
+                }
+                if (typeof loadInventory === 'function') loadInventory();
             } else if (section === 'economy') {
                 if (typeof loadMyBalance === 'function') loadMyBalance();
                 if (typeof loadMyDeposits === 'function') loadMyDeposits();
@@ -35,18 +45,7 @@ function setupNavigation() {
             } else if (section === 'bans') {
                 if (typeof loadBans === 'function') loadBans();
             } else if (section === 'online') {
-                if (typeof initOnlineChart === 'function') initOnlineChart();
-            } else if (section === 'search') {
-                const input = document.getElementById('socialSearchInput');
-                if (input) input.value = '';
-                if (typeof searchSocial === 'function') searchSocial('');
-            } else if (section === 'messages') {
-                if (!currentUser?.player) {
-                    alert('Войдите и привяжите Discord к игровому аккаунту');
-                    return;
-                }
-                if (typeof setupPmUserSearch === 'function') setupPmUserSearch();
-                if (typeof loadDialogs === 'function') loadDialogs();
+                if (typeof initStatsSection === 'function') initStatsSection();
             }
         });
     });
@@ -63,4 +62,6 @@ function showSection(sectionId) {
     document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
     const target = document.getElementById(sectionId + 'Section');
     if (target) target.classList.add('active');
+    if (sectionId !== 'messages' && typeof stopPmPolling === 'function') stopPmPolling();
+    if (sectionId !== 'chat' && typeof stopGlobalChatPolling === 'function') stopGlobalChatPolling();
 }

@@ -63,11 +63,10 @@ async def callback(code: str, state: str):
         'created': datetime.datetime.now().isoformat()
     }
 
-    # Привязка к игроку
+    # Привязка к игроку и создание профиля соцсети для всех авторизованных
     player = await find_player_by_discord(discord_id)
     if player:
         session_data['player'] = player
-        # Синхронный вызов – БЕЗ await
         get_or_create_social_user(
             player_id=player['player_id'],
             user_uuid=player['user_uuid'],
@@ -75,6 +74,15 @@ async def callback(code: str, state: str):
             discord_username=username,
             discord_avatar=avatar,
             game_nickname=player['last_seen_user_name']
+        )
+    else:
+        get_or_create_social_user(
+            player_id=f"discord_{discord_id}",
+            user_uuid=f"discord_{discord_id}",
+            discord_id=discord_id,
+            discord_username=username,
+            discord_avatar=avatar,
+            game_nickname=username
         )
 
     set_session(session_token, session_data)
@@ -108,10 +116,36 @@ async def api_me(request: Request):
     session = get_session(session_token)
     if not session:
         return {"authenticated": False}
-    return {
+    import database_social as social_db
+    social = social_db.get_social_user_by_discord_id(session['discord_id'])
+    if not social:
+        player = session.get('player')
+        if player:
+            get_or_create_social_user(
+                player_id=player['player_id'],
+                user_uuid=player['user_uuid'],
+                discord_id=session['discord_id'],
+                discord_username=session['username'],
+                discord_avatar=None,
+                game_nickname=player['last_seen_user_name']
+            )
+        else:
+            get_or_create_social_user(
+                player_id=f"discord_{session['discord_id']}",
+                user_uuid=f"discord_{session['discord_id']}",
+                discord_id=session['discord_id'],
+                discord_username=session['username'],
+                discord_avatar=None,
+                game_nickname=session['username']
+            )
+        social = social_db.get_social_user_by_discord_id(session['discord_id'])
+    result = {
         "authenticated": True,
         "username": session['username'],
         "discord_id": session['discord_id'],
         "avatar": session.get('avatar'),
-        "player": session.get('player')
+        "player": session.get('player'),
     }
+    if social:
+        result["social_id"] = social["player_id"]
+    return result

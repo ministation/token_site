@@ -1,5 +1,15 @@
 <div class="card">
-    <h2><i class="fa-solid fa-chart-line"></i> Статистика онлайна</h2>
+    <h2><i class="fa-solid fa-chart-line"></i> Статистика</h2>
+
+    <div class="playtime-compact stats-playtime">
+        <h3><i class="fa-solid fa-chart-pie"></i> Постоянные игроки <small>(от 5 ч)</small></h3>
+        <div class="playtime-chart-wrap stats-chart-wrap">
+            <canvas id="playtimeCanvas"></canvas>
+        </div>
+        <p class="playtime-total" id="playtimeTotal"></p>
+    </div>
+
+    <h3 class="stats-subtitle"><i class="fa-solid fa-signal"></i> Онлайн сервера</h3>
 
     <div class="chart-controls">
         <button class="chart-tab active" data-mode="day" onclick="switchOnlineMode('day', this)">День</button>

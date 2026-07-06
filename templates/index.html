@@ -41,10 +41,12 @@
             <div class="side-group">
                 <div class="side-group-title"><i class="fa-solid fa-compass"></i> Навигация</div>
                 <button class="nav-btn active" data-section="home"><i class="fa-solid fa-house"></i> Главная</button>
+                <button class="nav-btn" data-section="chat"><i class="fa-solid fa-comments"></i> Чат</button>
+                <button class="nav-btn" data-section="messages"><i class="fa-solid fa-envelope"></i> Сообщения</button>
+                <button class="nav-btn" data-section="inventory"><i class="fa-solid fa-box-open"></i> Инвентарь</button>
                 <button class="nav-btn" data-section="economy"><i class="fa-solid fa-coins"></i> Монетки</button>
                 <button class="nav-btn" data-section="bans"><i class="fa-solid fa-gavel"></i> Наказания</button>
                 <button class="nav-btn" data-section="online"><i class="fa-solid fa-chart-line"></i> Статистика</button>
-                <button class="nav-btn" data-section="messages"><i class="fa-solid fa-envelope"></i> Сообщения</button>
             </div>
             <div class="side-group">
                 <div class="side-group-title"><i class="fa-solid fa-link"></i> Ссылки</div>
@@ -59,6 +61,15 @@
             <div id="homeSection" class="section active">
                 {% include 'partials/home.html' %}
             </div>
+            <div id="chatSection" class="section">
+                {% include 'partials/chat.html' %}
+            </div>
+            <div id="messagesSection" class="section">
+                {% include 'partials/messages.html' %}
+            </div>
+            <div id="inventorySection" class="section">
+                {% include 'partials/inventory.html' %}
+            </div>
             <div id="economySection" class="section">
                 {% include 'partials/economy.html' %}
             </div>
@@ -67,9 +78,6 @@
             </div>
             <div id="onlineSection" class="section">
                 {% include 'partials/online.html' %}
-            </div>
-            <div id="messagesSection" class="section">
-                {% include 'partials/messages.html' %}
             </div>
 
             <datalist id="playersList"></datalist>
@@ -83,88 +91,62 @@
     <script src="/static/js/social.js"></script>
     <script src="/static/js/bans.js"></script>
     <script src="/static/js/online.js"></script>
+    <script src="/static/js/stats.js"></script>
     <script src="/static/js/messages.js"></script>
+    <script src="/static/js/chat.js"></script>
+    <script src="/static/js/inventory.js"></script>
     <script src="/static/script.js"></script>
 
     <script>
-    let playtimeChart = null;
-
-    async function loadPlaytimeChart() {
-        try {
-            const res = await fetch('/api/playtime-stats');
-            const data = await res.json();
-            const ctx = document.getElementById('playtimeCanvas');
-            if (!ctx) return;
-            if (playtimeChart) playtimeChart.destroy();
-            const total = (data.newbies || 0) + (data.regulars || 0) + (data.veterans || 0);
-            const totalEl = document.getElementById('playtimeTotal');
-            if (totalEl) totalEl.textContent = 'Всего: ' + total + ' игроков (с онлайном > 5 ч)';
-            playtimeChart = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: [
-                        'Новички (<50ч): ' + (data.newbies || 0),
-                        'Обычные (50–400ч): ' + (data.regulars || 0),
-                        'Ветераны (400+ч): ' + (data.veterans || 0)
-                    ],
-                    datasets: [{
-                        data: [data.newbies || 0, data.regulars || 0, data.veterans || 0],
-                        backgroundColor: [cssVar('--success'), cssVar('--gold'), cssVar('--accent')],
-                        borderColor: cssVar('--panel'),
-                        borderWidth: 2
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: { color: cssVar('--chart-text'), padding: 10, font: { size: 11 }, boxWidth: 12 }
-                        }
-                    }
-                }
-            });
-        } catch (e) {
-            console.error('Chart error:', e);
-        }
-    }
+    const RING_CIRC = 2 * Math.PI * 52;
 
     async function loadServerStatus() {
         try {
             const res = await fetch('/api/server-status');
             const data = await res.json();
+            const online = !!data.online;
 
             const dot = document.getElementById('statusDot');
-            if (dot) dot.className = 'status-dot' + (data.online ? ' online' : '');
+            if (dot) dot.className = 'status-dot' + (online ? ' online' : '');
+
+            const badgeText = document.getElementById('statusBadgeText');
+            const badge = document.getElementById('serverStatusBadge');
+            if (badgeText) badgeText.textContent = online ? 'Онлайн' : 'Оффлайн';
+            if (badge) badge.classList.toggle('offline', !online);
 
             const nameEl = document.getElementById('statusName');
             if (nameEl) nameEl.textContent = data.name || 'Мини-станция';
 
-            const playersEl = document.getElementById('statusPlayers');
-            if (playersEl) playersEl.textContent = data.players || 0;
+            const players = data.players || 0;
+            const maxPlayers = data.max_players || 100;
+
+            ['statusPlayers', 'statusPlayersText'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = players;
+            });
 
             const maxEl = document.getElementById('statusMax');
-            if (maxEl) maxEl.textContent = data.max_players || 100;
+            if (maxEl) maxEl.textContent = maxPlayers;
 
             const mapEl = document.getElementById('statusMap');
-            if (mapEl) mapEl.textContent = data.map || '-';
+            if (mapEl) mapEl.textContent = data.map || '—';
 
             const presetEl = document.getElementById('statusPreset');
-            if (presetEl) presetEl.textContent = data.preset || '-';
+            if (presetEl) presetEl.textContent = data.preset || '—';
+
+            const percent = Math.min(100, (players / maxPlayers) * 100);
+            const ring = document.getElementById('playersRing');
+            if (ring) {
+                ring.style.strokeDasharray = RING_CIRC;
+                ring.style.strokeDashoffset = RING_CIRC - (RING_CIRC * percent / 100);
+            }
 
             const fill = document.getElementById('progressFill');
-            if (fill) {
-                const percent = Math.min(100, ((data.players || 0) / (data.max_players || 100)) * 100);
-                fill.style.width = percent + '%';
-            }
+            if (fill) fill.style.width = percent + '%';
         } catch (e) {}
     }
 
-    window.addEventListener('themechange', loadPlaytimeChart);
-
     loadServerStatus();
-    loadPlaytimeChart();
     setInterval(loadServerStatus, 30000);
     </script>
 </body>

@@ -1,28 +1,35 @@
 let currentPmPartnerId = null;
 let pmSearchTimeout = null;
+let pmPollInterval = null;
 
 async function loadDialogs() {
-    if (!currentUser?.player) {
-        document.getElementById('dialogsList').innerHTML = '<p class="empty-state">Войдите, чтобы видеть сообщения</p>';
+    const container = document.getElementById('dialogsList');
+    if (!container) return;
+    if (!currentUser?.authenticated) {
+        container.innerHTML = '<p class="empty-state">Войдите, чтобы видеть сообщения</p>';
         return;
     }
     try {
         const dialogs = await apiCall('GET', '/api/messages/dialogs');
-        const container = document.getElementById('dialogsList');
         if (!dialogs.length) {
-            container.innerHTML = '<p class="empty-state">Нет диалогов — найдите игрока выше</p>';
+            container.innerHTML = '<p class="empty-state">Нет диалогов — найдите игрока слева</p>';
             return;
         }
         container.innerHTML = dialogs.map(d => `
             <div class="dialog-item ${currentPmPartnerId === d.other_id ? 'active' : ''}"
                  onclick='openConversation(${JSON.stringify(d.other_id)}, ${JSON.stringify(d.nickname || 'Игрок')})'>
-                <div class="dialog-name">${escapeHtml(d.nickname || 'Игрок')}</div>
-                <div class="dialog-preview">${escapeHtml(d.last_msg || '')}</div>
+                <div class="dialog-avatar-wrap">
+                    <div class="dialog-avatar-placeholder"><i class="fa-solid fa-user"></i></div>
+                </div>
+                <div class="dialog-body">
+                    <div class="dialog-name">${escapeHtml(d.nickname || 'Игрок')}</div>
+                    <div class="dialog-preview">${escapeHtml(d.last_msg || '')}</div>
+                </div>
                 ${d.unread ? `<span class="dialog-unread">${d.unread}</span>` : ''}
             </div>
         `).join('');
     } catch (e) {
-        document.getElementById('dialogsList').innerHTML = '<p class="error">Не удалось загрузить диалоги</p>';
+        container.innerHTML = '<p class="error">Не удалось загрузить диалоги</p>';
     }
 }
 
@@ -32,18 +39,17 @@ function setupPmUserSearch() {
     input.dataset.bound = '1';
     input.addEventListener('input', () => {
         clearTimeout(pmSearchTimeout);
-        pmSearchTimeout = setTimeout(() => searchPmUsers(input.value), 300);
+        pmSearchTimeout = setTimeout(() => searchPmUsers(input.value), 250);
+    });
+    input.addEventListener('focus', () => {
+        if (!input.value.trim()) searchPmUsers('');
     });
 }
 
 async function searchPmUsers(query) {
     const container = document.getElementById('pmUserResults');
     if (!container) return;
-    if (!query || query.trim().length < 2) {
-        container.innerHTML = '';
-        return;
-    }
-    if (!currentUser?.player) {
+    if (!currentUser?.authenticated) {
         container.innerHTML = '<p class="error">Войдите через Discord</p>';
         return;
     }
@@ -68,13 +74,13 @@ async function searchPmUsers(query) {
 async function openConversation(partnerId, nickname) {
     currentPmPartnerId = partnerId;
     const title = document.getElementById('conversationTitle');
-    if (title) title.textContent = nickname || 'Диалог';
+    if (title) title.innerHTML = `<i class="fa-solid fa-user"></i> ${escapeHtml(nickname || 'Диалог')}`;
     const results = document.getElementById('pmUserResults');
     if (results) results.innerHTML = '';
     const search = document.getElementById('pmUserSearch');
     if (search) search.value = '';
-    await loadDialogs();
     await loadConversation(partnerId);
+    await loadDialogs();
 }
 
 async function loadConversation(partnerId) {
@@ -86,13 +92,16 @@ async function loadConversation(partnerId) {
             container.innerHTML = '<p class="empty-state">Напишите первое сообщение</p>';
             return;
         }
-        const myId = currentUser.player.player_id;
-        const textKey = (m) => m.content ?? m.message ?? m.text ?? '';
+        const myId = currentUser.social_id || currentUser.player?.player_id;
         container.innerHTML = messages.reverse().map(m => {
             const own = m.sender_id === myId;
+            const text = m.content ?? m.message ?? m.text ?? '';
+            const time = new Date(m.created_at).toLocaleString('ru-RU', {
+                day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+            });
             return `<div class="pm-message ${own ? 'own' : ''}">
-                <div class="pm-bubble">${escapeHtml(textKey(m))}</div>
-                <div class="pm-time">${new Date(m.created_at).toLocaleString()}</div>
+                <div class="pm-bubble">${escapeHtml(text)}</div>
+                <div class="pm-time">${time}</div>
             </div>`;
         }).join('');
         container.scrollTop = container.scrollHeight;
@@ -102,6 +111,10 @@ async function loadConversation(partnerId) {
 }
 
 async function sendPrivateMessage() {
+    if (!currentUser?.authenticated) {
+        alert('Войдите через Discord');
+        return;
+    }
     if (!currentPmPartnerId) {
         alert('Выберите диалог или найдите игрока');
         return;
@@ -129,7 +142,23 @@ function startConversationWith(playerId, nickname) {
     if (btn) btn.classList.add('active');
     if (typeof closeMobileNav === 'function') closeMobileNav();
     setupPmUserSearch();
+    startPmPolling();
     openConversation(playerId, nickname);
+}
+
+function startPmPolling() {
+    stopPmPolling();
+    pmPollInterval = setInterval(() => {
+        if (currentPmPartnerId) loadConversation(currentPmPartnerId);
+        loadDialogs();
+    }, 5000);
+}
+
+function stopPmPolling() {
+    if (pmPollInterval) {
+        clearInterval(pmPollInterval);
+        pmPollInterval = null;
+    }
 }
 
 document.addEventListener('DOMContentLoaded', setupPmUserSearch);

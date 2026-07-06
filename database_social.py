@@ -153,6 +153,17 @@ def init_social_db():
             player_count INTEGER NOT NULL
         )
     """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS global_chat_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            author_id TEXT NOT NULL,
+            author_nickname TEXT NOT NULL,
+            author_avatar TEXT,
+            content TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (author_id) REFERENCES social_users(player_id) ON DELETE CASCADE
+        )
+    """)
     conn.commit()
     conn.close()
     get_pm_table_info()
@@ -271,21 +282,28 @@ def get_post_by_id(post_id: int) -> Optional[Dict]:
     return dict(row) if row else None
 
 def get_feed_posts(player_id: str, limit: int = 30, offset: int = 0) -> List[Dict]:
-    """Лента: посты от подписок + свои посты"""
+    """Общая лента: все посты всех пользователей."""
+    return get_all_posts(player_id, limit, offset)
+
+
+def get_all_posts(viewer_id: str | None = None, limit: int = 30, offset: int = 0) -> List[Dict]:
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("""
+    liked_expr = (
+        "EXISTS(SELECT 1 FROM likes WHERE post_id = p.id AND player_id = ?)"
+        if viewer_id else "0"
+    )
+    params: list = ([viewer_id] if viewer_id else []) + [limit, offset]
+    cursor.execute(f"""
         SELECT p.*, su.game_nickname, su.discord_username, su.discord_avatar, su.discord_id,
                (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as like_count,
                (SELECT COUNT(*) FROM comments WHERE post_id = p.id) as comment_count,
-               EXISTS(SELECT 1 FROM likes WHERE post_id = p.id AND player_id = ?) as liked_by_me
+               {liked_expr} as liked_by_me
         FROM posts p
         JOIN social_users su ON p.author_player_id = su.player_id
-        WHERE p.author_player_id = ? 
-           OR p.author_player_id IN (SELECT following_player_id FROM follows WHERE follower_player_id = ?)
         ORDER BY p.created_at DESC
         LIMIT ? OFFSET ?
-    """, (player_id, player_id, player_id, limit, offset))
+    """, params)
     rows = cursor.fetchall()
     conn.close()
     return [dict(row) for row in rows]
@@ -474,12 +492,13 @@ def send_private_message(sender_id: str, receiver_id: str, content: str) -> int:
 
 
 def get_conversation(user_id: str, other_id: str, limit: int = 50) -> List[Dict]:
-    table, content_col, _ = get_pm_table_info()
+    table, content_col, read_col = get_pm_table_info()
+    read_expr = f"COALESCE({read_col}, 0) as read" if read_col else "0 as read"
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute(f"""
         SELECT id, sender_id, receiver_id, {content_col} as content, created_at,
-               read
+               {read_expr}
         FROM {table}
         WHERE (sender_id = ? AND receiver_id = ?)
            OR (sender_id = ? AND receiver_id = ?)
@@ -489,6 +508,22 @@ def get_conversation(user_id: str, other_id: str, limit: int = 50) -> List[Dict]
     messages = [dict(row) for row in cursor.fetchall()]
     conn.close()
     return messages
+
+
+def mark_conversation_read(user_id: str, other_id: str) -> int:
+    table, _, read_col = get_pm_table_info()
+    if not read_col:
+        return 0
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        f"UPDATE {table} SET {read_col} = 1 WHERE receiver_id = ? AND sender_id = ? AND COALESCE({read_col}, 0) = 0",
+        (user_id, other_id)
+    )
+    conn.commit()
+    affected = cursor.rowcount
+    conn.close()
+    return affected
 
 
 def get_user_dialogs(user_id: str) -> List[Dict]:
@@ -536,24 +571,70 @@ def get_user_dialogs(user_id: str) -> List[Dict]:
     return dialogs
 
 
-def search_message_users(query: str, exclude_player_id: str, limit: int = 20) -> List[Dict]:
-    if len(query.strip()) < 2:
-        return []
+def search_message_users(query: str, exclude_player_id: str, limit: int = 30) -> List[Dict]:
     conn = get_db()
     cursor = conn.cursor()
-    like = f"%{query.strip()}%"
-    cursor.execute("""
-        SELECT player_id, game_nickname, discord_username, discord_avatar
-        FROM social_users
-        WHERE player_id != ?
-          AND (LOWER(game_nickname) LIKE LOWER(?)
-               OR LOWER(discord_username) LIKE LOWER(?))
-        ORDER BY game_nickname
-        LIMIT ?
-    """, (exclude_player_id, like, like, limit))
+    q = query.strip()
+    if len(q) >= 1:
+        like = f"%{q}%"
+        cursor.execute("""
+            SELECT player_id, game_nickname, discord_username, discord_avatar
+            FROM social_users
+            WHERE player_id != ?
+              AND (LOWER(game_nickname) LIKE LOWER(?)
+                   OR LOWER(discord_username) LIKE LOWER(?))
+            ORDER BY game_nickname
+            LIMIT ?
+        """, (exclude_player_id, like, like, limit))
+    else:
+        cursor.execute("""
+            SELECT player_id, game_nickname, discord_username, discord_avatar
+            FROM social_users
+            WHERE player_id != ?
+            ORDER BY updated_at DESC
+            LIMIT ?
+        """, (exclude_player_id, limit))
     rows = [dict(r) for r in cursor.fetchall()]
     conn.close()
     return rows
+
+
+def add_global_chat_message(author_id: str, author_nickname: str,
+                            author_avatar: str | None, content: str) -> int:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO global_chat_messages (author_id, author_nickname, author_avatar, content)
+        VALUES (?, ?, ?, ?)
+    """, (author_id, author_nickname, author_avatar, content))
+    conn.commit()
+    msg_id = cursor.lastrowid
+    conn.close()
+    return msg_id
+
+
+def get_global_chat_messages(limit: int = 100, after_id: int = 0) -> List[Dict]:
+    conn = get_db()
+    cursor = conn.cursor()
+    if after_id:
+        cursor.execute("""
+            SELECT * FROM global_chat_messages
+            WHERE id > ?
+            ORDER BY created_at ASC
+            LIMIT ?
+        """, (after_id, limit))
+    else:
+        cursor.execute("""
+            SELECT * FROM global_chat_messages
+            ORDER BY created_at DESC
+            LIMIT ?
+        """, (limit,))
+        rows = cursor.fetchall()
+        conn.close()
+        return [dict(r) for r in reversed(rows)]
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
 
 import json
 from datetime import datetime

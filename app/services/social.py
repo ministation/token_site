@@ -76,8 +76,12 @@ def get_following(player_id: str, limit: int = 20):
     return social_db.get_following(player_id, limit)
 
 
-def get_feed_posts(player_id: str, limit: int = 20, offset: int = 0):
-    return social_db.get_feed_posts(player_id, limit, offset)
+def get_feed_posts(player_id: str | None = None, limit: int = 20, offset: int = 0):
+    return social_db.get_all_posts(player_id, limit, offset)
+
+
+def get_all_posts(viewer_id: str | None = None, limit: int = 20, offset: int = 0):
+    return social_db.get_all_posts(viewer_id, limit, offset)
 
 
 def get_user_posts(player_id: str, limit: int = 20, offset: int = 0):

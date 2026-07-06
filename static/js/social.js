@@ -1,19 +1,25 @@
 document.addEventListener('change', function(e) {
     if (e.target.id === 'postImage') {
         const file = e.target.files[0];
+        const preview = document.getElementById('imagePreview');
+        if (!preview) return;
         if (file) {
             const reader = new FileReader();
             reader.onload = function(ev) {
-                document.getElementById('imagePreview').innerHTML = '<img src="' + ev.target.result + '" alt="Preview">';
+                preview.innerHTML = '<img src="' + ev.target.result + '" alt="Preview">';
             };
             reader.readAsDataURL(file);
         } else {
-            document.getElementById('imagePreview').innerHTML = '';
+            preview.innerHTML = '';
         }
     }
 });
 
 async function createPost() {
+    if (!currentUser?.authenticated) {
+        alert('Войдите через Discord, чтобы публиковать посты');
+        return;
+    }
     const content = document.getElementById('postContent').value.trim();
     if (!content) { alert('Введите текст поста'); return; }
     const imageInput = document.getElementById('postImage');
@@ -30,18 +36,23 @@ async function createPost() {
 }
 
 async function loadFeed() {
-    if (!currentUser?.player) return;
+    const container = document.getElementById('feedContainer');
+    if (!container) return;
     try {
-        const posts = await apiCall('GET', '/api/social/posts/feed');
+        const res = await fetch('/api/social/posts/feed');
+        if (!res.ok) throw new Error('Ошибка загрузки');
+        const posts = await res.json();
         renderPosts(posts, 'feedContainer');
-    } catch (e) {}
+    } catch (e) {
+        container.innerHTML = '<p class="empty-state">Не удалось загрузить ленту</p>';
+    }
 }
 
 function renderPosts(posts, containerId) {
     const container = document.getElementById(containerId);
     if (!container) return;
     if (!posts.length) {
-        container.innerHTML = '<p class="empty-state">Пока нет постов.</p>';
+        container.innerHTML = '<p class="empty-state">Пока нет постов. Будьте первым!</p>';
         return;
     }
     container.innerHTML = posts.map(post => renderPost(post)).join('');
@@ -49,12 +60,23 @@ function renderPosts(posts, containerId) {
 
 function renderPost(post) {
     const likedClass = post.liked_by_me ? 'liked' : '';
-    const imageHtml = post.image_url ? `<img src="${post.image_url}" class="post-image">` : '';
+    const imageHtml = post.image_url ? `<img src="${post.image_url}" class="post-image" alt="">` : '';
     const avatarUrl = post.author_avatar || '/static/default_avatar.png';
+    const canInteract = currentUser?.authenticated;
+    const likeBtn = canInteract
+        ? `<button onclick="toggleLike(${post.id})" class="post-action-btn ${likedClass}">
+                <i class="fa-solid fa-heart"></i> <span id="like-count-${post.id}">${post.like_count}</span>
+           </button>`
+        : `<span class="post-action-btn disabled"><i class="fa-solid fa-heart"></i> ${post.like_count}</span>`;
+    const commentBtn = canInteract
+        ? `<button onclick="toggleComments(${post.id})" class="post-action-btn">
+                <i class="fa-solid fa-comment"></i> <span id="comment-count-${post.id}">${post.comment_count}</span>
+           </button>`
+        : `<span class="post-action-btn disabled"><i class="fa-solid fa-comment"></i> ${post.comment_count}</span>`;
     return `
-        <div class="post" data-post-id="${post.id}">
+        <div class="post card" data-post-id="${post.id}">
             <div class="post-header">
-                <img src="${avatarUrl}" class="post-avatar" onerror="this.src='/static/default_avatar.png'">
+                <img src="${avatarUrl}" class="post-avatar" alt="" onerror="this.src='/static/default_avatar.png'">
                 <div class="post-author-info">
                     <div class="post-author-name">${escapeHtml(post.author_discord_username || 'Неизвестный')}</div>
                     <div class="post-author-nick">@${escapeHtml(post.author_nickname || 'unknown')}</div>
@@ -64,12 +86,8 @@ function renderPost(post) {
             <div class="post-content">${escapeHtml(post.content)}</div>
             ${imageHtml}
             <div class="post-actions">
-                <button onclick="toggleLike(${post.id})" class="post-action-btn ${likedClass}">
-                    <i class="fa-solid fa-heart"></i> <span id="like-count-${post.id}">${post.like_count}</span>
-                </button>
-                <button onclick="toggleComments(${post.id})" class="post-action-btn">
-                    <i class="fa-solid fa-comment"></i> <span id="comment-count-${post.id}">${post.comment_count}</span>
-                </button>
+                ${likeBtn}
+                ${commentBtn}
             </div>
             <div id="comments-${post.id}" class="comments-section" style="display:none;"></div>
         </div>
@@ -77,6 +95,7 @@ function renderPost(post) {
 }
 
 async function toggleLike(postId) {
+    if (!currentUser?.authenticated) return;
     try {
         const data = await apiCall('POST', '/api/social/posts/' + postId + '/like');
         const span = document.getElementById('like-count-' + postId);
@@ -87,6 +106,10 @@ async function toggleLike(postId) {
 }
 
 async function toggleComments(postId) {
+    if (!currentUser?.authenticated) {
+        alert('Войдите, чтобы комментировать');
+        return;
+    }
     const div = document.getElementById('comments-' + postId);
     if (!div) return;
     if (div.style.display === 'none') {
@@ -94,7 +117,7 @@ async function toggleComments(postId) {
             const comments = await apiCall('GET', '/api/social/posts/' + postId + '/comments');
             let html = '<h4>Комментарии</h4>';
             comments.forEach(c => {
-                html += '<div class="comment"><img src="' + (c.author_avatar || '/static/default_avatar.png') + '" class="comment-avatar">' +
+                html += '<div class="comment"><img src="' + (c.author_avatar || '/static/default_avatar.png') + '" class="comment-avatar" alt="">' +
                     '<div class="comment-content"><div class="comment-author">' + escapeHtml(c.author_nickname) + '</div>' +
                     '<div class="comment-text">' + escapeHtml(c.content) + '</div></div></div>';
             });
@@ -116,6 +139,7 @@ async function addComment(postId) {
     try {
         await apiCall('POST', '/api/social/posts/' + postId + '/comments', { content });
         input.value = '';
+        toggleComments(postId);
         toggleComments(postId);
         const span = document.getElementById('comment-count-' + postId);
         if (span) span.textContent = parseInt(span.textContent) + 1;
