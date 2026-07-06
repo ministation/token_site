@@ -1,8 +1,13 @@
-from fastapi import Request, HTTPException, Depends
+from fastapi import Request, HTTPException
 from app.core.sessions import get_session
 from app.db.database import get_pg_pool
+from app.config import ADMIN_USERNAMES
 from asyncpg import Pool
 import database_social as social_db
+
+
+def check_is_admin(username: str) -> bool:
+    return username.lower() in ADMIN_USERNAMES
 
 
 async def get_current_user(request: Request) -> dict:
@@ -12,6 +17,8 @@ async def get_current_user(request: Request) -> dict:
     session = get_session(session_token)
     if session is None:
         raise HTTPException(status_code=401, detail="Сессия недействительна")
+    if check_is_admin(session.get("username", "")):
+        session["is_admin"] = True
     return session
 
 
@@ -22,11 +29,22 @@ async def get_current_player(request: Request) -> dict:
     return user['player']
 
 
+async def get_current_admin(request: Request) -> dict:
+    user = await get_current_user(request)
+    if not user.get("is_admin") and not check_is_admin(user.get("username", "")):
+        raise HTTPException(status_code=403, detail="Доступ только для администраторов")
+    user["is_admin"] = True
+    return user
+
+
 async def get_optional_user(request: Request) -> dict | None:
     session_token = request.cookies.get("session_token")
     if not session_token:
         return None
-    return get_session(session_token)
+    session = get_session(session_token)
+    if session and check_is_admin(session.get("username", "")):
+        session["is_admin"] = True
+    return session
 
 
 async def get_current_social_user(request: Request) -> dict:

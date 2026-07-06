@@ -4,8 +4,8 @@
         <p class="messages-hint">Напишите любому авторизованному игроку</p>
     </div>
 
-    <div class="messages-layout">
-        <aside class="messages-sidebar">
+    <div class="messages-layout" id="messagesLayout">
+        <aside class="messages-sidebar" id="messagesSidebar">
             <div class="pm-search-box">
                 <i class="fa-solid fa-magnifying-glass"></i>
                 <input type="text" id="pmUserSearch" placeholder="Найти игрока..." autocomplete="off">
@@ -15,9 +15,12 @@
                 <p class="empty-state">Загрузка...</p>
             </div>
         </aside>
-        <div class="chat-area pm-chat-area">
+        <div class="chat-area pm-chat-area" id="pmChatArea">
             <div class="conversation-header" id="conversationTitle">
-                <i class="fa-solid fa-comments"></i> Выберите диалог
+                <button type="button" class="pm-back-btn" id="pmBackBtn" onclick="closePmConversation()" aria-label="Назад">
+                    <i class="fa-solid fa-arrow-left"></i>
+                </button>
+                <span class="conversation-title-text"><i class="fa-solid fa-comments"></i> Выберите диалог</span>
             </div>
             <div id="currentConversation" class="chat-messages pm-messages"></div>
             <div class="chat-input-area pm-input-area">

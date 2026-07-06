@@ -3,14 +3,24 @@ import secrets
 import aiohttp
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import RedirectResponse
-from app.config import DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, DISCORD_REDIRECT_URI
+from app.config import DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, DISCORD_REDIRECT_URI, ADMIN_USERNAMES
 from app.core.sessions import (
     get_session, set_session, delete_session, generate_session_token, user_sessions
 )
 from app.services.bank import find_player_by_discord
 from app.services.social import get_or_create_social_user
 
+
+def check_is_admin(username: str) -> bool:
+    return username.lower() in [u.lower() for u in ADMIN_USERNAMES]
+
 router = APIRouter(tags=["auth"])
+
+
+def _apply_admin_flag(session_data: dict) -> dict:
+    username = session_data.get("username", "")
+    session_data["is_admin"] = username.lower() in [u.lower() for u in ADMIN_USERNAMES]
+    return session_data
 
 
 @router.get("/login")
@@ -85,6 +95,7 @@ async def callback(code: str, state: str):
             game_nickname=username
         )
 
+    _apply_admin_flag(session_data)
     set_session(session_token, session_data)
 
     response = RedirectResponse("/")
@@ -117,6 +128,23 @@ async def api_me(request: Request):
     if not session:
         return {"authenticated": False}
     import database_social as social_db
+    from app.services.bank import find_player_by_discord
+
+    # Обновить привязку к игре, если появилась после входа
+    player = await find_player_by_discord(session['discord_id'])
+    if player:
+        session['player'] = player
+        get_or_create_social_user(
+            player_id=player['player_id'],
+            user_uuid=player['user_uuid'],
+            discord_id=session['discord_id'],
+            discord_username=session['username'],
+            discord_avatar=None,
+            game_nickname=player['last_seen_user_name']
+        )
+        from app.core.sessions import set_session
+        set_session(session_token, session)
+
     social = social_db.get_social_user_by_discord_id(session['discord_id'])
     if not social:
         player = session.get('player')
@@ -148,4 +176,5 @@ async def api_me(request: Request):
     }
     if social:
         result["social_id"] = social["player_id"]
+    result["is_admin"] = check_is_admin(session.get("username", ""))
     return result

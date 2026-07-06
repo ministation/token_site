@@ -1,5 +1,6 @@
 from typing import Optional
 from urllib.parse import quote
+import asyncpg
 from app.db.database import get_pg_pool
 
 SPONSOR_TIERS = {
@@ -32,51 +33,58 @@ def sponsor_icon_url(filename: str) -> str:
 
 
 async def get_sponsor_level(discord_id: str) -> Optional[dict]:
-    pg = await get_pg_pool()
-    async with pg.acquire() as conn:
-        row = await conn.fetchrow(
-            "SELECT sponsor_level FROM discord_sponsor WHERE discord_id = $1::bigint",
-            int(discord_id)
-        )
-        if not row:
-            return None
-        level = int(row["sponsor_level"])
-        tier = SPONSOR_TIERS.get(level, SPONSOR_TIERS[1])
-        return {
-            "level": level,
-            "name": tier["name"],
-            "icon": sponsor_icon_url(tier["icon"]),
-        }
+    try:
+        pg = await get_pg_pool()
+        async with pg.acquire() as conn:
+            row = await conn.fetchrow(
+                "SELECT sponsor_level FROM discord_sponsor WHERE discord_id = $1::bigint",
+                int(discord_id)
+            )
+            if not row:
+                return None
+            level = int(row["sponsor_level"])
+            tier = SPONSOR_TIERS.get(level, SPONSOR_TIERS[1])
+            return {
+                "level": level,
+                "name": tier["name"],
+                "icon": sponsor_icon_url(tier["icon"]),
+            }
+    except (asyncpg.PostgresError, ValueError, OSError):
+        return None
 
 
 async def get_player_tickets(user_uuid: str) -> list[dict]:
-    pg = await get_pg_pool()
-    async with pg.acquire() as conn:
-        rows = await conn.fetch("""
-            SELECT token_id, COALESCE(amount, 0) as amount
-            FROM player_antag_token
-            WHERE player_id::text = $1 AND token_id != 'balance' AND amount > 0
-            ORDER BY token_id
-        """, user_uuid)
-        tickets = []
-        for r in rows:
-            token_id = r["token_id"]
-            tickets.append({
-                "token_id": token_id,
-                "name": TOKEN_LABELS.get(token_id, token_id.replace("_", " ").title()),
-                "amount": int(r["amount"]),
-            })
-        return tickets
+    try:
+        pg = await get_pg_pool()
+        async with pg.acquire() as conn:
+            rows = await conn.fetch("""
+                SELECT token_id, COALESCE(amount, 0) as amount
+                FROM player_antag_token
+                WHERE player_id::text = $1 AND token_id != 'balance' AND amount > 0
+                ORDER BY token_id
+            """, user_uuid)
+            tickets = []
+            for r in rows:
+                token_id = r["token_id"]
+                tickets.append({
+                    "token_id": token_id,
+                    "name": TOKEN_LABELS.get(token_id, token_id.replace("_", " ").title()),
+                    "amount": int(r["amount"]),
+                })
+            return tickets
+    except (asyncpg.PostgresError, OSError):
+        return []
 
 
 async def get_inventory(discord_id: str, user_uuid: Optional[str]) -> dict:
     sponsor = await get_sponsor_level(discord_id)
     tickets = []
-    if user_uuid and not user_uuid.startswith("discord_"):
+    if user_uuid and not str(user_uuid).startswith("discord_"):
         tickets = await get_player_tickets(user_uuid)
     return {
         "sponsor": sponsor,
         "tickets": tickets,
+        "has_game_link": bool(user_uuid and not str(user_uuid).startswith("discord_")),
         "tiers": [
             {
                 "level": lvl,

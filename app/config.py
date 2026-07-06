@@ -17,6 +17,11 @@ DISCORD_CLIENT_ID = os.getenv("DISCORD_CLIENT_ID")
 DISCORD_CLIENT_SECRET = os.getenv("DISCORD_CLIENT_SECRET")
 DISCORD_REDIRECT_URI = os.getenv("DISCORD_REDIRECT_URI")
 ADMIN_ROLE_IDS = [int(x.strip()) for x in os.getenv("ADMIN_ROLE_IDS", "").split(",") if x.strip()]
+ADMIN_USERNAMES = [
+    x.strip().lower()
+    for x in os.getenv("ADMIN_USERNAMES", "dotnet_build").split(",")
+    if x.strip()
+]
 
 # Банк
 BANK_DEPOSIT_MIN = int(os.getenv("BANK_DEPOSIT_MIN", "10"))

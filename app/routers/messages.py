@@ -29,7 +29,12 @@ async def conversation(other_id: str, request: Request):
     if other_id == user['social_id']:
         raise HTTPException(status_code=400, detail="Нельзя открыть диалог с самим собой")
     mark_pm_read(user['social_id'], other_id)
-    return get_pm_conversation(user['social_id'], other_id)
+    messages = get_pm_conversation(user['social_id'], other_id)
+    my_id = user['social_id']
+    return [
+        {**m, "is_own": m.get("sender_id") == my_id}
+        for m in messages
+    ]
 
 
 @router.post("/read/{other_id}")

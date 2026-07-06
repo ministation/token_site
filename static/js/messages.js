@@ -74,7 +74,12 @@ async function searchPmUsers(query) {
 async function openConversation(partnerId, nickname) {
     currentPmPartnerId = partnerId;
     const title = document.getElementById('conversationTitle');
-    if (title) title.innerHTML = `<i class="fa-solid fa-user"></i> ${escapeHtml(nickname || 'Диалог')}`;
+    const titleText = title?.querySelector('.conversation-title-text');
+    if (titleText) {
+        titleText.innerHTML = `<i class="fa-solid fa-user"></i> ${escapeHtml(nickname || 'Диалог')}`;
+    }
+    const layout = document.getElementById('messagesLayout');
+    if (layout) layout.classList.add('chat-open');
     const results = document.getElementById('pmUserResults');
     if (results) results.innerHTML = '';
     const search = document.getElementById('pmUserSearch');
@@ -92,9 +97,9 @@ async function loadConversation(partnerId) {
             container.innerHTML = '<p class="empty-state">Напишите первое сообщение</p>';
             return;
         }
-        const myId = currentUser.social_id || currentUser.player?.player_id;
+        const myId = currentUser.social_id;
         container.innerHTML = messages.reverse().map(m => {
-            const own = m.sender_id === myId;
+            const own = m.is_own === true || (myId && m.sender_id === myId);
             const text = m.content ?? m.message ?? m.text ?? '';
             const time = new Date(m.created_at).toLocaleString('ru-RU', {
                 day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
@@ -159,6 +164,17 @@ function stopPmPolling() {
         clearInterval(pmPollInterval);
         pmPollInterval = null;
     }
+}
+
+function closePmConversation() {
+    currentPmPartnerId = null;
+    const layout = document.getElementById('messagesLayout');
+    if (layout) layout.classList.remove('chat-open');
+    const titleText = document.querySelector('#conversationTitle .conversation-title-text');
+    if (titleText) titleText.innerHTML = '<i class="fa-solid fa-comments"></i> Выберите диалог';
+    const container = document.getElementById('currentConversation');
+    if (container) container.innerHTML = '<p class="empty-state">Выберите диалог или найдите игрока</p>';
+    loadDialogs();
 }
 
 document.addEventListener('DOMContentLoaded', setupPmUserSearch);

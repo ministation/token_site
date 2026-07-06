@@ -1,6 +1,6 @@
 import datetime
 from fastapi import APIRouter, Request, Depends, HTTPException, Query
-from app.dependencies import get_current_user, get_current_player
+from app.dependencies import get_current_user, get_current_player, get_current_admin
 from app.models.bank import (
     TransferRequest, DepositRequest, LoanRequest,
     WithdrawRequest, RepayRequest, AdminGiveRequest
@@ -194,7 +194,7 @@ async def api_search(q: str = Query("")):
 
 @router.post("/admin/give")
 async def api_admin_give(request: Request, req: AdminGiveRequest):
-    # В оригинале не было проверки админских прав, оставим как есть
+    await get_current_admin(request)
     target = await find_player_by_nick(req.target_nick)
     if not target:
         raise HTTPException(status_code=404, detail="Игрок не найден")

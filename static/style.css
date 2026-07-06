@@ -220,6 +220,36 @@ img { max-width: 100%; }
 }
 #userPanel button:hover { background: var(--danger-deep); color: #fff; }
 
+.admin-badge {
+    display: inline-block;
+    font-family: var(--font-pixel);
+    font-size: 0.45rem;
+    background: var(--gold);
+    color: #1a1200;
+    padding: 3px 6px;
+    border-radius: 4px;
+    vertical-align: middle;
+    margin-left: 4px;
+}
+
+/* === Mobile nav backdrop === */
+.nav-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 15, 30, 0.55);
+    z-index: 90;
+    backdrop-filter: blur(2px);
+}
+.nav-backdrop.visible { display: block; }
+body.nav-open { overflow: hidden; }
+
+.bans-hint {
+    color: var(--muted);
+    font-size: 0.85rem;
+    margin-bottom: 12px;
+}
+
 /* === Layout: sidebar + content === */
 .layout {
     max-width: 1280px;
@@ -1144,7 +1174,26 @@ html[data-theme="dark"] .status-meta {
     border-bottom: 2px solid var(--accent-deep);
     font-size: 0.6rem;
     color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
+.pm-back-btn {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: var(--radius-sm);
+    color: #fff;
+    flex-shrink: 0;
+    box-shadow: none;
+}
+.pm-back-btn:hover { background: rgba(255,255,255,0.25); color: #fff; transform: none; }
+.conversation-title-text { flex: 1; min-width: 0; }
 .pm-messages {
     flex: 1;
     max-height: 360px;
@@ -1602,15 +1651,34 @@ html[data-theme="dark"] .status-meta {
 
 @media (max-width: 768px) {
     .layout { flex-direction: column; padding: 12px 10px 36px; }
-    .nav-toggle { display: inline-flex; }
-    .sidebar {
-        position: static;
-        width: 100%;
-        display: none;
+    .nav-toggle {
+        display: inline-flex;
+        order: -1;
+        margin-right: auto;
     }
-    .sidebar.open { display: flex; }
-    .topbar-inner { flex-wrap: wrap; padding: 10px; gap: 10px; }
-    .logo h1 { font-size: 0.75rem; }
+    .topbar-inner { flex-wrap: wrap; padding: 10px 12px; gap: 8px; }
+    .logo { flex: 1; min-width: 0; }
+    .logo h1 { font-size: 0.72rem; }
+    #userInfo { width: 100%; justify-content: flex-end; margin-left: 0; }
+    #userPanel span { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: min(300px, 88vw);
+        z-index: 100;
+        display: flex !important;
+        transform: translateX(-105%);
+        transition: transform 0.28s ease;
+        overflow-y: auto;
+        padding: 72px 12px 24px;
+        border-radius: 0;
+        box-shadow: 8px 0 32px rgba(0, 0, 0, 0.25);
+    }
+    .sidebar.open { transform: translateX(0); }
+
     .dashboard-grid, .bottom-row { grid-template-columns: 1fr; }
     .stats-grid { grid-template-columns: 1fr 1fr; }
     .social-links a { min-width: calc(50% - 0.4rem); }
@@ -1620,6 +1688,29 @@ html[data-theme="dark"] .status-meta {
     .card { padding: 14px; }
     .profile-header { flex-direction: column; align-items: center; text-align: center; }
     .profile-actions { justify-content: center; }
-    input, select, textarea { font-size: 1rem; }
+    input, select, textarea { font-size: 16px; }
     button, .tab, .chart-tab { font-size: 0.62rem; }
+
+    .messages-layout {
+        grid-template-columns: 1fr;
+        min-height: auto;
+    }
+    .messages-layout .messages-sidebar { max-height: none; }
+    .messages-layout .dialogs-list { max-height: 200px; }
+    .messages-layout .pm-chat-area {
+        min-height: 360px;
+        display: none;
+    }
+    .messages-layout.chat-open .messages-sidebar { display: none; }
+    .messages-layout.chat-open .pm-chat-area { display: flex; }
+    .pm-back-btn { display: inline-flex; }
+
+    .server-widget-body {
+        grid-template-columns: 1fr;
+        justify-items: center;
+        text-align: center;
+    }
+    .server-widget-details { width: 100%; }
+    .server-detail { justify-content: center; }
+    .global-chat-messages { min-height: 280px; max-height: 360px; }
 }

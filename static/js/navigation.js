@@ -1,17 +1,41 @@
 function setupNavigation() {
     const navToggle = document.getElementById('navToggle');
     const mainNav = document.getElementById('mainNav');
+    const navBackdrop = document.getElementById('navBackdrop');
+
+    function setNavOpen(open) {
+        if (mainNav) mainNav.classList.toggle('open', open);
+        if (navToggle) navToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        if (navBackdrop) {
+            navBackdrop.classList.toggle('visible', open);
+            navBackdrop.setAttribute('aria-hidden', open ? 'false' : 'true');
+        }
+        document.body.classList.toggle('nav-open', open);
+    }
 
     if (navToggle && mainNav) {
         navToggle.addEventListener('click', () => {
-            const open = mainNav.classList.toggle('open');
-            navToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+            setNavOpen(!mainNav.classList.contains('open'));
         });
+    }
+
+    if (navBackdrop) {
+        navBackdrop.addEventListener('click', () => setNavOpen(false));
     }
 
     document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const section = btn.dataset.section;
+
+            if (section === 'messages' && !currentUser?.authenticated) {
+                alert('Войдите через Discord, чтобы писать сообщения');
+                return;
+            }
+            if (section === 'inventory' && !currentUser?.authenticated) {
+                alert('Войдите через Discord, чтобы видеть инвентарь');
+                return;
+            }
+
             showSection(section);
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
@@ -23,18 +47,10 @@ function setupNavigation() {
             } else if (section === 'chat') {
                 if (typeof initGlobalChat === 'function') initGlobalChat();
             } else if (section === 'messages') {
-                if (!currentUser?.authenticated) {
-                    alert('Войдите через Discord, чтобы писать сообщения');
-                    return;
-                }
                 if (typeof setupPmUserSearch === 'function') setupPmUserSearch();
                 if (typeof loadDialogs === 'function') loadDialogs();
                 if (typeof startPmPolling === 'function') startPmPolling();
             } else if (section === 'inventory') {
-                if (!currentUser?.authenticated) {
-                    alert('Войдите через Discord, чтобы видеть инвентарь');
-                    return;
-                }
                 if (typeof loadInventory === 'function') loadInventory();
             } else if (section === 'economy') {
                 if (typeof loadMyBalance === 'function') loadMyBalance();
@@ -54,8 +70,14 @@ function setupNavigation() {
 function closeMobileNav() {
     const mainNav = document.getElementById('mainNav');
     const navToggle = document.getElementById('navToggle');
+    const navBackdrop = document.getElementById('navBackdrop');
     if (mainNav) mainNav.classList.remove('open');
     if (navToggle) navToggle.setAttribute('aria-expanded', 'false');
+    if (navBackdrop) {
+        navBackdrop.classList.remove('visible');
+        navBackdrop.setAttribute('aria-hidden', 'true');
+    }
+    document.body.classList.remove('nav-open');
 }
 
 function showSection(sectionId) {

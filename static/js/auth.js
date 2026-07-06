@@ -10,7 +10,7 @@ async function checkAuth() {
             panel.style.display = 'flex';
             panel.innerHTML = `
                 ${data.avatar ? `<img src="${data.avatar}" alt="" onerror="this.style.display='none'">` : ''}
-                <span id="userName">${data.display_name || data.username}</span>
+                <span id="userName">${data.display_name || data.username}${data.is_admin ? ' <span class="admin-badge">ADMIN</span>' : ''}</span>
                 <button onclick="logout()">Выйти</button>
             `;
             if (data.player) {

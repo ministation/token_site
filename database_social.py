@@ -172,35 +172,72 @@ def init_social_db():
 init_social_db()
 
 # ---------- Функции работы с пользователями ----------
+
+def _migrate_user_id_refs(old_id: str, new_id: str):
+    """Переносит PM и посты при смене player_id (discord → игровой аккаунт)."""
+    if not old_id or old_id == new_id:
+        return
+    conn = get_db()
+    cursor = conn.cursor()
+    table, _, _ = get_pm_table_info()
+    for col in ("sender_id", "receiver_id"):
+        cursor.execute(f"UPDATE {table} SET {col} = ? WHERE {col} = ?", (new_id, old_id))
+    cursor.execute("UPDATE posts SET author_player_id = ? WHERE author_player_id = ?", (new_id, old_id))
+    cursor.execute("UPDATE likes SET player_id = ? WHERE player_id = ?", (new_id, old_id))
+    cursor.execute("UPDATE comments SET author_player_id = ? WHERE author_player_id = ?", (new_id, old_id))
+    cursor.execute("UPDATE follows SET follower_player_id = ? WHERE follower_player_id = ?", (new_id, old_id))
+    cursor.execute("UPDATE follows SET following_player_id = ? WHERE following_player_id = ?", (new_id, old_id))
+    cursor.execute("UPDATE global_chat_messages SET author_id = ? WHERE author_id = ?", (new_id, old_id))
+    conn.commit()
+    conn.close()
+
+
 def get_or_create_social_user(player_id: str, user_uuid: str, discord_id: str, 
                               discord_username: str, discord_avatar: str, game_nickname: str) -> Dict:
     conn = get_db()
     cursor = conn.cursor()
-    
-    # Проверяем существование
+
+    cursor.execute("SELECT * FROM social_users WHERE discord_id = ?", (discord_id,))
+    row = cursor.fetchone()
+    if row:
+        old_player_id = row["player_id"]
+        cursor.execute("""
+            UPDATE social_users 
+            SET player_id = ?, user_uuid = ?, discord_username = ?, discord_avatar = ?,
+                game_nickname = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE discord_id = ?
+        """, (player_id, user_uuid, discord_username, discord_avatar, game_nickname, discord_id))
+        conn.commit()
+        if old_player_id != player_id:
+            _migrate_user_id_refs(old_player_id, player_id)
+        cursor.execute("SELECT * FROM social_users WHERE discord_id = ?", (discord_id,))
+        updated = cursor.fetchone()
+        conn.close()
+        return dict(updated)
+
     cursor.execute("SELECT * FROM social_users WHERE player_id = ?", (player_id,))
     row = cursor.fetchone()
     if row:
-        # Обновляем данные (ник, аватар могли измениться)
         cursor.execute("""
             UPDATE social_users 
-            SET discord_username = ?, discord_avatar = ?, game_nickname = ?, updated_at = CURRENT_TIMESTAMP
+            SET discord_id = ?, user_uuid = ?, discord_username = ?, discord_avatar = ?,
+                game_nickname = ?, updated_at = CURRENT_TIMESTAMP
             WHERE player_id = ?
-        """, (discord_username, discord_avatar, game_nickname, player_id))
+        """, (discord_id, user_uuid, discord_username, discord_avatar, game_nickname, player_id))
         conn.commit()
         conn.close()
         return dict(row)
-    else:
-        cursor.execute("""
-            INSERT INTO social_users (player_id, user_uuid, discord_id, discord_username, discord_avatar, game_nickname)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, (player_id, user_uuid, discord_id, discord_username, discord_avatar, game_nickname))
-        conn.commit()
-        user_id = cursor.lastrowid
-        cursor.execute("SELECT * FROM social_users WHERE id = ?", (user_id,))
-        new_row = cursor.fetchone()
-        conn.close()
-        return dict(new_row)
+
+    cursor.execute("""
+        INSERT INTO social_users (player_id, user_uuid, discord_id, discord_username, discord_avatar, game_nickname)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (player_id, user_uuid, discord_id, discord_username, discord_avatar, game_nickname))
+    conn.commit()
+    user_id = cursor.lastrowid
+    cursor.execute("SELECT * FROM social_users WHERE id = ?", (user_id,))
+    new_row = cursor.fetchone()
+    conn.close()
+    return dict(new_row)
 
 def get_social_user_by_player_id(player_id: str) -> Optional[Dict]:
     conn = get_db()

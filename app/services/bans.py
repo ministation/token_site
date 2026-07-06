@@ -89,20 +89,56 @@ async def get_all_bans(limit: int = 50, offset: int = 0):
         return bans
 
 
-async def get_player_bans(player_uuid: str, limit: int = 50):
+async def get_player_bans(user_uuid: str | None = None, ckey: str | None = None, limit: int = 50):
+    """Баны игрока по user_id (UUID) и/или ckey (ник)."""
     pg = await get_pg_pool()
     async with pg.acquire() as conn:
+        user_ids: set[str] = set()
+        if user_uuid:
+            user_ids.add(user_uuid)
+            rows = await conn.fetch("""
+                SELECT DISTINCT user_id::text AS uid
+                FROM player
+                WHERE user_id::text = $1
+                   OR player_id::text = $1
+                   OR ($2::text IS NOT NULL AND $2 != '' AND LOWER(last_seen_user_name) = LOWER($2))
+            """, user_uuid, ckey)
+            for r in rows:
+                user_ids.add(r["uid"])
+        elif ckey:
+            rows = await conn.fetch("""
+                SELECT DISTINCT user_id::text AS uid
+                FROM player
+                WHERE LOWER(last_seen_user_name) = LOWER($1)
+            """, ckey)
+            for r in rows:
+                user_ids.add(r["uid"])
+
+        if not user_ids:
+            return []
+
+        uid_list = list(user_ids)
         rows = await conn.fetch("""
             SELECT
                 b.ban_id, b.type, b.ban_time, b.expiration_time, b.reason,
-                p_admin.last_seen_user_name as admin_name
+                p_admin.last_seen_user_name as admin_name,
+                COALESCE(br_agg.roles, ARRAY[]::text[]) as roles,
+                COALESCE(brnd_agg.rounds, ARRAY[]::integer[]) as rounds
             FROM ban b
             JOIN ban_player bp ON b.ban_id = bp.ban_id
             LEFT JOIN player p_admin ON b.banning_admin = p_admin.user_id
-            WHERE bp.user_id::text = $1
+            LEFT JOIN LATERAL (
+                SELECT ARRAY_AGG(br.role_id) as roles
+                FROM ban_role br WHERE br.ban_id = b.ban_id
+            ) br_agg ON true
+            LEFT JOIN LATERAL (
+                SELECT ARRAY_AGG(brn.round_id) as rounds
+                FROM ban_round brn WHERE brn.ban_id = b.ban_id
+            ) brnd_agg ON true
+            WHERE bp.user_id::text = ANY($1::text[])
             ORDER BY b.ban_time DESC
             LIMIT $2
-        """, player_uuid, limit)
+        """, uid_list, limit)
 
         return [{
             "ban_id": row["ban_id"],
@@ -111,5 +147,6 @@ async def get_player_bans(player_uuid: str, limit: int = 50):
             "expiration_time": row["expiration_time"].isoformat() if row["expiration_time"] else None,
             "reason": row["reason"] or "Не указана",
             "admin_name": row["admin_name"] or "Неизвестный",
-            "player_names": [],
+            "roles": [translate_role(r) for r in (row["roles"] or [])],
+            "rounds": row["rounds"] or [],
         } for row in rows]
