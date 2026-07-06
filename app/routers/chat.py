@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request, HTTPException, Query
 from app.dependencies import get_current_social_user
 from app.models.chat import ChatMessage
 from app.services.chat import get_chat_messages, add_chat_message
+from app.services.avatars import resolve_avatar_url
 from app.services.roles import get_role_by_author_id, get_staff_role
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
