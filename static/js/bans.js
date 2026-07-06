@@ -15,7 +15,7 @@ async function loadBans() {
 
 function renderBanCard(b) {
     const typeClass = b.type === 0 ? 'type-server' : 'type-role';
-    const names = {0: '🚨 Серверный', 1: '🎭 Ролевой'};
+    const names = {0: 'Серверный', 1: 'Ролевой'};
     const exp = b.expiration_time ? new Date(b.expiration_time).toLocaleString() : 'Навсегда';
     const time = b.ban_time ? new Date(b.ban_time).toLocaleString() : '-';
     const players = (b.player_names && b.player_names.length) ? b.player_names.join(', ') : 'Неизвестный';
@@ -47,7 +47,7 @@ async function loadMyBans() {
         const res = await fetch('/api/bans/my');
         const bans = await res.json();
         const c = document.getElementById('myBansContainer');
-        if (!bans.length) { c.innerHTML = '<p class="empty-state success">✅ У вас нет наказаний!</p>'; return; }
+        if (!bans.length) { c.innerHTML = '<p class="empty-state success">У вас нет наказаний</p>'; return; }
         c.innerHTML = bans.map(b => renderBanCard(b)).join('');
     } catch (e) { document.getElementById('myBansContainer').innerHTML = '<p>Войдите, чтобы увидеть свои баны</p>'; }
 }

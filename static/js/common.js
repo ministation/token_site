@@ -4,6 +4,11 @@ const COIN_ICON = '<img src="/static/coin.png" class="coin-icon-result" alt="">'
 let currentUser = null;
 let currentPlayerId = null;
 
+// Читает значение CSS-переменной текущей темы (для цветов графиков)
+function cssVar(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
 function escapeHtml(text) {
     if (!text) return '';
     const div = document.createElement('div');
