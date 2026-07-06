@@ -45,6 +45,8 @@ function updateAuthUI() {
     if (postCard) {
         postCard.style.display = currentUser?.authenticated ? 'block' : 'none';
     }
+    if (typeof updateForumStaffOptions === 'function') updateForumStaffOptions();
+    if (typeof syncPostFormWithForum === 'function') syncPostFormWithForum();
     const chatInput = document.getElementById('globalChatInputArea');
     const chatHint = document.getElementById('globalChatLoginHint');
     if (chatInput) chatInput.style.display = currentUser?.authenticated ? 'flex' : 'none';

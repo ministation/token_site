@@ -32,8 +32,21 @@
         <input type="date" id="dayPicker" onchange="loadDailyOnline(this.value)">
     </div>
 
-    <div class="chart-canvas-wrap">
+    <div class="chart-canvas-wrap" id="onlineChartWrap">
         <canvas id="onlineChart"></canvas>
     </div>
-    <p class="chart-hint">Данные обновляются каждые 5 минут. Средний и пиковый онлайн.</p>
+    <div id="onlineChartReadout" class="online-chart-readout" aria-live="polite" hidden>
+        <div class="online-chart-readout-main">
+            <span class="online-chart-readout-label" id="onlineReadoutLabel">—</span>
+            <span class="online-chart-readout-values" id="onlineReadoutValues"></span>
+        </div>
+    </div>
+    <div class="online-chart-scrubber-wrap" id="onlineScrubberWrap" hidden>
+        <input type="range" id="onlineChartScrubber" class="online-chart-scrubber" min="0" max="0" value="0" aria-label="Выбор точки на графике">
+        <div class="online-chart-scrubber-labels">
+            <span id="onlineScrubberStart">—</span>
+            <span id="onlineScrubberEnd">—</span>
+        </div>
+    </div>
+    <p class="chart-hint" id="onlineChartHint">Данные обновляются каждые 5 минут. Средний и пиковый онлайн.</p>
 </div>

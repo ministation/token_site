@@ -24,8 +24,19 @@ def update_social_user(player_id: str, bio: Optional[str] = None):
     return social_db.update_social_user(player_id, bio=bio)
 
 
-def create_post(author_player_id: str, content: str, image_url: Optional[str] = None):
-    return social_db.create_post(author_player_id, content, image_url)
+def create_post(
+    author_player_id: str,
+    content: str,
+    image_url: Optional[str] = None,
+    *,
+    category: str = "forum",
+    topic: Optional[str] = None,
+    title: Optional[str] = None,
+):
+    return social_db.create_post(
+        author_player_id, content, image_url,
+        category=category, topic=topic, title=title,
+    )
 
 
 def delete_post(post_id: int, player_id: str):
@@ -76,12 +87,24 @@ def get_following(player_id: str, limit: int = 20):
     return social_db.get_following(player_id, limit)
 
 
-def get_feed_posts(player_id: str | None = None, limit: int = 20, offset: int = 0):
-    return social_db.get_all_posts(player_id, limit, offset)
+def get_feed_posts(
+    player_id: str | None = None,
+    limit: int = 20,
+    offset: int = 0,
+    category: str | None = None,
+    topic: str | None = None,
+):
+    return social_db.get_all_posts(player_id, limit, offset, category, topic)
 
 
-def get_all_posts(viewer_id: str | None = None, limit: int = 20, offset: int = 0):
-    return social_db.get_all_posts(viewer_id, limit, offset)
+def get_all_posts(
+    viewer_id: str | None = None,
+    limit: int = 20,
+    offset: int = 0,
+    category: str | None = None,
+    topic: str | None = None,
+):
+    return social_db.get_all_posts(viewer_id, limit, offset, category, topic)
 
 
 def get_user_posts(player_id: str, limit: int = 20, offset: int = 0):

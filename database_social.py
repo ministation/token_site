@@ -195,6 +195,14 @@ def _migrate_schema():
     if "role" not in admin_cols:
         cursor.execute("ALTER TABLE site_admins ADD COLUMN role TEXT DEFAULT 'admin'")
         cursor.execute("UPDATE site_admins SET role = 'admin' WHERE role IS NULL")
+    post_cols = _table_columns(cursor, "posts")
+    if "category" not in post_cols:
+        cursor.execute("ALTER TABLE posts ADD COLUMN category TEXT DEFAULT 'forum'")
+        cursor.execute("UPDATE posts SET category = 'forum' WHERE category IS NULL")
+    if "topic" not in post_cols:
+        cursor.execute("ALTER TABLE posts ADD COLUMN topic TEXT")
+    if "title" not in post_cols:
+        cursor.execute("ALTER TABLE posts ADD COLUMN title TEXT")
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS ban_appeals (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -490,13 +498,47 @@ def search_social_users(query: str, limit: int = 20) -> List[Dict]:
     return [dict(row) for row in rows]
 
 # ---------- Посты ----------
-def create_post(author_player_id: str, content: str, image_url: str = None) -> int:
+
+POST_CATEGORIES = {
+    "news": "Новости",
+    "forum": "Форум",
+    "discussion": "Обсуждения",
+}
+
+POST_TOPICS = {
+    "gameplay": "Геймплей",
+    "suggestions": "Предложения",
+    "bugs": "Баги",
+    "guides": "Гайды",
+    "offtopic": "Оффтоп",
+    "other": "Прочее",
+}
+
+VALID_CATEGORIES = set(POST_CATEGORIES)
+VALID_TOPICS = set(POST_TOPICS)
+
+
+def create_post(
+    author_player_id: str,
+    content: str,
+    image_url: str = None,
+    *,
+    category: str = "forum",
+    topic: str | None = None,
+    title: str | None = None,
+) -> int:
+    if category not in VALID_CATEGORIES:
+        category = "forum"
+    if topic and topic not in VALID_TOPICS:
+        topic = None
+    if category != "discussion":
+        topic = None
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT INTO posts (author_player_id, content, image_url)
-        VALUES (?, ?, ?)
-    """, (author_player_id, content, image_url))
+        INSERT INTO posts (author_player_id, content, image_url, category, topic, title)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (author_player_id, content, image_url, category, topic, title))
     conn.commit()
     post_id = cursor.lastrowid
     conn.close()
@@ -518,19 +560,48 @@ def get_post_by_id(post_id: int) -> Optional[Dict]:
     conn.close()
     return dict(row) if row else None
 
-def get_feed_posts(player_id: str, limit: int = 30, offset: int = 0) -> List[Dict]:
-    """Общая лента: все посты всех пользователей."""
-    return get_all_posts(player_id, limit, offset)
+def get_feed_posts(
+    player_id: str,
+    limit: int = 30,
+    offset: int = 0,
+    category: str | None = None,
+    topic: str | None = None,
+) -> List[Dict]:
+    """Общая лента: посты по категории и теме."""
+    return get_all_posts(player_id, limit, offset, category, topic)
 
 
-def get_all_posts(viewer_id: str | None = None, limit: int = 30, offset: int = 0) -> List[Dict]:
+def get_all_posts(
+    viewer_id: str | None = None,
+    limit: int = 30,
+    offset: int = 0,
+    category: str | None = None,
+    topic: str | None = None,
+) -> List[Dict]:
     conn = get_db()
     cursor = conn.cursor()
     liked_expr = (
         "EXISTS(SELECT 1 FROM likes WHERE post_id = p.id AND player_id = ?)"
         if viewer_id else "0"
     )
-    params: list = ([viewer_id] if viewer_id else []) + [limit, offset]
+    where = []
+    params: list = []
+    if viewer_id:
+        params.append(viewer_id)
+    if category:
+        if category not in VALID_CATEGORIES:
+            category = None
+        else:
+            where.append("p.category = ?")
+            params.append(category)
+    if topic:
+        if topic not in VALID_TOPICS:
+            topic = None
+        else:
+            where.append("p.topic = ?")
+            params.append(topic)
+    where_sql = f"WHERE {' AND '.join(where)}" if where else ""
+    params.extend([limit, offset])
     cursor.execute(f"""
         SELECT p.*, su.game_nickname, su.discord_username, su.discord_avatar, su.discord_id,
                su.avatar_path, su.avatar_custom,
@@ -539,6 +610,7 @@ def get_all_posts(viewer_id: str | None = None, limit: int = 30, offset: int = 0
                {liked_expr} as liked_by_me
         FROM posts p
         JOIN social_users su ON p.author_player_id = su.player_id
+        {where_sql}
         ORDER BY p.created_at DESC
         LIMIT ? OFFSET ?
     """, params)

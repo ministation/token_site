@@ -23,6 +23,30 @@ def profile_avatar(row: dict) -> str:
     return resolve_avatar_url(row)
 
 
+def serialize_post(p: dict) -> dict:
+    category = p.get("category") or "forum"
+    topic = p.get("topic")
+    return {
+        "id": p["id"],
+        "author_player_id": p["author_player_id"],
+        "author_nickname": p["game_nickname"],
+        "author_discord_username": p["discord_username"],
+        "author_discord_id": p.get("discord_id", ""),
+        "author_avatar": profile_avatar(p),
+        "title": p.get("title") or "",
+        "content": p["content"],
+        "image_url": p.get("image_url"),
+        "category": category,
+        "category_label": social_db.POST_CATEGORIES.get(category, category),
+        "topic": topic,
+        "topic_label": social_db.POST_TOPICS.get(topic, "") if topic else "",
+        "like_count": p["like_count"],
+        "comment_count": p["comment_count"],
+        "liked_by_me": bool(p.get("liked_by_me")),
+        "created_at": p["created_at"],
+    }
+
+
 # ==================== ПРОФИЛЬ ====================
 
 @router.get("/profile/{player_id}")
@@ -69,13 +93,35 @@ async def api_update_profile(request: Request, update: ProfileUpdate):
 
 # ==================== ПОСТЫ ====================
 
+@router.get("/posts/meta")
+async def api_posts_meta():
+    return {
+        "categories": social_db.POST_CATEGORIES,
+        "topics": social_db.POST_TOPICS,
+    }
+
+
 @router.post("/posts")
 async def api_create_post(
     request: Request,
     content: str = Form(...),
+    category: str = Form("forum"),
+    topic: str = Form(""),
+    title: str = Form(""),
     image: UploadFile | None = File(None)
 ):
     user = await get_current_social_user(request)
+    category = (category or "forum").strip().lower()
+    if category not in social_db.VALID_CATEGORIES:
+        category = "forum"
+    if category == "news" and not user.get("is_moderator"):
+        raise HTTPException(status_code=403, detail="Новости могут публиковать только администрация и модераторы")
+    topic_val = (topic or "").strip().lower() or None
+    if category != "discussion":
+        topic_val = None
+    elif topic_val and topic_val not in social_db.VALID_TOPICS:
+        topic_val = "other"
+    title_val = (title or "").strip() or None
     image_url = None
     if image and image.filename:
         file_ext = os.path.splitext(image.filename)[1]
@@ -85,32 +131,27 @@ async def api_create_post(
             shutil.copyfileobj(image.file, buffer)
         image_url = f"/static/uploads/{filename}"
 
-    post_id = create_post(user['social_id'], content, image_url)
+    post_id = create_post(
+        user['social_id'], content, image_url,
+        category=category, topic=topic_val, title=title_val,
+    )
     return {"success": True, "post_id": post_id}
 
 
 @router.get("/posts/feed")
-async def api_feed(request: Request, limit: int = 20, offset: int = 0):
+async def api_feed(
+    request: Request,
+    limit: int = 20,
+    offset: int = 0,
+    category: str | None = None,
+    topic: str | None = None,
+):
     viewer = await get_optional_social_user(request)
     viewer_id = viewer['social_id'] if viewer else None
-    posts = get_feed_posts(viewer_id, limit, offset)
-    result = []
-    for p in posts:
-        result.append({
-            "id": p["id"],
-            "author_player_id": p["author_player_id"],
-            "author_nickname": p["game_nickname"],
-            "author_discord_username": p["discord_username"],
-            "author_discord_id": p.get("discord_id", ""),
-            "author_avatar": profile_avatar(p),
-            "content": p["content"],
-            "image_url": p.get("image_url"),
-            "like_count": p["like_count"],
-            "comment_count": p["comment_count"],
-            "liked_by_me": bool(p["liked_by_me"]),
-            "created_at": p["created_at"]
-        })
-    return result
+    cat = (category or "").strip().lower() or None
+    top = (topic or "").strip().lower() or None
+    posts = get_feed_posts(viewer_id, limit, offset, cat, top)
+    return [serialize_post(p) for p in posts]
 
 
 @router.get("/posts/user/{player_id}")
@@ -128,20 +169,7 @@ async def api_user_posts(request: Request, player_id: str, limit: int = 20, offs
             cursor.execute("SELECT 1 FROM likes WHERE post_id = ? AND player_id = ?", (p["id"], viewer_id))
             liked = cursor.fetchone() is not None
             conn.close()
-        result.append({
-            "id": p["id"],
-            "author_player_id": p["author_player_id"],
-            "author_nickname": p["game_nickname"],
-            "author_discord_username": p["discord_username"],
-            "author_discord_id": p.get("discord_id", ""),
-            "author_avatar": profile_avatar(p),
-            "content": p["content"],
-            "image_url": p.get("image_url"),
-            "like_count": p["like_count"],
-            "comment_count": p["comment_count"],
-            "liked_by_me": liked,
-            "created_at": p["created_at"]
-        })
+        result.append(serialize_post({**p, "liked_by_me": liked}))
     return result
 
 

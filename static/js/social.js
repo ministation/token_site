@@ -1,3 +1,12 @@
+let currentForumCategory = 'news';
+let currentForumTopic = '';
+
+const FORUM_HINTS = {
+    news: 'Официальные новости и объявления проекта',
+    forum: 'Общие темы, вопросы и обсуждения сообщества',
+    discussion: 'Обсуждения по конкретным темам — выберите категорию ниже',
+};
+
 document.addEventListener('change', function(e) {
     if (e.target.id === 'postImage') {
         const file = e.target.files[0];
@@ -15,47 +24,148 @@ document.addEventListener('change', function(e) {
     }
 });
 
+function updatePostFormFields() {
+    const category = document.getElementById('postCategory')?.value || 'forum';
+    const topicRow = document.getElementById('postTopicRow');
+    if (topicRow) {
+        topicRow.style.display = category === 'discussion' ? '' : 'none';
+    }
+}
+
+function syncPostFormWithForum() {
+    const categorySelect = document.getElementById('postCategory');
+    if (!categorySelect) return;
+    categorySelect.value = currentForumCategory;
+    updatePostFormFields();
+    if (currentForumCategory === 'discussion') {
+        const topicSelect = document.getElementById('postTopic');
+        if (topicSelect && currentForumTopic) {
+            topicSelect.value = currentForumTopic;
+        }
+    }
+}
+
+function updateForumStaffOptions() {
+    const newsOption = document.getElementById('postCategoryNews');
+    if (newsOption) {
+        const canNews = currentUser?.is_moderator;
+        newsOption.hidden = !canNews;
+        if (!canNews && document.getElementById('postCategory')?.value === 'news') {
+            document.getElementById('postCategory').value = 'forum';
+            updatePostFormFields();
+        }
+    }
+}
+
+function switchForumSection(category, btn) {
+    currentForumCategory = category;
+    currentForumTopic = '';
+    document.querySelectorAll('.forum-tab').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    document.querySelectorAll('.forum-topic-tab').forEach(b => {
+        b.classList.toggle('active', !b.dataset.topic);
+    });
+    const topicTabs = document.getElementById('forumTopicTabs');
+    if (topicTabs) topicTabs.hidden = category !== 'discussion';
+    const hint = document.getElementById('forumSectionHint');
+    if (hint) hint.textContent = FORUM_HINTS[category] || '';
+    syncPostFormWithForum();
+    loadFeed();
+}
+
+function switchForumTopic(topic, btn) {
+    currentForumTopic = topic;
+    document.querySelectorAll('.forum-topic-tab').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    const topicSelect = document.getElementById('postTopic');
+    if (topicSelect && topic) topicSelect.value = topic;
+    loadFeed();
+}
+
 async function createPost() {
     if (!currentUser?.authenticated) {
-        alert('Войдите через Discord, чтобы публиковать посты');
+        alert('Войдите через Discord, чтобы публиковать');
         return;
     }
     const content = document.getElementById('postContent').value.trim();
-    if (!content) { alert('Введите текст поста'); return; }
+    if (!content) { alert('Введите текст'); return; }
+    const category = document.getElementById('postCategory')?.value || currentForumCategory;
+    const topic = category === 'discussion'
+        ? (document.getElementById('postTopic')?.value || 'other')
+        : '';
+    const title = document.getElementById('postTitle')?.value.trim() || '';
     const imageInput = document.getElementById('postImage');
     const formData = new FormData();
     formData.append('content', content);
+    formData.append('category', category);
+    formData.append('topic', topic);
+    formData.append('title', title);
     if (imageInput.files[0]) formData.append('image', imageInput.files[0]);
     try {
         await apiCall('POST', '/api/social/posts', formData);
         document.getElementById('postContent').value = '';
+        document.getElementById('postTitle').value = '';
         imageInput.value = '';
         document.getElementById('imagePreview').innerHTML = '';
-        loadFeed();
+        if (category !== currentForumCategory) {
+            const tab = document.querySelector(`.forum-tab[data-forum="${category}"]`);
+            switchForumSection(category, tab);
+        } else {
+            loadFeed();
+        }
     } catch (e) { alert(e.message); }
 }
 
 async function loadFeed() {
     const container = document.getElementById('feedContainer');
     if (!container) return;
+    container.innerHTML = '<p class="empty-state">Загрузка...</p>';
     try {
-        const res = await fetch('/api/social/posts/feed');
+        const params = new URLSearchParams({ category: currentForumCategory });
+        if (currentForumCategory === 'discussion' && currentForumTopic) {
+            params.set('topic', currentForumTopic);
+        }
+        const res = await fetch('/api/social/posts/feed?' + params);
         if (!res.ok) throw new Error('Ошибка загрузки');
         const posts = await res.json();
         renderPosts(posts, 'feedContainer');
     } catch (e) {
-        container.innerHTML = '<p class="empty-state">Не удалось загрузить ленту</p>';
+        container.innerHTML = '<p class="empty-state">Не удалось загрузить раздел</p>';
     }
+}
+
+function forumEmptyMessage() {
+    if (currentForumCategory === 'news') {
+        return 'Новостей пока нет';
+    }
+    if (currentForumCategory === 'discussion' && currentForumTopic) {
+        return 'В этой теме пока нет обсуждений';
+    }
+    if (currentForumCategory === 'discussion') {
+        return 'Обсуждений пока нет — начните первым';
+    }
+    return 'Записей пока нет — будьте первым';
 }
 
 function renderPosts(posts, containerId) {
     const container = document.getElementById(containerId);
     if (!container) return;
     if (!posts.length) {
-        container.innerHTML = '<p class="empty-state">Пока нет постов. Будьте первым!</p>';
+        container.innerHTML = `<p class="empty-state">${forumEmptyMessage()}</p>`;
         return;
     }
     container.innerHTML = posts.map(post => renderPost(post)).join('');
+}
+
+function renderPostBadges(post) {
+    const parts = [];
+    if (post.category_label) {
+        parts.push(`<span class="forum-badge forum-badge-${post.category || 'forum'}">${escapeHtml(post.category_label)}</span>`);
+    }
+    if (post.topic_label) {
+        parts.push(`<span class="forum-badge forum-badge-topic">${escapeHtml(post.topic_label)}</span>`);
+    }
+    return parts.length ? `<div class="forum-badges">${parts.join('')}</div>` : '';
 }
 
 function renderPost(post) {
@@ -63,6 +173,9 @@ function renderPost(post) {
     const imageHtml = post.image_url ? `<img src="${post.image_url}" class="post-image" alt="">` : '';
     const avatarUrl = post.author_avatar || '/static/default_avatar.png';
     const canInteract = currentUser?.authenticated;
+    const titleHtml = post.title
+        ? `<h3 class="forum-post-title">${escapeHtml(post.title)}</h3>`
+        : '';
     const likeBtn = canInteract
         ? `<button onclick="toggleLike(${post.id})" class="post-action-btn ${likedClass}">
                 <i class="fa-solid fa-heart"></i> <span id="like-count-${post.id}">${post.like_count}</span>
@@ -80,7 +193,9 @@ function renderPost(post) {
            </button>`
         : '';
     return `
-        <div class="post card" data-post-id="${post.id}">
+        <div class="post card forum-post" data-post-id="${post.id}">
+            ${renderPostBadges(post)}
+            ${titleHtml}
             <div class="post-header">
                 <img src="${avatarUrl}" class="post-avatar" alt="" onerror="this.src='/static/default_avatar.png'">
                 <div class="post-author-info">
@@ -154,7 +269,7 @@ async function addComment(postId) {
 }
 
 async function deletePost(postId) {
-    if (!confirm('Удалить этот пост?')) return;
+    if (!confirm('Удалить эту запись?')) return;
     try {
         await apiCall('DELETE', '/api/social/posts/' + postId);
         const el = document.querySelector('.post[data-post-id="' + postId + '"]');

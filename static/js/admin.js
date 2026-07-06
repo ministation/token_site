@@ -102,20 +102,25 @@ async function loadAdminPostsList(append) {
             container.innerHTML = '<p class="empty-state">Постов нет</p>';
             return;
         }
-        const html = posts.map(p => `
+        const html = posts.map(p => {
+            const section = p.category_label || 'Форум';
+            const topic = p.topic_label ? ` · ${p.topic_label}` : '';
+            const title = p.title ? `<strong>${escapeHtml(p.title)}</strong><br>` : '';
+            return `
             <div class="admin-post-row">
                 <img src="${p.author_avatar || '/static/default_avatar.png'}" class="admin-user-avatar" alt="">
                 <div class="admin-post-body">
                     <div class="admin-post-meta">
-                        <strong>#${p.id}</strong> · ${escapeHtml(p.author_discord || p.author_nickname)}
+                        <strong>#${p.id}</strong> · ${escapeHtml(section)}${escapeHtml(topic)}
+                        · ${escapeHtml(p.author_discord || p.author_nickname)}
                         · ${new Date(p.created_at).toLocaleString()}
                         · ❤ ${p.like_count} · 💬 ${p.comment_count}
                     </div>
-                    <div class="admin-post-text">${escapeHtml(p.content)}</div>
+                    <div class="admin-post-text">${title}${escapeHtml(p.content)}</div>
                 </div>
                 <button type="button" class="btn-danger-sm" onclick="adminDeletePost(${p.id})"><i class="fa-solid fa-trash"></i></button>
-            </div>
-        `).join('');
+            </div>`;
+        }).join('');
         if (append) container.innerHTML += html;
         else container.innerHTML = html;
         adminPostsOffset += posts.length;
