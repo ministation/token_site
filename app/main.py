@@ -23,9 +23,11 @@ app.state.templates_env = env
 async def startup():
     load_sessions()
     social_db.cleanup_expired_sessions(30)
-    from app.config import ADMIN_USERNAMES
+    from app.config import ADMIN_USERNAMES, MODERATOR_USERNAMES
     for name in ADMIN_USERNAMES:
         social_db.seed_admin_by_username(name)
+    for name in MODERATOR_USERNAMES:
+        social_db.seed_moderator_by_username(name)
     await get_pg_pool()
     print("✅ Подключено к PostgreSQL (игровая БД)")
     print("✅ SQLite для соцсети готова")

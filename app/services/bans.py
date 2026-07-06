@@ -37,7 +37,20 @@ def translate_role(role: str) -> str:
     return ROLE_TRANSLATIONS.get(role, role)
 
 
-async def get_all_bans(limit: int = 50, offset: int = 0):
+async def lift_ban(ban_id: int) -> bool:
+    """Снимает бан из игровой PostgreSQL БД."""
+    pg = await get_pg_pool()
+    async with pg.acquire() as conn:
+        async with conn.transaction():
+            exists = await conn.fetchval("SELECT 1 FROM ban WHERE ban_id = $1", ban_id)
+            if not exists:
+                return False
+            await conn.execute("DELETE FROM ban_player WHERE ban_id = $1", ban_id)
+            await conn.execute("DELETE FROM ban_role WHERE ban_id = $1", ban_id)
+            await conn.execute("DELETE FROM ban_round WHERE ban_id = $1", ban_id)
+            await conn.execute("DELETE FROM ban WHERE ban_id = $1", ban_id)
+    return True
+
     pg = await get_pg_pool()
     async with pg.acquire() as conn:
         rows = await conn.fetch("""

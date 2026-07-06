@@ -3,7 +3,8 @@ import secrets
 import aiohttp
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import RedirectResponse
-from app.config import DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, DISCORD_REDIRECT_URI, ADMIN_USERNAMES
+from app.config import DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, DISCORD_REDIRECT_URI
+from app.services.roles import apply_roles, ROLE_ADMIN, ROLE_MODERATOR
 from app.core.sessions import (
     get_session, set_session, delete_session, generate_session_token, user_sessions
 )
@@ -13,27 +14,18 @@ from app.services.avatars import sync_discord_avatar_for_user, resolve_avatar_ur
 import database_social as social_db
 
 
-def check_is_admin(username: str = "", discord_id: str | None = None) -> bool:
-    if discord_id and social_db.is_site_admin(discord_id):
-        return True
-    return username.lower() in [u.lower() for u in ADMIN_USERNAMES]
-
-
-def _ensure_admin_record(discord_id: str, username: str):
-    if check_is_admin(username, discord_id):
-        social_db.add_site_admin(discord_id, username, "config")
+def _apply_staff_flags(session_data: dict) -> dict:
+    apply_roles(session_data)
+    discord_id = session_data.get("discord_id")
+    username = session_data.get("username", "")
+    if discord_id and session_data.get("is_admin"):
+        social_db.add_site_staff(discord_id, username, "config", ROLE_ADMIN)
+    elif discord_id and session_data.get("is_moderator"):
+        social_db.add_site_staff(discord_id, username, "config", ROLE_MODERATOR)
+    return session_data
 
 
 router = APIRouter(tags=["auth"])
-
-
-def _apply_admin_flag(session_data: dict) -> dict:
-    username = session_data.get("username", "")
-    discord_id = session_data.get("discord_id")
-    session_data["is_admin"] = check_is_admin(username, discord_id)
-    if session_data["is_admin"] and discord_id:
-        social_db.add_site_admin(discord_id, username, "config")
-    return session_data
 
 
 @router.get("/login")
@@ -111,7 +103,7 @@ async def callback(code: str, state: str):
         social_db.get_social_user_by_discord_id(discord_id)
     )
 
-    _apply_admin_flag(session_data)
+    _apply_staff_flags(session_data)
     set_session(session_token, session_data)
 
     response = RedirectResponse("/")
@@ -198,7 +190,9 @@ async def api_me(request: Request):
         result["avatar"] = resolve_avatar_url(social)
     else:
         result["avatar"] = "/static/default_avatar.png"
-    result["is_admin"] = check_is_admin(session.get("username", ""), session.get("discord_id"))
-    if result["is_admin"]:
-        social_db.add_site_admin(session["discord_id"], session.get("username", ""), "config")
+    apply_roles(result)
+    if result.get("is_admin"):
+        social_db.add_site_staff(session["discord_id"], session.get("username", ""), "config", ROLE_ADMIN)
+    elif result.get("is_moderator"):
+        social_db.add_site_staff(session["discord_id"], session.get("username", ""), "config", ROLE_MODERATOR)
     return result

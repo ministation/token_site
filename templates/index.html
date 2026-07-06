@@ -49,6 +49,7 @@
                 <button class="nav-btn" data-section="bans"><i class="fa-solid fa-gavel"></i> Наказания</button>
                 <button class="nav-btn" data-section="online"><i class="fa-solid fa-chart-line"></i> Статистика</button>
                 <button class="nav-btn" data-section="admin" id="adminNavBtn" style="display:none;"><i class="fa-solid fa-shield-halved"></i> Админ</button>
+                <button class="nav-btn" data-section="moderator" id="moderatorNavBtn" style="display:none;"><i class="fa-solid fa-scale-balanced"></i> Модерация</button>
             </div>
             <div class="side-group">
                 <div class="side-group-title"><i class="fa-solid fa-link"></i> Ссылки</div>
@@ -84,6 +85,9 @@
             <div id="adminSection" class="section">
                 {% include 'partials/admin.html' %}
             </div>
+            <div id="moderatorSection" class="section">
+                {% include 'partials/moderator.html' %}
+            </div>
 
             <datalist id="playersList"></datalist>
         </main>
@@ -100,6 +104,7 @@
     <script src="/static/js/messages.js"></script>
     <script src="/static/js/chat.js"></script>
     <script src="/static/js/inventory.js"></script>
+    <script src="/static/js/moderator.js"></script>
     <script src="/static/js/admin.js"></script>
     <script src="/static/script.js"></script>
 

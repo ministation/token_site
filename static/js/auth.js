@@ -1,3 +1,9 @@
+function staffBadgeHtml(user) {
+    if (user?.is_admin) return ' <span class="admin-badge">ADMIN</span>';
+    if (user?.is_moderator) return ' <span class="mod-badge">MOD</span>';
+    return '';
+}
+
 async function checkAuth() {
     try {
         const res = await fetch(`${API_BASE}/api/me`);
@@ -10,7 +16,7 @@ async function checkAuth() {
             panel.style.display = 'flex';
             panel.innerHTML = `
                 ${data.avatar ? `<img src="${data.avatar}" alt="" onerror="this.style.display='none'">` : ''}
-                <span id="userName">${data.display_name || data.username}${data.is_admin ? ' <span class="admin-badge">ADMIN</span>' : ''}</span>
+                <span id="userName">${data.display_name || data.username}${staffBadgeHtml(data)}</span>
                 <button onclick="logout()">Выйти</button>
             `;
             if (data.player) {
@@ -21,6 +27,7 @@ async function checkAuth() {
             }
             updateAuthUI();
             if (typeof initAdminPanel === 'function') initAdminPanel();
+            if (typeof initModeratorPanel === 'function') initModeratorPanel();
         } else {
             document.getElementById('loginBtn').style.display = '';
             document.getElementById('userPanel').style.display = 'none';

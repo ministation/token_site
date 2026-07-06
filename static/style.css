@@ -232,6 +232,23 @@ img { max-width: 100%; }
     margin-left: 4px;
 }
 
+.mod-badge {
+    display: inline-block;
+    font-family: var(--font-pixel);
+    font-size: 0.45rem;
+    background: #5b8def;
+    color: #fff;
+    padding: 3px 6px;
+    border-radius: 4px;
+    vertical-align: middle;
+    margin-left: 4px;
+}
+
+.chat-role-badge {
+    font-size: 0.4rem;
+    margin-left: 6px;
+}
+
 /* === Mobile nav backdrop === */
 .nav-backdrop {
     display: none;

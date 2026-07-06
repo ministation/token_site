@@ -2,14 +2,17 @@ from fastapi import APIRouter, Request, HTTPException, Query
 from app.dependencies import get_current_social_user
 from app.models.chat import ChatMessage
 from app.services.chat import get_chat_messages, add_chat_message
-from app.services.avatars import resolve_avatar_url
+from app.services.roles import get_role_by_author_id, get_staff_role
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
 
 @router.get("")
 async def get_chat(after: int = Query(0, ge=0)):
-    return get_chat_messages(100, after)
+    messages = get_chat_messages(100, after)
+    for m in messages:
+        m["author_role"] = get_role_by_author_id(m["author_id"])
+    return messages
 
 
 @router.post("")
@@ -24,4 +27,5 @@ async def post_chat(request: Request, msg: ChatMessage):
     avatar = resolve_avatar_url(social)
     nickname = social.get("game_nickname") or social.get("discord_username") or user.get("username", "Игрок")
     msg_data = add_chat_message(user["social_id"], nickname, avatar, msg.message)
+    msg_data["author_role"] = get_staff_role(user.get("username", ""), user.get("discord_id"))
     return {"success": True, "message": msg_data}

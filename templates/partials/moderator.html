@@ -1,0 +1,14 @@
+<div class="card admin-panel">
+    <h2><i class="fa-solid fa-scale-balanced"></i> Модерация</h2>
+    <p class="admin-hint">Рассмотрение обжалований банов</p>
+
+    <div class="admin-inline-form">
+        <select id="moderatorAppealFilter" onchange="loadModeratorAppeals()">
+            <option value="">Все</option>
+            <option value="pending" selected>Ожидают</option>
+            <option value="approved">Одобрены</option>
+            <option value="rejected">Отклонены</option>
+        </select>
+    </div>
+    <div id="moderatorAppealsContent"><p class="empty-state">Загрузка...</p></div>
+</div>

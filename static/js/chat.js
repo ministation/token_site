@@ -117,12 +117,15 @@ function renderGlobalChatMessage(m) {
     const time = new Date(m.created_at).toLocaleString('ru-RU', {
         day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
     });
+    const roleBadge = m.author_role === 'admin'
+        ? '<span class="admin-badge chat-role-badge">ADMIN</span>'
+        : (m.author_role === 'moderator' ? '<span class="mod-badge chat-role-badge">MOD</span>' : '');
     return `
         <div class="global-chat-message" data-id="${m.id}">
             ${avatar}
             <div class="global-chat-content">
                 <div class="global-chat-meta">
-                    <span class="global-chat-author">${escapeHtml(m.author_nickname)}</span>
+                    <span class="global-chat-author">${escapeHtml(m.author_nickname)}</span>${roleBadge}
                     <span class="global-chat-time">${time}</span>
                 </div>
                 <div class="global-chat-text">${escapeHtml(m.content)}</div>

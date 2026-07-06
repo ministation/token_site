@@ -78,7 +78,7 @@ async function loadAdminUsers(append) {
                     <div class="admin-user-name">${escapeHtml(u.game_nickname || u.discord_username)}</div>
                     <div class="admin-user-sub">@${escapeHtml(u.discord_username || '')} · ${escapeHtml(u.player_id?.slice(0, 8) || '')}…</div>
                 </div>
-                ${u.is_admin ? '<span class="admin-badge">ADMIN</span>' : ''}
+                ${u.is_admin ? '<span class="admin-badge">ADMIN</span>' : (u.is_moderator ? '<span class="mod-badge">MOD</span>' : '')}
                 <button type="button" class="btn-sm" onclick='messageUserFromChat(${JSON.stringify(u.player_id)}, ${JSON.stringify(u.game_nickname || u.discord_username)})'>
                     <i class="fa-solid fa-envelope"></i>
                 </button>
@@ -136,35 +136,21 @@ async function loadAdminAppeals(append) {
             container.innerHTML = '<p class="empty-state">Обжалований нет</p>';
             return;
         }
-        container.innerHTML = appeals.map(a => {
-            const statusLabel = { pending: 'Ожидает', approved: 'Одобрено', rejected: 'Отклонено' }[a.status] || a.status;
-            const statusClass = a.status === 'pending' ? 'appeal-pending' : (a.status === 'approved' ? 'appeal-approved' : 'appeal-rejected');
-            return `
-            <div class="appeal-card ${statusClass}">
-                <div class="appeal-header">
-                    <strong>Бан #${a.ban_id}</strong> · ${escapeHtml(a.ckey || a.player_id?.slice(0, 8) || 'Игрок')}
-                    · <span class="appeal-status">${statusLabel}</span>
-                    · ${new Date(a.created_at).toLocaleString()}
-                </div>
-                <div class="appeal-text">${escapeHtml(a.appeal_text)}</div>
-                ${a.admin_response ? `<div class="appeal-response"><b>Ответ:</b> ${escapeHtml(a.admin_response)}</div>` : ''}
-                ${a.status === 'pending' ? `
-                <div class="appeal-actions">
-                    <button type="button" class="btn-sm" onclick="reviewAppeal(${a.id}, 'approved')">Одобрить</button>
-                    <button type="button" class="btn-danger-sm" onclick="reviewAppeal(${a.id}, 'rejected')">Отклонить</button>
-                </div>` : ''}
-            </div>`;
-        }).join('');
+        container.innerHTML = appeals.map(a => typeof renderAppealCard === 'function' ? renderAppealCard(a) : '').join('');
     } catch (e) {
         container.innerHTML = `<p class="error">${escapeHtml(e.message)}</p>`;
     }
 }
 
 async function reviewAppeal(appealId, status) {
-    const response = prompt(status === 'approved' ? 'Комментарий (необязательно):' : 'Причина отклонения:') || '';
+    const msg = status === 'approved'
+        ? 'Одобрить обжалование и снять бан в игровой БД?\nКомментарий (необязательно):'
+        : 'Причина отклонения:';
+    const response = prompt(msg) || '';
     try {
         await apiCall('POST', `/api/admin/appeals/${appealId}/review`, { status, admin_response: response });
-        loadAdminAppeals(false);
+        if (document.getElementById('moderatorAppealsContent')) loadModeratorAppeals();
+        if (document.getElementById('adminAppealsContent')) loadAdminAppeals(false);
     } catch (e) {
         alert(e.message);
     }
@@ -210,15 +196,19 @@ async function loadAdminList() {
             container.innerHTML = '<p class="empty-state">Нет администраторов</p>';
             return;
         }
-        container.innerHTML = admins.map(a => `
+        container.innerHTML = admins.map(a => {
+            const roleBadge = (a.role === 'moderator')
+                ? '<span class="mod-badge">MOD</span>'
+                : '<span class="admin-badge">ADMIN</span>';
+            return `
             <div class="admin-list-item">
-                <span><i class="fa-brands fa-discord"></i> ${escapeHtml(a.discord_username || a.discord_id)}</span>
+                <span><i class="fa-brands fa-discord"></i> ${escapeHtml(a.discord_username || a.discord_id)} ${roleBadge}</span>
                 <span class="admin-meta">назначил: ${escapeHtml(a.granted_by || '—')}</span>
                 ${a.discord_id !== currentUser.discord_id
                     ? `<button type="button" class="btn-danger-sm" onclick="revokeAdmin('${a.discord_id}')">Снять</button>`
                     : '<span class="admin-badge">Вы</span>'}
-            </div>
-        `).join('');
+            </div>`;
+        }).join('');
     } catch (e) {
         container.innerHTML = `<p class="error">${escapeHtml(e.message)}</p>`;
     }
@@ -226,13 +216,15 @@ async function loadAdminList() {
 
 async function grantAdmin() {
     const input = document.getElementById('adminGrantUsername');
+    const roleSelect = document.getElementById('adminGrantRole');
     const username = input?.value.trim();
+    const role = roleSelect?.value || 'admin';
     const res = document.getElementById('adminGrantResult');
     if (!username) { alert('Введите Discord-ник'); return; }
     try {
-        await apiCall('POST', '/api/admin/admins', { discord_username: username });
+        await apiCall('POST', '/api/admin/admins', { discord_username: username, role });
         if (input) input.value = '';
-        if (res) res.innerHTML = '<p class="success">Администратор назначен</p>';
+        if (res) res.innerHTML = `<p class="success">${role === 'admin' ? 'Администратор' : 'Модератор'} назначен</p>`;
         loadAdminList();
     } catch (e) {
         if (res) res.innerHTML = `<p class="error">${escapeHtml(e.message)}</p>`;

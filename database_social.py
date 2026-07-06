@@ -187,9 +187,14 @@ def _migrate_schema():
             discord_id TEXT PRIMARY KEY,
             discord_username TEXT,
             granted_by TEXT,
+            role TEXT DEFAULT 'admin',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
+    admin_cols = _table_columns(cursor, "site_admins")
+    if "role" not in admin_cols:
+        cursor.execute("ALTER TABLE site_admins ADD COLUMN role TEXT DEFAULT 'admin'")
+        cursor.execute("UPDATE site_admins SET role = 'admin' WHERE role IS NULL")
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS ban_appeals (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -333,28 +338,50 @@ def update_user_avatar(discord_id: str, avatar_path: str,
     return ok
 
 
-def is_site_admin(discord_id: str) -> bool:
+def get_site_staff_role(discord_id: str) -> str | None:
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT 1 FROM site_admins WHERE discord_id = ?", (discord_id,))
+    cursor.execute("SELECT role FROM site_admins WHERE discord_id = ?", (discord_id,))
     row = cursor.fetchone()
     conn.close()
-    return row is not None
+    if not row:
+        return None
+    return row["role"] or "admin"
 
 
-def add_site_admin(discord_id: str, discord_username: str, granted_by: str) -> bool:
+def is_site_admin(discord_id: str) -> bool:
+    return get_site_staff_role(discord_id) == "admin"
+
+
+def is_site_moderator(discord_id: str) -> bool:
+    return get_site_staff_role(discord_id) in ("admin", "moderator")
+
+
+def add_site_staff(discord_id: str, discord_username: str, granted_by: str, role: str = "admin") -> bool:
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT INTO site_admins (discord_id, discord_username, granted_by)
-        VALUES (?, ?, ?)
+        INSERT INTO site_admins (discord_id, discord_username, granted_by, role)
+        VALUES (?, ?, ?, ?)
         ON CONFLICT(discord_id) DO UPDATE SET
             discord_username = excluded.discord_username,
-            granted_by = excluded.granted_by
-    """, (discord_id, discord_username, granted_by))
+            granted_by = excluded.granted_by,
+            role = CASE
+                WHEN site_admins.role = 'admin' OR excluded.role = 'admin' THEN 'admin'
+                ELSE excluded.role
+            END
+    """, (discord_id, discord_username, granted_by, role))
     conn.commit()
     conn.close()
     return True
+
+
+def add_site_admin(discord_id: str, discord_username: str, granted_by: str) -> bool:
+    return add_site_staff(discord_id, discord_username, granted_by, "admin")
+
+
+def add_site_moderator(discord_id: str, discord_username: str, granted_by: str) -> bool:
+    return add_site_staff(discord_id, discord_username, granted_by, "moderator")
 
 
 def remove_site_admin(discord_id: str) -> bool:
@@ -374,6 +401,22 @@ def list_site_admins() -> List[Dict]:
     rows = [dict(r) for r in cursor.fetchall()]
     conn.close()
     return rows
+
+
+def seed_moderator_by_username(username: str, granted_by: str = "config") -> bool:
+    user = get_social_user_by_discord_username(username)
+    if not user:
+        return False
+    return add_site_moderator(user["discord_id"], user.get("discord_username") or username, granted_by)
+
+
+def get_ban_appeal_by_id(appeal_id: int) -> Optional[Dict]:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM ban_appeals WHERE id = ?", (appeal_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
 
 
 def seed_admin_by_username(username: str, granted_by: str = "config") -> bool:

@@ -69,6 +69,12 @@ function setupNavigation() {
                     return;
                 }
                 if (typeof loadAdminStats === 'function') loadAdminStats();
+            } else if (section === 'moderator') {
+                if (!currentUser?.is_moderator) {
+                    alert('Доступ только для модерации');
+                    return;
+                }
+                if (typeof loadModeratorAppeals === 'function') loadModeratorAppeals();
             }
         });
     });

@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Request, HTTPException, Query
 from pydantic import BaseModel
-from app.dependencies import get_current_admin
-from app.services.admin import get_site_statistics, list_admins, grant_admin, revoke_admin, find_user_for_admin
-from app.services.bans import get_all_bans
+from app.dependencies import get_current_admin, get_current_staff
+from app.services.admin import get_site_statistics, list_admins, grant_admin, grant_moderator, revoke_admin, find_user_for_admin
+from app.services.bans import get_all_bans, lift_ban
 from app.services.appeals import list_appeals, review_appeal
 from app.services.avatars import resolve_avatar_url
 from app.services.social import get_feed_posts
@@ -13,6 +13,7 @@ router = APIRouter(prefix="/api/admin", tags=["admin"])
 
 class GrantAdminRequest(BaseModel):
     discord_username: str
+    role: str = "admin"
 
 
 class ReviewAppealRequest(BaseModel):
@@ -37,6 +38,8 @@ async def admin_users(request: Request, q: str = "", limit: int = 50, offset: in
                 **u,
                 "avatar": resolve_avatar_url(u),
                 "is_admin": social_db.is_site_admin(u.get("discord_id", "")),
+                "is_moderator": social_db.is_site_moderator(u.get("discord_id", "")),
+                "staff_role": social_db.get_site_staff_role(u.get("discord_id", "")),
             }
             for u in users
         ],
@@ -80,8 +83,12 @@ async def admin_grant(req: GrantAdminRequest, request: Request):
     user = find_user_for_admin(username)
     if not user:
         raise HTTPException(status_code=404, detail="Пользователь не найден. Он должен войти на сайт хотя бы раз.")
-    grant_admin(user["discord_id"], user.get("discord_username") or username, admin.get("username", ""))
-    return {"success": True, "discord_id": user["discord_id"], "discord_username": user.get("discord_username")}
+    role = req.role if req.role in ("admin", "moderator") else "admin"
+    if role == "admin":
+        grant_admin(user["discord_id"], user.get("discord_username") or username, admin.get("username", ""))
+    else:
+        grant_moderator(user["discord_id"], user.get("discord_username") or username, admin.get("username", ""))
+    return {"success": True, "discord_id": user["discord_id"], "discord_username": user.get("discord_username"), "role": role}
 
 
 @router.delete("/admins/{discord_id}")
@@ -110,16 +117,25 @@ async def admin_all_bans(request: Request, limit: int = 50, offset: int = 0):
 
 @router.get("/appeals")
 async def admin_appeals(request: Request, status: str = Query("", max_length=20), limit: int = 50, offset: int = 0):
-    await get_current_admin(request)
+    await get_current_staff(request)
     st = status if status in ("pending", "approved", "rejected") else None
     return list_appeals(st, limit, offset)
 
 
 @router.post("/appeals/{appeal_id}/review")
 async def admin_review_appeal(appeal_id: int, req: ReviewAppealRequest, request: Request):
-    admin = await get_current_admin(request)
+    staff = await get_current_staff(request)
+    appeal = social_db.get_ban_appeal_by_id(appeal_id)
+    if not appeal:
+        raise HTTPException(status_code=404, detail="Обжалование не найдено")
+    if appeal.get("status") != "pending":
+        raise HTTPException(status_code=400, detail="Обжалование уже рассмотрено")
     try:
-        ok = review_appeal(appeal_id, req.status, req.admin_response, admin.get("username", ""))
+        if req.status == "approved":
+            lifted = await lift_ban(appeal["ban_id"])
+            if not lifted:
+                raise HTTPException(status_code=404, detail="Бан не найден в игровой БД (возможно, уже снят)")
+        ok = review_appeal(appeal_id, req.status, req.admin_response, staff.get("username", ""))
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     if not ok:

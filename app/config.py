@@ -22,6 +22,11 @@ ADMIN_USERNAMES = [
     for x in os.getenv("ADMIN_USERNAMES", "dotnet_build").split(",")
     if x.strip()
 ]
+MODERATOR_USERNAMES = [
+    x.strip().lower()
+    for x in os.getenv("MODERATOR_USERNAMES", "").split(",")
+    if x.strip()
+]
 
 # Банк
 BANK_DEPOSIT_MIN = int(os.getenv("BANK_DEPOSIT_MIN", "10"))

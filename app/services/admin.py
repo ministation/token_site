@@ -21,6 +21,10 @@ def list_admins() -> list[dict]:
     return social_db.list_site_admins()
 
 
+def grant_moderator(discord_id: str, username: str, granted_by: str) -> bool:
+    return social_db.add_site_moderator(discord_id, username, granted_by)
+
+
 def grant_admin(discord_id: str, username: str, granted_by: str) -> bool:
     return social_db.add_site_admin(discord_id, username, granted_by)
 
