@@ -2,6 +2,7 @@ from fastapi import APIRouter
 from datetime import datetime, timezone, timedelta
 import sqlite3
 import os
+from app.services.admin_rating import get_admin_rating_leaderboard
 
 router = APIRouter(prefix="/api/stats", tags=["stats"])
 
@@ -30,3 +31,13 @@ async def weekly_online_by_hour():
         ORDER BY hour
     """)
     return [{"hour": row["hour"], "players": row["players"]} for row in rows]
+
+
+@router.get("/admin-rating")
+async def admin_rating_leaderboard():
+    """Рейтинг администрации AHelp из игровой PostgreSQL БД."""
+    admins = await get_admin_rating_leaderboard()
+    return {
+        "updated_at": datetime.now(MOSCOW_TZ).isoformat(),
+        "admins": admins,
+    }
