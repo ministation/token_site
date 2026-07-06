@@ -19,9 +19,9 @@ async function searchSocial(query = '') {
                 <div style="flex:1;">
                     <div><strong>${escapeHtml(user.game_nickname || user.nickname || 'Без имени')}</strong></div>
                     <div style="font-size:0.8rem; color:#888;">@${escapeHtml(user.discord_username || 'Не привязан')}</div>
-                    ${user.balance !== undefined ? `<div style="color:#fc0;">🪙 ${user.balance} монет</div>` : ''}
+                    ${user.balance !== undefined ? `<div>${user.balance} монет</div>` : ''}
                 </div>
-                <button onclick="window.location.href='/profile/${user.player_id}'" class="follow-btn">👤 Профиль</button>
+                <button onclick="window.location.href='/profile/${user.player_id}'" class="follow-btn"><i class="fa-solid fa-user"></i> Профиль</button>
             </div>
         `).join('');
     } catch (e) {

@@ -65,10 +65,10 @@ function renderPost(post) {
             ${imageHtml}
             <div class="post-actions">
                 <button onclick="toggleLike(${post.id})" class="post-action-btn ${likedClass}">
-                    ❤️ <span id="like-count-${post.id}">${post.like_count}</span>
+                    <i class="fa-solid fa-heart"></i> <span id="like-count-${post.id}">${post.like_count}</span>
                 </button>
                 <button onclick="toggleComments(${post.id})" class="post-action-btn">
-                    💬 <span id="comment-count-${post.id}">${post.comment_count}</span>
+                    <i class="fa-solid fa-comment"></i> <span id="comment-count-${post.id}">${post.comment_count}</span>
                 </button>
             </div>
             <div id="comments-${post.id}" class="comments-section" style="display:none;"></div>

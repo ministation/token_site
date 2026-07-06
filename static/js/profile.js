@@ -45,7 +45,7 @@ async function loadProfile(playerId) {
                                     ${p.is_following ? 'Отписаться' : 'Подписаться'}
                                 </button>
                                 <button class="message-btn" onclick="openMessageModal('${p.player_id}', '${escapeHtml(p.game_nickname)}')">
-                                    💬 Написать
+                                    <i class="fa-solid fa-envelope"></i> Написать
                                 </button>
                             ` : ''}
                         </div>
