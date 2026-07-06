@@ -45,13 +45,16 @@ async function loadInventory() {
         if (!data.has_game_link) {
             html += '<p class="inventory-empty">Привяжите Discord к игровому аккаунту, чтобы видеть билеты.</p>';
         } else if (data.tickets?.length) {
+            const totalTickets = data.tickets.reduce((s, t) => s + (t.amount || 0), 0);
+            html += `<p class="inventory-tickets-summary">Всего билетов: <strong>${totalTickets}</strong></p>`;
             html += '<div class="tickets-grid">';
             data.tickets.forEach(t => {
                 html += `
                     <div class="ticket-card" style="--ticket-color: ${t.color || '#5b8def'}">
                         <div class="ticket-icon"><i class="fa-solid ${t.icon || 'fa-ticket'}"></i></div>
                         <div class="ticket-name">${escapeHtml(t.name)}</div>
-                        <div class="ticket-amount">×${t.amount}</div>
+                        <div class="ticket-amount">${t.amount}</div>
+                        <div class="ticket-amount-label">${t.amount === 1 ? 'билет' : (t.amount < 5 ? 'билета' : 'билетов')}</div>
                     </div>`;
             });
             html += '</div>';

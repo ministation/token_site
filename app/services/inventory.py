@@ -49,6 +49,26 @@ TICKET_META: dict[str, dict] = {
     "xenomorph": {"name": "Ксеноморф", "icon": "fa-alien", "color": "#2ecc71"},
 }
 
+# Служебные записи в player_antag_token — не билеты на антагов
+INTERNAL_TOKEN_IDS = frozenset({
+    "balance",
+    "last-donor-bonus-claim",
+    "monthly-earned",
+    "monthly-month",
+    "monthly-year",
+})
+
+INTERNAL_TOKEN_PREFIXES = (
+    "last-",
+    "monthly-",
+    "meta-",
+    "stat-",
+    "donor-",
+    "bonus-",
+    "claim-",
+    "earned-",
+)
+
 GHOST_LABELS: dict[str, str] = {
     "MobGhostUnati": "Унати",
     "MobGhostSpaceUnati": "Космический унати",
@@ -205,6 +225,42 @@ def _is_ghost_token(token_id: str) -> bool:
         or tid.startswith("mobghost")
         or tid.startswith("customghost")
     )
+
+
+def _is_internal_token(token_id: str) -> bool:
+    tid = (token_id or "").strip().lower()
+    if not tid or tid in INTERNAL_TOKEN_IDS:
+        return True
+    for prefix in INTERNAL_TOKEN_PREFIXES:
+        if tid.startswith(prefix):
+            return True
+    # kebab-case ключи метаданных: last-donor-bonus-claim, monthly-year
+    if re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)+", tid):
+        return True
+    return False
+
+
+def _is_antag_ticket(token_id: str, amount: int) -> bool:
+    """Только реальные билеты на роли, не служебные поля БД."""
+    if _is_internal_token(token_id) or _is_ghost_token(token_id):
+        return False
+    raw = (token_id or "").strip()
+    tid = raw.lower()
+    # Известный антаг
+    if _normalize_token_key(raw) in TICKET_META:
+        return True
+    # Prototype ID: Traitor, NuclearOperative, Job:Traitor
+    if raw.startswith("Job:") or raw.startswith("Antag:"):
+        return True
+    if re.fullmatch(r"[A-Z][A-Za-z0-9]*", raw):
+        return True
+    # Короткий slug без дефисов: traitor, nukie
+    if re.fullmatch(r"[a-z][a-z0-9]{2,}", tid):
+        return True
+    # Сумма как год/таймстамп — точно не билет
+    if amount > 9999:
+        return False
+    return False
 
 
 def _format_token_name(token_id: str) -> str:
@@ -369,16 +425,16 @@ async def get_player_tickets(user_uuids: list[str]) -> list[dict]:
             merged: dict[str, dict] = {}
             for r in rows:
                 token_id = r["token_id"]
-                if _is_ghost_token(token_id):
-                    continue
                 amount = int(r["amount"])
+                if not _is_antag_ticket(token_id, amount):
+                    continue
                 info = _ticket_info(token_id)
                 key = info["key"]
                 if key in merged:
                     merged[key]["amount"] += amount
                 else:
                     merged[key] = {**info, "amount": amount}
-            return sorted(merged.values(), key=lambda x: x["name"])
+            return sorted(merged.values(), key=lambda x: (-x["amount"], x["name"]))
     except (asyncpg.PostgresError, OSError):
         return []
 
