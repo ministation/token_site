@@ -41,19 +41,43 @@ async function loadInventory() {
         html += '</div></div>';
 
         html += '<div class="inventory-section">';
-        html += '<h3><i class="fa-solid fa-ticket"></i> Билеты</h3>';
-        if (data.tickets?.length) {
+        html += '<h3><i class="fa-solid fa-ticket"></i> Билеты на антагов</h3>';
+        if (!data.has_game_link) {
+            html += '<p class="inventory-empty">Привяжите Discord к игровому аккаунту, чтобы видеть билеты.</p>';
+        } else if (data.tickets?.length) {
             html += '<div class="tickets-grid">';
             data.tickets.forEach(t => {
                 html += `
-                    <div class="ticket-card">
+                    <div class="ticket-card" style="--ticket-color: ${t.color || '#5b8def'}">
+                        <div class="ticket-icon"><i class="fa-solid ${t.icon || 'fa-ticket'}"></i></div>
                         <div class="ticket-name">${escapeHtml(t.name)}</div>
                         <div class="ticket-amount">×${t.amount}</div>
                     </div>`;
             });
             html += '</div>';
         } else {
-            html += '<p class="inventory-empty">Нет билетов. Привяжите Discord к игровому аккаунту, чтобы видеть билеты.</p>';
+            html += '<p class="inventory-empty">Нет активных билетов на антагов</p>';
+        }
+        html += '</div>';
+
+        html += '<div class="inventory-section">';
+        html += '<h3><i class="fa-solid fa-ghost"></i> Custom Ghost</h3>';
+        if (!data.has_game_link) {
+            html += '<p class="inventory-empty">Привяжите Discord к игровому аккаунту.</p>';
+        } else if (data.custom_ghosts?.length) {
+            html += '<div class="ghosts-grid">';
+            data.custom_ghosts.forEach(g => {
+                const amount = g.amount > 1 ? `<span class="ghost-amount">×${g.amount}</span>` : '';
+                html += `
+                    <div class="ghost-card">
+                        <div class="ghost-icon"><i class="fa-solid fa-ghost"></i></div>
+                        <div class="ghost-name">${escapeHtml(g.name)}</div>
+                        ${amount}
+                    </div>`;
+            });
+            html += '</div>';
+        } else {
+            html += '<p class="inventory-empty">Нет разблокированных custom ghost</p>';
         }
         html += '</div>';
 
