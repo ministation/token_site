@@ -172,7 +172,7 @@ async function loadStats() {
     }
 }
 
-function showEconomyTab(tab) {
+function showEconomyTab(tab, btn) {
     document.querySelectorAll('.economy-tab-content').forEach(t => t.style.display = 'none');
     const tabMap = { wallet: 'economyWallet', bank: 'economyBank', lottery: 'economyLottery' };
     const targetId = tabMap[tab];
@@ -181,7 +181,7 @@ function showEconomyTab(tab) {
         if (target) target.style.display = 'block';
     }
     document.querySelectorAll('.economy-tabs .tab').forEach(t => t.classList.remove('active'));
-    if (event?.target) event.target.classList.add('active');
+    if (btn) btn.classList.add('active');
     if (tab === 'wallet') {
         loadMyBalance();
         loadTop();
@@ -192,12 +192,12 @@ function showEconomyTab(tab) {
     }
 }
 
-function showBankSubTab(tab) {
+function showBankSubTab(tab, btn) {
     document.querySelectorAll('.bank-tab').forEach(t => t.style.display = 'none');
     const target = document.getElementById(tab + 'Tab');
     if (target) target.style.display = 'block';
     document.querySelectorAll('#economyBank .tab').forEach(t => t.classList.remove('active'));
-    if (event?.target) event.target.classList.add('active');
+    if (btn) btn.classList.add('active');
     if (tab === 'withdraw') loadMyDeposits();
     if (tab === 'repay') loadMyLoans();
 }

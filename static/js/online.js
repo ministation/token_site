@@ -2,11 +2,12 @@ let onlineChart = null;
 let currentOnlineMode = 'day';
 let isInitialized = false;
 
-function switchOnlineMode(mode) {
+function switchOnlineMode(mode, btn) {
     currentOnlineMode = mode;
-    
-    document.querySelectorAll('.chart-tab').forEach(btn => btn.classList.remove('active'));
-    event.target.classList.add('active');
+
+    document.querySelectorAll('.chart-tab').forEach(b => b.classList.remove('active'));
+    const activeBtn = btn || document.querySelector(`.chart-tab[data-mode="${mode}"]`);
+    if (activeBtn) activeBtn.classList.add('active');
     
     const dayPicker = document.getElementById('dayPicker');
     if (dayPicker) {
@@ -101,8 +102,8 @@ function renderSingleChart(labels, values, xLabel, datasetLabel) {
             datasets: [{
                 label: datasetLabel,
                 data: values,
-                backgroundColor: 'rgba(155, 127, 212, 0.55)',
-                borderColor: '#9b7fd4',
+                backgroundColor: 'rgba(202, 165, 61, 0.55)',
+                borderColor: '#caa53d',
                 borderWidth: 1
             }]
         },
@@ -126,7 +127,7 @@ function chartOptions(xLabel) {
         plugins: {
             legend: {
                 position: 'top',
-                labels: { color: '#c4b5e0', padding: 12, font: { size: 11 } }
+                labels: { color: '#ece2ca', padding: 12, font: { size: 11 } }
             }
         },
         scales: {
@@ -159,8 +160,8 @@ function renderChart(labels, avgValues, maxValues, xLabel) {
                 {
                     label: 'Средний',
                     data: avgValues,
-                    borderColor: '#9b7fd4',
-                    backgroundColor: 'rgba(155, 127, 212, 0.12)',
+                    borderColor: '#caa53d',
+                    backgroundColor: 'rgba(202, 165, 61, 0.12)',
                     tension: 0.35,
                     fill: true,
                     pointRadius: 2,
@@ -169,8 +170,8 @@ function renderChart(labels, avgValues, maxValues, xLabel) {
                 {
                     label: 'Максимум',
                     data: maxValues,
-                    borderColor: '#6ecf8a',
-                    backgroundColor: 'rgba(110, 207, 138, 0.08)',
+                    borderColor: '#6fbf73',
+                    backgroundColor: 'rgba(111, 191, 115, 0.08)',
                     tension: 0.35,
                     fill: false,
                     pointRadius: 2,

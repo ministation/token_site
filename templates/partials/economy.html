@@ -1,7 +1,7 @@
 <div class="economy-tabs">
-    <button class="tab active" onclick="showEconomyTab('wallet')"><i class="fa-solid fa-wallet"></i> Кошелёк</button>
-    <button class="tab" onclick="showEconomyTab('bank')"><i class="fa-solid fa-building-columns"></i> Банк</button>
-    <button class="tab" onclick="showEconomyTab('lottery')"><i class="fa-solid fa-dice"></i> Лотерея</button>
+    <button class="tab active" onclick="showEconomyTab('wallet', this)"><i class="fa-solid fa-wallet"></i> Кошелёк</button>
+    <button class="tab" onclick="showEconomyTab('bank', this)"><i class="fa-solid fa-building-columns"></i> Банк</button>
+    <button class="tab" onclick="showEconomyTab('lottery', this)"><i class="fa-solid fa-dice"></i> Лотерея</button>
 </div>
 
 <!-- Кошелёк -->
@@ -44,10 +44,10 @@
 <!-- Банк -->
 <div id="economyBank" class="economy-tab-content" style="display:none;">
     <div class="tabs">
-        <button class="tab active" onclick="showBankSubTab('deposit')">Вклады</button>
-        <button class="tab" onclick="showBankSubTab('withdraw')">Снять вклад</button>
-        <button class="tab" onclick="showBankSubTab('loan')">Займы</button>
-        <button class="tab" onclick="showBankSubTab('repay')">Погасить</button>
+        <button class="tab active" onclick="showBankSubTab('deposit', this)">Вклады</button>
+        <button class="tab" onclick="showBankSubTab('withdraw', this)">Снять вклад</button>
+        <button class="tab" onclick="showBankSubTab('loan', this)">Займы</button>
+        <button class="tab" onclick="showBankSubTab('repay', this)">Погасить</button>
     </div>
     <div id="depositTab" class="bank-tab">
         <div class="card">

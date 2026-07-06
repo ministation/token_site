@@ -17,7 +17,7 @@ async function checkAuth() {
                 currentPlayerId = data.player.player_id;
             }
         } else {
-            document.getElementById('loginBtn').style.display = 'block';
+            document.getElementById('loginBtn').style.display = '';
             document.getElementById('userPanel').style.display = 'none';
         }
     } catch (e) {
