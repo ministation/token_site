@@ -166,7 +166,7 @@ async def list_admin_help_ratings(admin_user_id: str) -> dict | None:
 
         rows = await conn.fetch("""
             SELECT
-                r.id,
+                r.admin_help_rating_id AS id,
                 r.player_user_id::text AS player_uuid,
                 r.admin_user_id::text AS admin_uuid,
                 r.round_id,
@@ -213,13 +213,18 @@ async def delete_admin_help_rating(rating_id: int) -> dict | None:
     async with pg.acquire() as conn:
         async with conn.transaction():
             row = await conn.fetchrow("""
-                SELECT id, admin_user_id::text AS admin_uuid, player_user_id::text AS player_uuid, stars
+                SELECT admin_help_rating_id AS id,
+                       admin_user_id::text AS admin_uuid,
+                       player_user_id::text AS player_uuid,
+                       stars
                 FROM admin_help_rating
-                WHERE id = $1
+                WHERE admin_help_rating_id = $1
             """, rating_id)
             if not row:
                 return None
-            await conn.execute("DELETE FROM admin_help_rating WHERE id = $1", rating_id)
+            await conn.execute(
+                "DELETE FROM admin_help_rating WHERE admin_help_rating_id = $1", rating_id
+            )
             updated = await _recalculate_admin_rating(conn, row["admin_uuid"])
             return {
                 "id": row["id"],
