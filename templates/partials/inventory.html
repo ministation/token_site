@@ -23,44 +23,5 @@
         <div id="inventoryContent">
             <p class="empty-state">Загрузка...</p>
         </div>
-
-        <div class="inventory-section playtime-transfer-section" id="playtimeTransferSection" hidden>
-            <h3><i class="fa-solid fa-clock"></i> Перенос времени на роли</h3>
-            <p class="inventory-hint">Только для хранителей времени и администраторов. Укажите игрока, выберите роль-источник и отметьте роли для переноса.</p>
-
-            <label class="playtime-label" for="playtimePlayerNick">Игрок (ник в игре)</label>
-            <div class="playtime-keeper-row">
-                <input type="text" id="playtimePlayerNick" placeholder="ckey / ник" required>
-                <button type="button" onclick="loadPlaytimeOverview()"><i class="fa-solid fa-magnifying-glass"></i> Найти</button>
-            </div>
-
-            <p class="playtime-player-title" id="playtimePlayerTitle" hidden></p>
-
-            <div class="playtime-source-row" id="playtimeSourceRow" hidden>
-                <label class="playtime-label" for="playtimeFromTracker">Откуда переносить</label>
-                <select id="playtimeFromTracker"></select>
-            </div>
-
-            <div class="playtime-toolbar" id="playtimeToolbar" hidden>
-                <input type="text" id="playtimeRoleSearch" class="playtime-search" placeholder="Поиск роли..." oninput="filterPlaytimeRoles()">
-                <label class="playtime-select-all">
-                    <input type="checkbox" id="playtimeSelectAll" onchange="togglePlaytimeSelectAll()">
-                    Выбрать все
-                </label>
-                <div class="playtime-bulk-minutes">
-                    <input type="number" id="playtimeBulkMinutes" min="1" step="1" placeholder="Минут">
-                    <button type="button" class="playtime-quick-btn" onclick="applyPlaytimeBulkMinutes()">На выбранные</button>
-                </div>
-                <button type="button" class="playtime-unlock-btn" onclick="unlockAllPlaytimeRoles()">
-                    <i class="fa-solid fa-unlock"></i> Разблокировать все роли
-                </button>
-                <button type="button" class="playtime-submit-btn" onclick="submitPlaytimeBulkTransfer()">
-                    <i class="fa-solid fa-right-left"></i> Перенести выбранные
-                </button>
-            </div>
-
-            <div id="playtimeRolesTable" class="playtime-roles-table-wrap"></div>
-            <div id="playtimeTransferResult" class="result"></div>
-        </div>
     </div>
 </div>

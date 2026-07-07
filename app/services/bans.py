@@ -34,6 +34,9 @@ ROLE_TRANSLATIONS = {
     'NavyOfficerUndercover': 'Офицер флота под прикрытием', 'NavyCaptain': 'Капитан флота',
     'NavyOfficer': 'Офицер флота', 'NanotrasenCareerTrainer': 'Инструктор НаноТрейзен',
     'PartyMaker': 'Организатор вечеринок', 'SecurityClown': 'Клоун безопасности',
+    'Borg': 'Борг', 'StationAi': 'ИИ станции',
+    'ShaftMiner': 'Шахтёр', 'Bitrunner': 'Битраннер', 'WardenHelper': 'Помощник смотрителя',
+    'Assistant': 'Ассистент',
 }
 
 
@@ -46,15 +49,28 @@ def translate_role(role: str) -> str:
 
 
 def list_job_roles() -> list[dict]:
+    import json
+    from pathlib import Path
     from app.services.job_icons import tracker_from_role_id, job_icon_url
+
+    role_ids = set(ROLE_TRANSLATIONS)
+    unlock_path = Path(__file__).resolve().parents[2] / "data" / "mini_station_job_unlock.json"
+    if unlock_path.is_file():
+        try:
+            data = json.loads(unlock_path.read_text(encoding="utf-8"))
+            role_ids.update(data.get("jobs", {}))
+            role_ids.update(data.get("role_to_department", {}))
+        except (json.JSONDecodeError, OSError):
+            pass
+
     return [
         {
             "id": tracker_from_role_id(role_id),
             "role_id": role_id,
-            "label": label,
+            "label": ROLE_TRANSLATIONS.get(role_id, translate_role(role_id)),
             "icon": job_icon_url(role_id),
         }
-        for role_id, label in sorted(ROLE_TRANSLATIONS.items(), key=lambda x: x[1])
+        for role_id in sorted(role_ids, key=lambda item: ROLE_TRANSLATIONS.get(item, item))
     ]
 
 

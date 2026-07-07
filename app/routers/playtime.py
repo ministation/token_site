@@ -9,7 +9,7 @@ from app.services.playtime_transfer import (
     build_unlock_all_plan,
     fetch_player_minutes_map,
 )
-from app.services.bans import list_job_roles
+from app.services.bans import list_job_roles, search_players
 from app.services.bank import find_player_by_nick
 
 router = APIRouter(prefix="/api/playtime", tags=["playtime"])
@@ -58,6 +58,13 @@ async def _resolve_target_uuid(player_nick: str) -> tuple[str, str]:
     if not target:
         raise HTTPException(status_code=404, detail="Игрок не найден")
     return target["user_uuid"], target.get("last_seen_user_name") or nick
+
+
+@router.get("/players/search")
+async def playtime_player_search(request: Request, q: str = Query("", min_length=2)):
+    user = await get_current_user(request)
+    _require_manager(user)
+    return await search_players(q, limit=15)
 
 
 @router.get("/roles")

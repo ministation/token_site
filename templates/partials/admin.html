@@ -3,13 +3,13 @@
     <p class="admin-hint">Управление сайтом — только для администраторов</p>
 
     <div class="admin-tabs">
-        <button type="button" class="tab active" onclick="showAdminTab('stats', this)">Метрика</button>
-        <button type="button" class="tab" onclick="showAdminTab('ratings', this)">Рейтинг</button>
-        <button type="button" class="tab" onclick="showAdminTab('users', this)">Игроки</button>
-        <button type="button" class="tab" onclick="showAdminTab('posts', this)">Форум</button>
-        <button type="button" class="tab" onclick="showAdminTab('appeals', this)">Обжалования</button>
-        <button type="button" class="tab" onclick="showAdminTab('game', this)">Админ панель</button>
-        <button type="button" class="tab" onclick="showAdminTab('admins', this)">Staff</button>
+        <button type="button" class="tab active" data-admin-only onclick="showAdminTab('stats', this)">Метрика</button>
+        <button type="button" class="tab" data-admin-only onclick="showAdminTab('ratings', this)">Рейтинг</button>
+        <button type="button" class="tab" data-admin-only onclick="showAdminTab('posts', this)">Форум</button>
+        <button type="button" class="tab" data-admin-only onclick="showAdminTab('appeals', this)">Обжалования</button>
+        <button type="button" class="tab" data-admin-only onclick="showAdminTab('game', this)">Админ панель</button>
+        <button type="button" class="tab" data-staff-only onclick="showAdminTab('playtime', this)">Время</button>
+        <button type="button" class="tab" data-admin-only onclick="showAdminTab('admins', this)">Staff</button>
     </div>
 
     <div id="adminStatsTab" class="admin-tab-content">
@@ -26,15 +26,7 @@
         <div id="adminRatingsContent"><p class="empty-state">Загрузка списка администраторов...</p></div>
     </div>
 
-    <div id="adminUsersTab" class="admin-tab-content" style="display:none;">
-        <div class="admin-inline-form">
-            <input type="text" id="adminUserSearch" placeholder="Поиск по нику..." oninput="debounceAdminUserSearch()">
-        </div>
-        <div id="adminUsersContent"><p class="empty-state">Загрузка...</p></div>
-        <div class="bans-load-more">
-            <button type="button" onclick="loadAdminUsers(true)"><i class="fa-solid fa-angles-down"></i> Загрузить ещё</button>
-        </div>
-    </div>
+    <div id="adminUsersTab" class="admin-tab-content" style="display:none;" hidden></div>
 
     <div id="adminPostsTab" class="admin-tab-content" style="display:none;">
         <div id="adminPostsList"><p class="empty-state">Загрузка...</p></div>
@@ -209,6 +201,52 @@
                 </div>
             </section>
         </div>
+    </div>
+
+    <div id="adminPlaytimeTab" class="admin-tab-content playtime-transfer-section" style="display:none;">
+        <p class="admin-hint">Перенос наигранного времени между ролями. Доступно хранителям времени и администраторам.</p>
+
+        <label class="playtime-label" for="playtimePlayerNick">Игрок (ckey / ник)</label>
+        <div class="playtime-keeper-row">
+            <div class="playtime-search-wrap">
+                <input type="text" id="playtimePlayerNick" placeholder="Начните вводить ник..." autocomplete="off"
+                    oninput="debouncePlaytimePlayerSearch()" onkeydown="onPlaytimePlayerSearchKeydown(event)">
+                <div id="playtimePlayerSuggestions" class="playtime-suggestions" hidden></div>
+            </div>
+            <button type="button" onclick="loadPlaytimeOverview()"><i class="fa-solid fa-magnifying-glass"></i> Загрузить</button>
+        </div>
+
+        <p class="playtime-player-title" id="playtimePlayerTitle" hidden></p>
+
+        <div class="playtime-source-row" id="playtimeSourceRow" hidden>
+            <label class="playtime-label" for="playtimeFromTracker">Откуда переносить</label>
+            <select id="playtimeFromTracker"></select>
+        </div>
+
+        <div class="playtime-toolbar" id="playtimeToolbar" hidden>
+            <div class="playtime-search-wrap playtime-role-search-wrap">
+                <input type="text" id="playtimeRoleSearch" class="playtime-search" placeholder="Поиск роли..." autocomplete="off"
+                    oninput="onPlaytimeRoleSearchInput()" onkeydown="onPlaytimeRoleSearchKeydown(event)" onfocus="onPlaytimeRoleSearchInput()">
+                <div id="playtimeRoleSuggestions" class="playtime-suggestions" hidden></div>
+            </div>
+            <label class="playtime-select-all">
+                <input type="checkbox" id="playtimeSelectAll" onchange="togglePlaytimeSelectAll()">
+                Выбрать все
+            </label>
+            <div class="playtime-bulk-minutes">
+                <input type="number" id="playtimeBulkMinutes" min="1" step="1" placeholder="Минут">
+                <button type="button" class="playtime-quick-btn" onclick="applyPlaytimeBulkMinutes()">На выбранные</button>
+            </div>
+            <button type="button" class="playtime-unlock-btn" onclick="unlockAllPlaytimeRoles()">
+                <i class="fa-solid fa-unlock"></i> Разблокировать все роли
+            </button>
+            <button type="button" class="playtime-submit-btn" onclick="submitPlaytimeBulkTransfer()">
+                <i class="fa-solid fa-right-left"></i> Перенести выбранные
+            </button>
+        </div>
+
+        <div id="playtimeRolesTable" class="playtime-roles-table-wrap"></div>
+        <div id="playtimeTransferResult" class="result"></div>
     </div>
 
     <div id="adminAdminsTab" class="admin-tab-content" style="display:none;">

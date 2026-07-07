@@ -3512,6 +3512,95 @@ label.chat-tool-btn input[type="file"] {
     color: var(--muted);
     margin-bottom: 6px;
 }
+.playtime-search-wrap {
+    position: relative;
+    flex: 1;
+    min-width: 180px;
+}
+.playtime-role-search-wrap {
+    flex: 1;
+    min-width: 200px;
+}
+.playtime-suggestions {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    z-index: 40;
+    max-height: 280px;
+    overflow-y: auto;
+    background: var(--panel);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+.playtime-suggestion-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 8px 10px;
+    text-align: left;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--border);
+    border-radius: 0;
+    box-shadow: none;
+    cursor: pointer;
+    min-height: 0;
+}
+.playtime-suggestion-item:last-child { border-bottom: none; }
+.playtime-suggestion-item:hover,
+.playtime-suggestion-item.active {
+    background: var(--panel-2);
+}
+.playtime-suggestion-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+.playtime-suggestion-text strong {
+    font-size: 0.82rem;
+    color: var(--ink);
+}
+.playtime-suggestion-text small {
+    font-size: 0.72rem;
+    color: var(--muted);
+    word-break: break-word;
+}
+.playtime-suggestion-empty {
+    margin: 0;
+    padding: 10px 12px;
+    font-size: 0.78rem;
+    color: var(--muted);
+}
+.playtime-suggestion-icon-fa {
+    width: 28px;
+    text-align: center;
+    color: var(--muted);
+    flex-shrink: 0;
+}
+.playtime-roles-count {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin: 0 0 8px;
+}
+.playtime-role-label { display: block; font-weight: 600; }
+.playtime-role-id {
+    display: block;
+    font-size: 0.68rem;
+    color: var(--muted);
+    margin-top: 2px;
+}
+.playtime-role-row-highlight {
+    background: color-mix(in srgb, var(--link) 12%, transparent);
+}
+#adminPlaytimeTab.playtime-transfer-section {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+}
 .inventory-section { margin-bottom: 24px; }
 .inventory-section h3 {
     font-size: 0.95rem;

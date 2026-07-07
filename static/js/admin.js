@@ -10,8 +10,9 @@ let gameSelectedPlayer = null;
 function showAdminTab(tab, btn) {
     document.querySelectorAll('.admin-tab-content').forEach(el => el.style.display = 'none');
     const map = {
-        stats: 'adminStatsTab', ratings: 'adminRatingsTab', users: 'adminUsersTab', posts: 'adminPostsTab',
-        appeals: 'adminAppealsTab', game: 'adminGameTab', admins: 'adminAdminsTab'
+        stats: 'adminStatsTab', ratings: 'adminRatingsTab', posts: 'adminPostsTab',
+        appeals: 'adminAppealsTab', game: 'adminGameTab', playtime: 'adminPlaytimeTab',
+        admins: 'adminAdminsTab'
     };
     const target = document.getElementById(map[tab]);
     if (target) target.style.display = 'block';
@@ -19,18 +20,45 @@ function showAdminTab(tab, btn) {
     if (btn) btn.classList.add('active');
     if (tab === 'stats') loadAdminStats();
     if (tab === 'ratings') loadAdminRatingsPanel();
-    if (tab === 'users') loadAdminUsers(false);
     if (tab === 'posts') loadAdminPostsList(false);
     if (tab === 'appeals') loadAdminAppeals(false);
     if (tab === 'game') initGameModerationTab();
+    if (tab === 'playtime' && typeof initPlaytimeTransfer === 'function') initPlaytimeTransfer();
     if (tab === 'admins') loadAdminList();
 }
 
+function canAccessAdminPanel() {
+    return !!(currentUser?.is_admin || currentUser?.is_time_keeper);
+}
+
+function configureAdminTabsForUser() {
+    const isAdmin = !!currentUser?.is_admin;
+    const canPlaytime = canAccessAdminPanel();
+    document.querySelectorAll('.admin-tabs .tab[data-admin-only]').forEach(el => {
+        el.style.display = isAdmin ? '' : 'none';
+    });
+    document.querySelectorAll('.admin-tabs .tab[data-staff-only]').forEach(el => {
+        el.style.display = canPlaytime ? '' : 'none';
+    });
+    const hint = document.querySelector('.admin-panel > .admin-hint');
+    if (hint) {
+        hint.textContent = isAdmin
+            ? 'Управление сайтом — только для администраторов'
+            : 'Перенос времени на роли — для хранителей времени';
+    }
+}
+
 function initAdminPanel() {
-    if (!currentUser?.is_admin) return;
+    if (!canAccessAdminPanel()) return;
     const navBtn = document.getElementById('adminNavBtn');
     if (navBtn) navBtn.style.display = '';
-    loadAdminStats();
+    configureAdminTabsForUser();
+    if (currentUser?.is_admin) {
+        loadAdminStats();
+    } else {
+        const playtimeBtn = document.querySelector('.admin-tabs .tab[data-staff-only]');
+        showAdminTab('playtime', playtimeBtn);
+    }
 }
 
 function debounceAdminUserSearch() {

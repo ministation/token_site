@@ -52,8 +52,8 @@ function canAccessSection(section, opts = {}) {
             return false;
         }
     }
-    if (section === 'admin' && !currentUser?.is_admin) {
-        alert('Доступ только для администраторов');
+    if (section === 'admin' && !currentUser?.is_admin && !currentUser?.is_time_keeper) {
+        alert('Доступ только для администраторов и хранителей времени');
         return false;
     }
     if (section === 'moderator' && !currentUser?.is_moderator) {
@@ -148,7 +148,12 @@ function runSectionInit(section, playerId = null) {
     } else if (section === 'online') {
         if (typeof initStatsSection === 'function') initStatsSection();
     } else if (section === 'admin') {
-        if (typeof loadAdminStats === 'function') loadAdminStats();
+        if (typeof configureAdminTabsForUser === 'function') configureAdminTabsForUser();
+        if (currentUser?.is_admin && typeof loadAdminStats === 'function') loadAdminStats();
+        else if (currentUser?.is_time_keeper && typeof showAdminTab === 'function') {
+            const playtimeBtn = document.querySelector('.admin-tabs .tab[data-staff-only]');
+            showAdminTab('playtime', playtimeBtn);
+        }
     } else if (section === 'moderator') {
         if (typeof loadModeratorAppeals === 'function') loadModeratorAppeals();
     }
