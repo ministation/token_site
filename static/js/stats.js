@@ -101,7 +101,7 @@ async function loadPlaytimeChart() {
                 ],
                 datasets: [{
                     data: [data.newbies || 0, data.regulars || 0, data.veterans || 0],
-                    backgroundColor: [cssVar('--success'), cssVar('--gold'), cssVar('--accent')],
+                    backgroundColor: [cssVar('--success'), cssVar('--gold'), cssVar('--accent-3')],
                     borderColor: cssVar('--panel'),
                     borderWidth: 2
                 }]

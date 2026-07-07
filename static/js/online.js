@@ -443,7 +443,7 @@ function renderChart(labels, avgValues, maxValues, xLabel) {
                 {
                     label: 'Максимум',
                     data: maxValues,
-                    borderColor: cssVar('--accent-2'),
+                    borderColor: cssVar('--accent-3'),
                     backgroundColor: 'rgba(11, 167, 180, 0.08)',
                     tension: 0.35,
                     fill: false,

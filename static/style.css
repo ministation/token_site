@@ -25,10 +25,12 @@
     --muted: #5a6b82;
     --dim: #8b9cb0;
 
-    --accent: #ea7a0c;
-    --accent-deep: #c45f08;
-    --accent-2: #f5c518;
-    --accent-2-deep: #d4a506;
+    --accent: #f0780a;
+    --accent-deep: #d96508;
+    --accent-2: #ffd23f;
+    --accent-2-deep: #e6b800;
+    --accent-3: #9d4edd;
+    --accent-3-deep: #7b2cbf;
     --gold: #f5b800;
     --danger: #d9453a;
     --danger-deep: #b23227;
@@ -37,10 +39,10 @@
     --purple: #7a5cd6;
     --discord: #5865F2;
 
-    --grad-accent: linear-gradient(135deg, #f5c518 0%, #f59e0b 48%, #ea580c 100%);
-    --grad-hero: linear-gradient(135deg, #fde047 0%, #f59e0b 42%, #ea580c 100%);
-    --grad-warm: linear-gradient(90deg, #f5c518 0%, #f59e0b 50%, #ea580c 100%);
-    --accent-glow: rgba(234, 122, 12, 0.18);
+    --grad-accent: linear-gradient(128deg, #ffd23f 0%, #ff9f1a 26%, #ff6b1a 52%, #e8488a 78%, #9d4edd 100%);
+    --grad-hero: linear-gradient(145deg, #fff0b3 0%, #ffc93c 16%, #ff8c1a 38%, #f25c54 62%, #9d4edd 88%, #5a189a 100%);
+    --grad-warm: linear-gradient(92deg, #ffd23f 0%, #ff8c1a 38%, #e8488a 72%, #9d4edd 100%);
+    --accent-glow: rgba(240, 120, 10, 0.16);
 
     --shadow-hard: 0 4px 0 rgba(23, 34, 47, 0.10), 0 10px 24px rgba(23, 34, 47, 0.08);
     --shadow-btn: 0 3px 0 rgba(23, 34, 47, 0.14);
@@ -66,16 +68,18 @@ html[data-theme="dark"] {
     --accent-deep: #e68900;
     --accent-2: #ffd54f;
     --accent-2-deep: #e6b800;
+    --accent-3: #c77dff;
+    --accent-3-deep: #9d4edd;
     --gold: #ffca28;
     --danger: #ef6a5e;
     --danger-deep: #cf4a3e;
     --success: #38c273;
     --success-deep: #279a58;
 
-    --grad-accent: linear-gradient(135deg, #ffd54f 0%, #ff9800 48%, #ff6d00 100%);
-    --grad-hero: linear-gradient(135deg, #78350f 0%, #d97706 42%, #ea580c 100%);
-    --grad-warm: linear-gradient(90deg, #ffd54f 0%, #ff9800 50%, #ff6d00 100%);
-    --accent-glow: rgba(255, 176, 32, 0.22);
+    --grad-accent: linear-gradient(128deg, #ffe066 0%, #ffb020 24%, #ff7043 48%, #f72585 72%, #b5179e 100%);
+    --grad-hero: linear-gradient(150deg, #3d1c02 0%, #b45309 22%, #ea580c 44%, #be185d 68%, #7e22ce 100%);
+    --grad-warm: linear-gradient(92deg, #ffd54f 0%, #ff9800 34%, #f72585 68%, #9d4edd 100%);
+    --accent-glow: rgba(255, 176, 32, 0.20);
 
     --shadow-hard: 0 4px 0 rgba(0, 0, 0, 0.35), 0 12px 28px rgba(0, 0, 0, 0.35);
     --shadow-btn: 0 3px 0 rgba(0, 0, 0, 0.4);
@@ -107,15 +111,16 @@ body::before {
     z-index: -1;
     pointer-events: none;
     background:
-        radial-gradient(720px 420px at 12% -4%, rgba(245, 197, 24, 0.16), transparent 65%),
-        radial-gradient(640px 420px at 88% 8%, rgba(234, 122, 12, 0.14), transparent 65%),
-        radial-gradient(700px 520px at 50% 108%, rgba(245, 158, 11, 0.12), transparent 65%);
+        radial-gradient(720px 420px at 10% -4%, rgba(255, 210, 63, 0.14), transparent 65%),
+        radial-gradient(640px 420px at 92% 6%, rgba(240, 120, 10, 0.12), transparent 65%),
+        radial-gradient(680px 480px at 50% 108%, rgba(157, 78, 221, 0.10), transparent 65%);
 }
 
 html[data-theme="dark"] body::before {
     background:
-        radial-gradient(680px 420px at 15% -8%, rgba(255, 176, 32, 0.14), transparent 65%),
-        radial-gradient(560px 380px at 90% 5%, rgba(255, 109, 0, 0.10), transparent 65%),
+        radial-gradient(680px 420px at 14% -8%, rgba(255, 176, 32, 0.12), transparent 65%),
+        radial-gradient(560px 380px at 88% 4%, rgba(255, 112, 67, 0.10), transparent 65%),
+        radial-gradient(720px 520px at 72% 108%, rgba(199, 125, 255, 0.14), transparent 65%),
         radial-gradient(1.5px 1.5px at 12% 22%, rgba(255,255,255,0.9), transparent 100%),
         radial-gradient(1px 1px at 28% 64%, rgba(255,255,255,0.7), transparent 100%),
         radial-gradient(1.5px 1.5px at 41% 12%, rgba(255,255,255,0.8), transparent 100%),
@@ -125,8 +130,8 @@ html[data-theme="dark"] body::before {
         radial-gradient(1.5px 1.5px at 90% 58%, rgba(255,255,255,0.85), transparent 100%),
         radial-gradient(1px 1px at 8% 84%, rgba(255,255,255,0.6), transparent 100%),
         radial-gradient(1px 1px at 47% 90%, rgba(255,255,255,0.65), transparent 100%),
-        radial-gradient(900px 600px at 80% -10%, rgba(47, 127, 224, 0.16), transparent 65%),
-        radial-gradient(800px 560px at 6% 110%, rgba(23, 172, 159, 0.12), transparent 65%);
+        radial-gradient(900px 600px at 80% -10%, rgba(157, 78, 221, 0.12), transparent 65%),
+        radial-gradient(800px 560px at 6% 110%, rgba(255, 176, 32, 0.08), transparent 65%);
 }
 
 img { max-width: 100%; }
@@ -1124,7 +1129,7 @@ html[data-theme="dark"] .status-meta {
 }
 
 .online-readout-chip.avg b { color: var(--accent); }
-.online-readout-chip.max b { color: var(--accent-2); }
+.online-readout-chip.max b { color: var(--accent-3); }
 
 .online-chart-scrubber-wrap {
     margin-top: 12px;
@@ -1427,9 +1432,9 @@ html[data-theme="dark"] .status-meta {
 }
 
 .forum-badge-discussion {
-    background: color-mix(in srgb, var(--accent-2) 12%, transparent);
-    color: var(--accent-2-deep);
-    border: 1px solid color-mix(in srgb, var(--accent-2) 25%, transparent);
+    background: color-mix(in srgb, var(--accent-3) 12%, transparent);
+    color: var(--accent-3-deep);
+    border: 1px solid color-mix(in srgb, var(--accent-3) 28%, transparent);
 }
 
 .forum-badge-topic {
