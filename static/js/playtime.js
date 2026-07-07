@@ -24,9 +24,11 @@ function playtimeMatchRole(role, query) {
 function playtimeRoleRow(role) {
     const checked = role._selected ? ' checked' : '';
     const minutes = role._transferMinutes ?? '';
-    const unlocked = role.unlocked
+    const unlocked = role.unlocked === true
         ? '<span class="playtime-unlocked-badge">открыта</span>'
-        : `<span class="playtime-deficit" title="${escapeHtml(role.unlock_hint || '')}">−${role.deficit_minutes} м</span>`;
+        : role.unlocked === false
+            ? `<span class="playtime-deficit" title="${escapeHtml(role.unlock_hint || '')}">−${role.deficit_minutes} м</span>`
+            : '<span class="playtime-deficit">—</span>';
     const trackerAttr = escapeHtml(role.tracker).replace(/'/g, "\\'");
     return `
         <tr class="playtime-role-row${role._hidden ? ' hidden' : ''}" data-tracker="${escapeHtml(role.tracker)}" id="playtime-row-${escapeHtml(role.role_id)}">
@@ -53,10 +55,28 @@ function playtimeRoleRow(role) {
     `;
 }
 
+function buildCatalogOverview(catalog) {
+    return {
+        roles: catalog.map(r => ({
+            ...r,
+            tracker: r.id || r.tracker,
+            minutes: 0,
+            time_text: '—',
+            unlocked: null,
+            deficit_minutes: 0,
+            unlock_hint: '',
+            _selected: false,
+            _transferMinutes: '',
+            _hidden: false,
+        })),
+        sources: [],
+    };
+}
+
 function renderPlaytimeRolesTable() {
     const container = document.getElementById('playtimeRolesTable');
     if (!container || !playtimeOverview?.roles?.length) {
-        if (container) container.innerHTML = '';
+        if (container) container.innerHTML = '<p class="empty-state">Загрузка списка ролей...</p>';
         return;
     }
 
@@ -73,23 +93,26 @@ function renderPlaytimeRolesTable() {
         selectAll.checked = visible.length > 0 && totalSelected === visible.length;
     }
 
+    const playerLoaded = playtimeOverview.player_loaded;
     container.innerHTML = `
-        <p class="playtime-roles-count">Ролей: ${playtimeOverview.roles.length}${q ? ` · показано ${visible.length}` : ''}</p>
-        <table class="playtime-roles-table">
-            <thead>
-                <tr>
-                    <th></th>
-                    <th></th>
-                    <th>Роль</th>
-                    <th>Сейчас</th>
-                    <th>Статус</th>
-                    <th>Перенести (мин)</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${playtimeOverview.roles.map(playtimeRoleRow).join('')}
-            </tbody>
-        </table>
+        <p class="playtime-roles-count">Ролей: ${playtimeOverview.roles.length}${q ? ` · показано ${visible.length}` : ''}${playerLoaded ? '' : ' · укажите игрока и нажмите «Загрузить»'}</p>
+        <div class="playtime-roles-table-scroll">
+            <table class="playtime-roles-table">
+                <thead>
+                    <tr>
+                        <th></th>
+                        <th></th>
+                        <th>Роль</th>
+                        <th>Сейчас</th>
+                        <th>Статус</th>
+                        <th>Перенести (мин)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${playtimeOverview.roles.map(playtimeRoleRow).join('')}
+                </tbody>
+            </table>
+        </div>
         <p class="playtime-unlock-hint">Требования из билда <a href="https://github.com/ministation/mini-station-goob" target="_blank" rel="noopener">mini-station-goob</a>. Наведите на «−N м» для условия.</p>
     `;
 }
@@ -390,6 +413,13 @@ async function ensurePlaytimeRoleCatalog() {
 async function initPlaytimeTransfer() {
     if (!canManagePlaytime()) return;
     await ensurePlaytimeRoleCatalog();
+    const toolbar = document.getElementById('playtimeToolbar');
+    if (toolbar) toolbar.hidden = false;
+    if (!playtimeOverview && playtimeRoleCatalog.length) {
+        playtimeOverview = buildCatalogOverview(playtimeRoleCatalog);
+        playtimeOverview.player_loaded = false;
+        renderPlaytimeRolesTable();
+    }
 }
 
 async function loadPlaytimeOverview() {
@@ -410,10 +440,17 @@ async function loadPlaytimeOverview() {
 
     try {
         const data = await apiCall('GET', `/api/playtime/overview?player_nick=${encodeURIComponent(nick)}`);
+        const prevSelected = new Map(
+            (playtimeOverview?.roles || [])
+                .filter(r => r._selected || r._transferMinutes)
+                .map(r => [r.tracker, { selected: r._selected, minutes: r._transferMinutes }])
+        );
         playtimeOverview = data;
+        playtimeOverview.player_loaded = true;
         for (const role of playtimeOverview.roles) {
-            role._selected = false;
-            role._transferMinutes = '';
+            const prev = prevSelected.get(role.tracker);
+            role._selected = prev?.selected || false;
+            role._transferMinutes = prev?.minutes || '';
             role._hidden = false;
         }
 

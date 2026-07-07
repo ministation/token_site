@@ -3433,13 +3433,26 @@ label.chat-tool-btn input[type="file"] {
     margin-bottom: 0;
 }
 .playtime-roles-table-wrap {
-    overflow-x: auto;
     margin-bottom: 8px;
+}
+.playtime-roles-table-scroll {
+    max-height: min(68vh, 720px);
+    overflow: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--panel);
 }
 .playtime-roles-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 0.82rem;
+}
+.playtime-roles-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--panel);
+    box-shadow: 0 1px 0 var(--border);
 }
 .playtime-roles-table th,
 .playtime-roles-table td {
