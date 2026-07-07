@@ -1,5 +1,5 @@
 import database_social as social_db
-from app.services.bank import get_total_stats, get_bank_stats
+from app.services.bank import get_total_stats
 
 
 async def get_site_statistics() -> dict:
@@ -7,15 +7,12 @@ async def get_site_statistics() -> dict:
     visits = social_db.get_visit_stats()
     try:
         game_stats = await get_total_stats()
-        bank_stats = await get_bank_stats()
     except Exception:
         game_stats = {}
-        bank_stats = {}
     return {
         "social": social,
         "visits": visits,
         "game": game_stats,
-        "bank": bank_stats,
     }
 
 

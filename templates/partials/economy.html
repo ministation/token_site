@@ -1,6 +1,5 @@
 <div class="economy-tabs">
     <button class="tab active" onclick="showEconomyTab('wallet', this)"><i class="fa-solid fa-wallet"></i> Кошелёк</button>
-    <button class="tab" onclick="showEconomyTab('bank', this)"><i class="fa-solid fa-building-columns"></i> Банк</button>
     <button class="tab" onclick="showEconomyTab('lottery', this)"><i class="fa-solid fa-dice"></i> Лотерея</button>
 </div>
 
@@ -37,57 +36,6 @@
         <div class="card">
             <h2><i class="fa-solid fa-chart-bar"></i> Статистика</h2>
             <div id="statsResult"></div>
-        </div>
-    </div>
-</div>
-
-<!-- Банк -->
-<div id="economyBank" class="economy-tab-content" style="display:none;">
-    <div class="tabs">
-        <button class="tab active" onclick="showBankSubTab('deposit', this)">Вклады</button>
-        <button class="tab" onclick="showBankSubTab('withdraw', this)">Снять вклад</button>
-        <button class="tab" onclick="showBankSubTab('loan', this)">Займы</button>
-        <button class="tab" onclick="showBankSubTab('repay', this)">Погасить</button>
-    </div>
-    <div id="depositTab" class="bank-tab">
-        <div class="card">
-            <h2>Создать вклад</h2>
-            <input type="number" id="depositAmount" placeholder="Сумма (мин. 10)">
-            <div class="form-actions">
-                <button onclick="createDeposit()">Создать</button>
-            </div>
-            <div id="depositResult" class="result"></div>
-        </div>
-    </div>
-    <div id="withdrawTab" class="bank-tab" style="display:none;">
-        <div class="card">
-            <h2>Снять вклад</h2>
-            <select id="withdrawSelect"></select>
-            <div class="form-actions">
-                <button onclick="withdrawDeposit()">Снять</button>
-            </div>
-            <div id="withdrawResult" class="result"></div>
-        </div>
-    </div>
-    <div id="loanTab" class="bank-tab" style="display:none;">
-        <div class="card">
-            <h2>Взять заём</h2>
-            <input type="number" id="loanAmount" placeholder="Сумма">
-            <div class="form-actions">
-                <button onclick="createLoan()">Получить</button>
-            </div>
-            <div id="loanResult" class="result"></div>
-        </div>
-    </div>
-    <div id="repayTab" class="bank-tab" style="display:none;">
-        <div class="card">
-            <h2>Погасить заём</h2>
-            <select id="repaySelect"></select>
-            <input type="number" id="repayAmount" placeholder="Сумма (необязательно)">
-            <div class="form-actions">
-                <button onclick="repayLoan()">Погасить</button>
-            </div>
-            <div id="repayResult" class="result"></div>
         </div>
     </div>
 </div>

@@ -72,6 +72,10 @@ async def startup():
     for name in TIME_KEEPER_USERNAMES:
         social_db.seed_time_keeper_by_username(name)
     await get_pg_pool()
+    from app.services.bank import retire_deposits_and_loans
+    closed = await retire_deposits_and_loans()
+    if closed:
+        print(f"✅ Закрыто активных вкладов: {closed}")
     from app.services.game_staff import sync_all_game_moderators_on_site
     from app.services.discord_badges import sync_all_member_badges
     synced = await sync_all_game_moderators_on_site()

@@ -1,14 +1,6 @@
-import datetime
 import random
 from typing import Optional
 from app.db.database import get_pg_pool
-from app.config import (
-    BANK_DEPOSIT_MIN, BANK_DEPOSIT_RATE, BANK_DEPOSIT_DAYS,
-    BANK_LOAN_MAX, BANK_LOAN_RATE, BANK_LOAN_DAYS,
-    LOTTERY_COST, MIN_TRANSFER
-)
-from app.core.state import transfer_cooldowns
-from fastapi import HTTPException
 
 
 async def find_player_by_nick(nick: str):
@@ -145,146 +137,53 @@ async def get_total_stats():
         }
 
 
-async def get_bank_stats():
+async def retire_deposits_and_loans():
+    """Закрывает активные вклады и займы при отключении банковских механик."""
     pg = await get_pg_pool()
+    closed_deposits = 0
     async with pg.acquire() as conn:
-        total_deposits = await conn.fetchval("SELECT COALESCE(SUM(amount),0) FROM deposits WHERE status='active'")
-        total_loans = await conn.fetchval("SELECT COALESCE(SUM(remaining),0) FROM loans WHERE status='active'")
-        return {
-            'total_deposits': total_deposits or 0,
-            'total_loans': total_loans or 0,
-            'liquidity': (total_deposits or 0) - (total_loans or 0)
-        }
-
-
-async def get_active_deposits(user_uuid: str):
-    pg = await get_pg_pool()
-    async with pg.acquire() as conn:
-        return await conn.fetch(
-            "SELECT deposit_id, amount, bonus, mature_at FROM deposits WHERE user_uuid = $1 AND status = 'active'",
-            user_uuid
+        deposits = await conn.fetch(
+            "SELECT deposit_id, user_uuid, amount FROM deposits WHERE status = 'active'"
         )
-
-
-async def get_active_loans(user_uuid: str):
-    pg = await get_pg_pool()
-    async with pg.acquire() as conn:
-        return await conn.fetch(
-            "SELECT loan_id, amount, remaining, interest, due_at FROM loans WHERE user_uuid = $1 AND status = 'active'",
-            user_uuid
+        for d in deposits:
+            async with conn.transaction():
+                existing = await conn.fetchrow(
+                    "SELECT player_antag_token_id, amount FROM player_antag_token "
+                    "WHERE player_id::text = $1 AND token_id = 'balance'",
+                    d['user_uuid'],
+                )
+                if existing:
+                    await conn.execute(
+                        "UPDATE player_antag_token SET amount = $1 WHERE player_antag_token_id = $2",
+                        existing['amount'] + d['amount'], existing['player_antag_token_id'],
+                    )
+                else:
+                    await conn.execute(
+                        "INSERT INTO player_antag_token (player_id, token_id, amount) VALUES ($1::uuid, 'balance', $2)",
+                        d['user_uuid'], d['amount'],
+                    )
+                await conn.execute(
+                    "UPDATE deposits SET status = 'cancelled' WHERE deposit_id = $1",
+                    d['deposit_id'],
+                )
+                closed_deposits += 1
+        await conn.execute(
+            "UPDATE loans SET status = 'cancelled', remaining = 0 WHERE status = 'active'"
         )
-
-
-async def create_deposit(user_uuid: str, amount: int):
-    mature_at = datetime.datetime.now() + datetime.timedelta(days=BANK_DEPOSIT_DAYS)
-    bonus = amount * BANK_DEPOSIT_RATE // 100
-    pg = await get_pg_pool()
-    async with pg.acquire() as conn:
-        async with conn.transaction():
-            existing = await conn.fetchrow(
-                "SELECT deposit_id FROM deposits WHERE user_uuid = $1 AND status = 'active'", user_uuid
-            )
-            if existing:
-                return None, f"Уже есть активный депозит (ID: {existing['deposit_id']})"
-            new_balance, err = await remove_tokens(user_uuid, amount)
-            if err:
-                return None, err
-            await conn.execute(
-                "INSERT INTO deposits (user_uuid, amount, bonus, mature_at, status) VALUES ($1, $2, $3, $4, 'active')",
-                user_uuid, amount, bonus, mature_at
-            )
-            deposit_id = await conn.fetchval("SELECT currval(pg_get_serial_sequence('deposits','deposit_id'))")
-            return deposit_id, None
-
-
-async def create_loan(user_uuid: str, amount: int):
-    balance = await get_balance(user_uuid)
-    if balance < 10:
-        max_loan = 20
-    elif balance >= 30:
-        max_loan = 50
-    else:
-        max_loan = 35
-    if amount > max_loan:
-        return None, f"Максимальная сумма займа: {max_loan} монет"
-    bank = await get_bank_stats()
-    if amount > bank['liquidity']:
-        return None, f"Недостаточно средств в банке. Доступно: {bank['liquidity']} монет"
-    due_at = datetime.datetime.now() + datetime.timedelta(days=BANK_LOAN_DAYS)
-    interest = amount * BANK_LOAN_RATE // 100
-    pg = await get_pg_pool()
-    async with pg.acquire() as conn:
-        async with conn.transaction():
-            existing = await conn.fetchrow(
-                "SELECT loan_id FROM loans WHERE user_uuid = $1 AND status = 'active'", user_uuid
-            )
-            if existing:
-                return None, f"Уже есть активный заём (ID: {existing['loan_id']})"
-            await conn.execute(
-                "INSERT INTO loans (user_uuid, amount, remaining, interest, due_at, status) VALUES ($1, $2, $3, $4, $5, 'active')",
-                user_uuid, amount, amount + interest, interest, due_at
-            )
-            loan_id = await conn.fetchval("SELECT currval(pg_get_serial_sequence('loans','loan_id'))")
-            await add_tokens(user_uuid, amount)
-            return loan_id, None
-
-
-async def withdraw_deposit(user_uuid: str, deposit_id: int):
-    pg = await get_pg_pool()
-    async with pg.acquire() as conn:
-        async with conn.transaction():
-            deposit = await conn.fetchrow(
-                "SELECT amount, bonus, mature_at FROM deposits WHERE deposit_id = $1 AND user_uuid = $2 AND status = 'active'",
-                deposit_id, user_uuid
-            )
-            if not deposit:
-                return False, "Вклад не найден"
-            if deposit['mature_at'] > datetime.datetime.now():
-                return False, f"Вклад созреет {deposit['mature_at'].strftime('%d.%m.%Y')}"
-            total = deposit['amount'] + deposit['bonus']
-            await add_tokens(user_uuid, total)
-            await conn.execute("UPDATE deposits SET status = 'withdrawn' WHERE deposit_id = $1", deposit_id)
-            return True, total
-
-
-async def repay_loan(user_uuid: str, loan_id: int, amount: Optional[int] = None):
-    pg = await get_pg_pool()
-    async with pg.acquire() as conn:
-        async with conn.transaction():
-            loan = await conn.fetchrow(
-                "SELECT amount, remaining, interest FROM loans WHERE loan_id = $1 AND user_uuid = $2 AND status = 'active'",
-                loan_id, user_uuid
-            )
-            if not loan:
-                return False, "Заём не найден"
-            total = loan['amount'] + loan['interest']
-            repay = total if amount is None else amount
-            if repay <= 0 or repay > total:
-                return False, f"Сумма должна быть от 1 до {total}"
-            balance = await get_balance(user_uuid)
-            if balance < repay:
-                return False, f"Недостаточно монет. Нужно {repay}, у вас {balance}"
-            await remove_tokens(user_uuid, repay)
-            if repay >= total:
-                await conn.execute("UPDATE loans SET status = 'repaid', remaining = 0 WHERE loan_id = $1", loan_id)
-                return True, f"Заём погашен. Возвращено {repay} монет"
-            else:
-                new_remaining = total - repay
-                await conn.execute("UPDATE loans SET remaining = $1 WHERE loan_id = $2", new_remaining, loan_id)
-                return True, f"Погашено {repay} монет. Остаток: {new_remaining}"
+    return closed_deposits
 
 
 def get_random_lottery_prize():
     roll = random.randint(1, 100)
-    if roll <= 60:
+    if roll <= 70:
         return random.randint(1, 3)
-    if roll <= 80:
-        return random.randint(4, 8)
-    if roll <= 92:
-        return random.randint(9, 10)
+    if roll <= 88:
+        return random.randint(4, 6)
+    if roll <= 96:
+        return random.randint(7, 9)
     if roll <= 99:
-        return random.randint(11, 15)
-    return random.randint(16, 25)
+        return random.randint(10, 12)
+    return random.randint(13, 18)
 
 async def search_all_players(query: str, limit: int = 50):
     pg = await get_pg_pool()

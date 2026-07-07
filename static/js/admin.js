@@ -187,7 +187,6 @@ async function loadAdminStats() {
         const s = data.social || {};
         const v = data.visits || {};
         const g = data.game || {};
-        const b = data.bank || {};
         const dailyRows = (v.daily || []).map(d => `
             <tr>
                 <td>${escapeHtml(d.day || '')}</td>
@@ -222,8 +221,6 @@ async function loadAdminStats() {
                 <div class="stat-item"><div class="stat-value">${s.admins ?? 0}</div><div class="stat-label">Админов</div></div>
                 <div class="stat-item"><div class="stat-value">${g.total_players ?? 0}</div><div class="stat-label">Игроков (БД)</div></div>
                 <div class="stat-item"><div class="stat-value">${g.total_tokens ?? 0}</div><div class="stat-label">Монет в обороте</div></div>
-                <div class="stat-item"><div class="stat-value">${b.total_deposits ?? 0}</div><div class="stat-label">Во вкладах</div></div>
-                <div class="stat-item"><div class="stat-value">${b.total_loans ?? 0}</div><div class="stat-label">В займах</div></div>
             </div>`;
     } catch (e) {
         container.innerHTML = `<p class="error">${escapeHtml(e.message)}</p>`;

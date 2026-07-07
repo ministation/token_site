@@ -1,17 +1,13 @@
 import datetime
 from fastapi import APIRouter, Request, Depends, HTTPException, Query
 from app.dependencies import get_current_user, get_current_player, get_current_admin
-from app.models.bank import (
-    TransferRequest, DepositRequest, LoanRequest,
-    WithdrawRequest, RepayRequest, AdminGiveRequest
-)
+from app.models.bank import TransferRequest, AdminGiveRequest
 from app.services.bank import (
     find_player_by_nick, get_balance, transfer_tokens, remove_tokens, add_tokens,
-    get_random_lottery_prize, get_active_deposits, create_deposit,
-    withdraw_deposit, get_active_loans, create_loan, repay_loan,
-    get_top_players, get_total_stats, get_bank_stats, search_all_players, get_playtime_stats
+    get_random_lottery_prize,
+    get_top_players, get_total_stats, search_all_players, get_playtime_stats
 )
-from app.config import LOTTERY_COST, MIN_TRANSFER, TRANSFER_COOLDOWN, BANK_DEPOSIT_MIN
+from app.config import LOTTERY_COST, MIN_TRANSFER, TRANSFER_COOLDOWN
 from app.core.state import transfer_cooldowns
 from app.db.database import get_pg_pool
 
@@ -86,97 +82,17 @@ async def api_lottery(request: Request):
     return {"success": True, "prize": prize, "new_balance": final_balance}
 
 
-@router.get("/deposits")
-async def api_my_deposits(request: Request):
-    player = await get_current_player(request)
-    deposits = await get_active_deposits(player['user_uuid'])
-    return [
-        {
-            'deposit_id': d['deposit_id'],
-            'amount': d['amount'],
-            'bonus': d['bonus'],
-            'total': d['amount'] + d['bonus'],
-            'mature_at': d['mature_at'].isoformat(),
-            'mature_ts': int(d['mature_at'].timestamp())
-        }
-        for d in deposits
-    ]
-
-
-@router.post("/deposit")
-async def api_deposit(request: Request, req: DepositRequest):
-    player = await get_current_player(request)
-    if req.amount < BANK_DEPOSIT_MIN:
-        raise HTTPException(status_code=400, detail=f"Минимальная сумма: {BANK_DEPOSIT_MIN} монет")
-    balance = await get_balance(player['user_uuid'])
-    if balance < req.amount:
-        raise HTTPException(status_code=400, detail=f"Недостаточно монет. У вас {balance}")
-    deposit_id, err = await create_deposit(player['user_uuid'], req.amount)
-    if err:
-        raise HTTPException(status_code=400, detail=err)
-    return {"success": True, "deposit_id": deposit_id}
-
-
-@router.post("/withdraw")
-async def api_withdraw(request: Request, req: WithdrawRequest):
-    player = await get_current_player(request)
-    success, result = await withdraw_deposit(player['user_uuid'], req.deposit_id)
-    if not success:
-        raise HTTPException(status_code=400, detail=result)
-    return {"success": True, "amount": result}
-
-
-@router.get("/loans")
-async def api_my_loans(request: Request):
-    player = await get_current_player(request)
-    loans = await get_active_loans(player['user_uuid'])
-    return [
-        {
-            'loan_id': l['loan_id'],
-            'amount': l['amount'],
-            'remaining': l['remaining'],
-            'interest': l['interest'],
-            'total': l['amount'] + l['interest'],
-            'due_at': l['due_at'].isoformat(),
-            'due_ts': int(l['due_at'].timestamp())
-        }
-        for l in loans
-    ]
-
-
-@router.post("/loan")
-async def api_loan(request: Request, req: LoanRequest):
-    player = await get_current_player(request)
-    if req.amount <= 0:
-        raise HTTPException(status_code=400, detail="Сумма должна быть положительной")
-    loan_id, err = await create_loan(player['user_uuid'], req.amount)
-    if err:
-        raise HTTPException(status_code=400, detail=err)
-    return {"success": True, "loan_id": loan_id}
-
-
-@router.post("/repay")
-async def api_repay(request: Request, req: RepayRequest):
-    player = await get_current_player(request)
-    success, msg = await repay_loan(player['user_uuid'], req.loan_id, req.amount)
-    if not success:
-        raise HTTPException(status_code=400, detail=msg)
-    return {"success": True, "message": msg}
-
-
 @router.get("/top")
 async def api_top():
     players = await get_top_players(30)
     stats = await get_total_stats()
-    bank = await get_bank_stats()
-    return {"players": players, "stats": stats, "bank": bank}
+    return {"players": players, "stats": stats}
 
 
 @router.get("/stats")
 async def api_stats():
     stats = await get_total_stats()
-    bank = await get_bank_stats()
-    return {"stats": stats, "bank": bank}
+    return {"stats": stats}
 
 
 @router.get("/search")

@@ -46,13 +46,7 @@ TIME_KEEPER_USERNAMES = [
     if x.strip()
 ]
 
-# Банк
-BANK_DEPOSIT_MIN = int(os.getenv("BANK_DEPOSIT_MIN", "10"))
-BANK_DEPOSIT_RATE = int(os.getenv("BANK_DEPOSIT_RATE", "20"))
-BANK_DEPOSIT_DAYS = int(os.getenv("BANK_DEPOSIT_DAYS", "7"))
-BANK_LOAN_MAX = int(os.getenv("BANK_LOAN_MAX", "50"))
-BANK_LOAN_RATE = int(os.getenv("BANK_LOAN_RATE", "30"))
-BANK_LOAN_DAYS = int(os.getenv("BANK_LOAN_DAYS", "7"))
+# Банк (вклады и займы отключены)
 
 # Лотерея и переводы
 LOTTERY_COST = int(os.getenv("LOTTERY_COST", "5"))
