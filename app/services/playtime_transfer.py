@@ -7,7 +7,7 @@ from datetime import timedelta
 from app.db.database import get_pg_pool
 from app.services.bans import translate_role, list_job_roles
 from app.services.job_icons import role_id_from_tracker, tracker_from_role_id, job_icon_url
-from app.services.job_unlock import evaluate_role_unlock, plan_unlock_all_transfers, get_unlock_metadata
+from app.services.job_unlock import evaluate_role_unlock, plan_unlock_all_transfers, get_unlock_metadata, enrich_and_sort_roles
 
 
 def _parse_user_uuid(value: str) -> uuid.UUID | None:
@@ -117,6 +117,7 @@ async def get_playtime_overview(user_uuid: str) -> dict:
             "unlock_hint": unlock_info["unlock_hint"],
             "unlock_labels": unlock_info["unlock_labels"],
         })
+    roles = enrich_and_sort_roles(roles)
     sources = [
         _job_row(tracker, minutes)
         for tracker, minutes in minutes_map.items()

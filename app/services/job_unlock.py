@@ -7,6 +7,21 @@ from pathlib import Path
 from app.services.job_icons import role_id_from_tracker, tracker_from_role_id
 
 _DATA_PATH = Path(__file__).resolve().parents[2] / "data" / "mini_station_job_unlock.json"
+_DEPT_YAML_PATH = Path(__file__).resolve().parents[2] / "data" / "departments.yml"
+
+DEPARTMENT_LABELS = {
+    "Cargo": "Карго",
+    "Civilian": "Гражданские",
+    "CentralCommand": "ЦентКом",
+    "Command": "Командование",
+    "Engineering": "Инженерия",
+    "Medical": "Медицина",
+    "Security": "Служба безопасности",
+    "Science": "Наука",
+    "Silicon": "Силикон",
+    "Specific": "Особые",
+    "_other": "Прочие",
+}
 
 TIME_REQ_TYPES = {
     "DepartmentTimeRequirement",
@@ -16,6 +31,98 @@ TIME_REQ_TYPES = {
 }
 
 _cache: dict | None = None
+_dept_config_cache: tuple[list[str], dict[str, str], dict[str, list[str]]] | None = None
+
+
+def _parse_departments_yaml(text: str) -> tuple[list[str], dict[str, str], dict[str, list[str]]]:
+    import re
+
+    dept_order: list[str] = []
+    role_to_dept: dict[str, str] = {}
+    dept_roles: dict[str, list[str]] = {}
+    current_dept: str | None = None
+    in_roles = False
+
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        if stripped.startswith("- type: department"):
+            current_dept = None
+            in_roles = False
+            continue
+        if current_dept is None and stripped.startswith("id:"):
+            current_dept = stripped.split(":", 1)[1].strip()
+            dept_order.append(current_dept)
+            dept_roles.setdefault(current_dept, [])
+            in_roles = False
+            continue
+        if stripped == "roles:":
+            in_roles = True
+            continue
+        if in_roles and stripped.startswith("- "):
+            role_id = stripped[2:].strip()
+            dept_roles[current_dept or ""].append(role_id)
+            if role_id not in role_to_dept and current_dept:
+                role_to_dept[role_id] = current_dept
+            continue
+        if in_roles and stripped and not stripped.startswith("-"):
+            in_roles = False
+
+    return dept_order, role_to_dept, dept_roles
+
+
+def get_department_config() -> tuple[list[str], dict[str, str], dict[str, list[str]]]:
+    global _dept_config_cache
+    if _dept_config_cache is not None:
+        return _dept_config_cache
+
+    if _DEPT_YAML_PATH.is_file():
+        dept_order, role_to_dept, dept_roles = _parse_departments_yaml(
+            _DEPT_YAML_PATH.read_text(encoding="utf-8")
+        )
+    else:
+        dept_order, role_to_dept, dept_roles = [], {}, {}
+
+    data = _load_data()
+    for role_id, dept in data.get("role_to_department", {}).items():
+        role_to_dept.setdefault(role_id, dept)
+        dept_roles.setdefault(dept, [])
+        if dept not in dept_order:
+            dept_order.append(dept)
+
+    _dept_config_cache = (dept_order, role_to_dept, dept_roles)
+    return _dept_config_cache
+
+
+def department_label(dept_id: str) -> str:
+    return DEPARTMENT_LABELS.get(dept_id, dept_id.replace("_", " "))
+
+
+def enrich_and_sort_roles(roles: list[dict]) -> list[dict]:
+    dept_order, role_to_dept, dept_roles = get_department_config()
+    dept_index = {dept: idx for idx, dept in enumerate(dept_order)}
+
+    enriched: list[dict] = []
+    for role in roles:
+        role_id = role.get("role_id", "")
+        dept = role.get("department") or role_to_dept.get(role_id, "_other")
+        enriched.append({
+            **role,
+            "department": dept,
+            "department_label": department_label(dept),
+        })
+
+    def sort_key(role: dict) -> tuple:
+        dept = role["department"]
+        role_id = role.get("role_id", "")
+        dept_idx = dept_index.get(dept, len(dept_order) + (0 if dept == "_other" else 1))
+        order_list = dept_roles.get(dept, [])
+        role_idx = order_list.index(role_id) if role_id in order_list else 10_000
+        return (dept_idx, role_idx, role.get("label", role_id))
+
+    enriched.sort(key=sort_key)
+    return enriched
 
 
 def _load_data() -> dict:

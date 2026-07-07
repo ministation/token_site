@@ -3467,6 +3467,21 @@ label.chat-tool-btn input[type="file"] {
     font-size: 0.75rem;
 }
 .playtime-role-row.hidden { display: none; }
+.playtime-dept-header td {
+    padding: 10px 12px 6px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--link);
+    background: color-mix(in srgb, var(--link) 8%, var(--panel));
+    border-bottom: 1px solid var(--border);
+}
+.playtime-empty-filter {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.82rem;
+}
 .playtime-col-check { width: 36px; }
 .playtime-col-icon { width: 48px; }
 .playtime-col-current { white-space: nowrap; color: var(--link); font-weight: 600; }

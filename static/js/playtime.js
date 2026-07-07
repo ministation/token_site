@@ -18,6 +18,8 @@ function playtimeMatchRole(role, query) {
         || (role.role_id || '').toLowerCase().includes(q)
         || trackerName.includes(q)
         || (role.unlock_hint || '').toLowerCase().includes(q)
+        || (role.department_label || '').toLowerCase().includes(q)
+        || (role.department || '').toLowerCase().includes(q)
     );
 }
 
@@ -55,6 +57,26 @@ function playtimeRoleRow(role) {
     `;
 }
 
+function buildPlaytimeTableBody() {
+    let lastDept = null;
+    let html = '';
+    for (const role of playtimeOverview.roles) {
+        if (role._hidden) continue;
+        if (role.department !== lastDept) {
+            lastDept = role.department;
+            html += `
+                <tr class="playtime-dept-header">
+                    <td colspan="6">${escapeHtml(role.department_label || role.department || 'Прочие')}</td>
+                </tr>`;
+        }
+        html += playtimeRoleRow(role);
+    }
+    if (!html) {
+        html = '<tr><td colspan="6" class="playtime-empty-filter">Нет ролей по фильтру</td></tr>';
+    }
+    return html;
+}
+
 function buildCatalogOverview(catalog) {
     return {
         roles: catalog.map(r => ({
@@ -65,6 +87,8 @@ function buildCatalogOverview(catalog) {
             unlocked: null,
             deficit_minutes: 0,
             unlock_hint: '',
+            department: r.department || '_other',
+            department_label: r.department_label || 'Прочие',
             _selected: false,
             _transferMinutes: '',
             _hidden: false,
@@ -109,7 +133,7 @@ function renderPlaytimeRolesTable() {
                     </tr>
                 </thead>
                 <tbody>
-                    ${playtimeOverview.roles.map(playtimeRoleRow).join('')}
+                    ${buildPlaytimeTableBody()}
                 </tbody>
             </table>
         </div>

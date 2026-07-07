@@ -53,6 +53,8 @@ def list_job_roles() -> list[dict]:
     from pathlib import Path
     from app.services.job_icons import tracker_from_role_id, job_icon_url
 
+    from app.services.job_unlock import enrich_and_sort_roles
+
     role_ids = set(ROLE_TRANSLATIONS)
     unlock_path = Path(__file__).resolve().parents[2] / "data" / "mini_station_job_unlock.json"
     if unlock_path.is_file():
@@ -63,15 +65,16 @@ def list_job_roles() -> list[dict]:
         except (json.JSONDecodeError, OSError):
             pass
 
-    return [
+    roles = [
         {
             "id": tracker_from_role_id(role_id),
             "role_id": role_id,
             "label": ROLE_TRANSLATIONS.get(role_id, translate_role(role_id)),
             "icon": job_icon_url(role_id),
         }
-        for role_id in sorted(role_ids, key=lambda item: ROLE_TRANSLATIONS.get(item, item))
+        for role_id in role_ids
     ]
+    return enrich_and_sort_roles(roles)
 
 
 def _parse_admin_uuid(admin_uuid: str | None) -> uuid.UUID | None:
