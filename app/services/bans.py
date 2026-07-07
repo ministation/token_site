@@ -40,12 +40,20 @@ ROLE_TRANSLATIONS = {
 def translate_role(role: str) -> str:
     if role.startswith("Job:"):
         role = role[4:]
+    elif role.startswith("Job") and len(role) > 3:
+        role = role[3:]
     return ROLE_TRANSLATIONS.get(role, role)
 
 
 def list_job_roles() -> list[dict]:
+    from app.services.job_icons import tracker_from_role_id, job_icon_url
     return [
-        {"id": role_id, "label": label}
+        {
+            "id": tracker_from_role_id(role_id),
+            "role_id": role_id,
+            "label": label,
+            "icon": job_icon_url(role_id),
+        }
         for role_id, label in sorted(ROLE_TRANSLATIONS.items(), key=lambda x: x[1])
     ]
 

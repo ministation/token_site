@@ -1,4 +1,4 @@
-"""Перенос наигранного времени между должностями в игровой БД."""
+"""Перенос наигранного времени между должностями в игровой БД (play_time.tracker = JobCaptain)."""
 from __future__ import annotations
 
 import uuid
@@ -6,6 +6,7 @@ from datetime import timedelta
 
 from app.db.database import get_pg_pool
 from app.services.bans import translate_role, list_job_roles
+from app.services.job_icons import role_id_from_tracker, tracker_from_role_id, job_icon_url
 
 
 def _parse_user_uuid(value: str) -> uuid.UUID | None:
@@ -23,15 +24,42 @@ def _interval_to_minutes(value) -> float:
     return 0.0
 
 
-def _normalize_job_tracker(tracker: str) -> str:
-    tracker = (tracker or "").strip()
-    if not tracker:
+def _format_hours(minutes: float) -> str:
+    if minutes >= 60:
+        h = int(minutes // 60)
+        m = int(round(minutes % 60))
+        return f"{h} ч {m} м" if m else f"{h} ч"
+    return f"{int(round(minutes))} м"
+
+
+def normalize_job_tracker(value: str) -> str:
+    raw = (value or "").strip()
+    if not raw:
         raise ValueError("Укажите должность")
-    if tracker.startswith("Job:"):
-        return tracker
-    if tracker in {r["id"] for r in list_job_roles()}:
-        return f"Job:{tracker}"
+    if raw.startswith("Job") and not raw.startswith("Job:"):
+        return raw
+    if raw.startswith("Job:"):
+        return tracker_from_role_id(raw[4:])
+    known = {r["role_id"] for r in list_job_roles()}
+    if raw in known:
+        return tracker_from_role_id(raw)
+    candidate = tracker_from_role_id(raw)
+    if candidate:
+        return candidate
     raise ValueError("Некорректная должность")
+
+
+def _job_row(tracker: str, minutes: float) -> dict:
+    role_id = role_id_from_tracker(tracker)
+    return {
+        "tracker": tracker,
+        "role_id": role_id,
+        "label": translate_role(tracker),
+        "icon": job_icon_url(role_id),
+        "minutes": round(minutes, 1),
+        "hours": round(minutes / 60.0, 2),
+        "time_text": _format_hours(minutes),
+    }
 
 
 async def get_job_playtimes(user_uuid: str) -> list[dict]:
@@ -43,7 +71,9 @@ async def get_job_playtimes(user_uuid: str) -> list[dict]:
         rows = await conn.fetch("""
             SELECT tracker, time_spent
             FROM play_time
-            WHERE player_id = $1 AND tracker LIKE 'Job:%'
+            WHERE player_id = $1
+              AND tracker LIKE 'Job%'
+              AND tracker <> 'Overall'
             ORDER BY time_spent DESC
         """, uid)
     result = []
@@ -51,14 +81,7 @@ async def get_job_playtimes(user_uuid: str) -> list[dict]:
         minutes = _interval_to_minutes(row["time_spent"])
         if minutes <= 0:
             continue
-        tracker = row["tracker"]
-        result.append({
-            "tracker": tracker,
-            "role_id": tracker[4:] if tracker.startswith("Job:") else tracker,
-            "label": translate_role(tracker),
-            "minutes": round(minutes, 1),
-            "hours": round(minutes / 60.0, 2),
-        })
+        result.append(_job_row(row["tracker"], minutes))
     return result
 
 
@@ -71,8 +94,8 @@ async def transfer_job_playtime(
     uid = _parse_user_uuid(target_user_uuid)
     if not uid:
         raise ValueError("Некорректный игрок")
-    from_tracker = _normalize_job_tracker(from_tracker)
-    to_tracker = _normalize_job_tracker(to_tracker)
+    from_tracker = normalize_job_tracker(from_tracker)
+    to_tracker = normalize_job_tracker(to_tracker)
     if from_tracker == to_tracker:
         raise ValueError("Выберите разные должности")
     if minutes <= 0:

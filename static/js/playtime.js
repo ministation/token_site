@@ -1,4 +1,75 @@
 let playtimeRoleCatalog = [];
+let playtimePlayerJobs = [];
+let playtimeSelectedFrom = null;
+let playtimeSelectedTo = null;
+
+function playtimeJobCard(job, mode, selectedTracker) {
+    const selected = selectedTracker === job.tracker ? ` selected-${mode}` : '';
+    const timeHtml = job.time_text
+        ? `<span class="playtime-job-time">${escapeHtml(job.time_text)}</span>`
+        : '';
+    const tracker = JSON.stringify(job.tracker);
+    return `
+        <button type="button"
+            class="playtime-job-card${selected}"
+            data-tracker="${escapeHtml(job.tracker)}"
+            data-mode="${mode}"
+            onclick="selectPlaytimeJob(${tracker}, '${mode}')">
+            <img src="${escapeHtml(job.icon)}" alt="" class="playtime-job-icon"
+                 onerror="this.src='/static/job_icons/Unknown.png'">
+            <span class="playtime-job-name">${escapeHtml(job.label)}</span>
+            ${timeHtml}
+        </button>
+    `;
+}
+
+function renderPlaytimeFromJobs() {
+    const container = document.getElementById('playtimeFromJobs');
+    if (!container) return;
+    if (!playtimePlayerJobs.length) {
+        container.innerHTML = '<p class="empty-state">Нет времени на должностях</p>';
+        return;
+    }
+    container.innerHTML = playtimePlayerJobs.map(j =>
+        playtimeJobCard(j, 'from', playtimeSelectedFrom)
+    ).join('');
+}
+
+function renderPlaytimeToJobs(filter = '') {
+    const container = document.getElementById('playtimeToJobs');
+    if (!container) return;
+    const q = filter.trim().toLowerCase();
+    const roles = playtimeRoleCatalog.filter(r =>
+        !q || r.label.toLowerCase().includes(q) || r.role_id.toLowerCase().includes(q)
+    );
+    if (!roles.length) {
+        container.innerHTML = '<p class="empty-state">Роль не найдена</p>';
+        return;
+    }
+    container.innerHTML = roles.map(r =>
+        playtimeJobCard(r, 'to', playtimeSelectedTo)
+    ).join('');
+}
+
+function selectPlaytimeJob(tracker, mode) {
+    if (mode === 'from') {
+        playtimeSelectedFrom = playtimeSelectedFrom === tracker ? null : tracker;
+        renderPlaytimeFromJobs();
+    } else {
+        playtimeSelectedTo = playtimeSelectedTo === tracker ? null : tracker;
+        renderPlaytimeToJobs(document.getElementById('playtimeToSearch')?.value || '');
+    }
+}
+
+function filterPlaytimeToRoles() {
+    const q = document.getElementById('playtimeToSearch')?.value || '';
+    renderPlaytimeToJobs(q);
+}
+
+function setPlaytimeMinutes(value) {
+    const input = document.getElementById('playtimeMinutes');
+    if (input) input.value = String(value);
+}
 
 async function initPlaytimeTransfer() {
     const section = document.getElementById('playtimeTransferSection');
@@ -16,7 +87,7 @@ async function initPlaytimeTransfer() {
     if (!playtimeRoleCatalog.length) {
         try {
             playtimeRoleCatalog = await apiCall('GET', '/api/playtime/roles');
-            fillPlaytimeRoleSelects();
+            renderPlaytimeToJobs();
         } catch (e) {
             console.error('playtime roles', e);
         }
@@ -24,21 +95,9 @@ async function initPlaytimeTransfer() {
     await loadPlaytimeJobs();
 }
 
-function fillPlaytimeRoleSelects() {
-    const from = document.getElementById('playtimeFromRole');
-    const to = document.getElementById('playtimeToRole');
-    if (!from || !to) return;
-    const options = playtimeRoleCatalog.map(r =>
-        `<option value="${escapeHtml(r.id)}">${escapeHtml(r.label)}</option>`
-    ).join('');
-    from.innerHTML = `<option value="">— выберите —</option>${options}`;
-    to.innerHTML = `<option value="">— выберите —</option>${options}`;
-}
-
 async function loadPlaytimeJobs() {
-    const list = document.getElementById('playtimeJobsList');
     const result = document.getElementById('playtimeTransferResult');
-    if (!list) return;
+    const title = document.getElementById('playtimePlayerTitle');
     if (result) result.innerHTML = '';
 
     const nickInput = document.getElementById('playtimePlayerNick');
@@ -46,38 +105,34 @@ async function loadPlaytimeJobs() {
     const canOther = currentUser?.is_time_keeper || currentUser?.is_admin;
     const query = canOther && nick ? `?player_nick=${encodeURIComponent(nick)}` : '';
 
-    list.innerHTML = '<p class="empty-state">Загрузка...</p>';
+    const fromContainer = document.getElementById('playtimeFromJobs');
+    if (fromContainer) fromContainer.innerHTML = '<p class="empty-state">Загрузка...</p>';
+
     try {
         const data = await apiCall('GET', `/api/playtime/jobs${query}`);
-        if (!data.jobs?.length) {
-            list.innerHTML = '<p class="empty-state">Нет времени на должностях Job:</p>';
-            return;
+        playtimePlayerJobs = data.jobs || [];
+        playtimeSelectedFrom = null;
+        playtimeSelectedTo = null;
+
+        if (title) {
+            title.hidden = false;
+            title.innerHTML = `Игрок: <strong>${escapeHtml(data.player_name || '—')}</strong>`;
         }
-        list.innerHTML = `
-            <p class="playtime-player-title">Игрок: <strong>${escapeHtml(data.player_name || '—')}</strong></p>
-            <div class="playtime-jobs-grid">
-                ${data.jobs.map(j => `
-                    <div class="playtime-job-card">
-                        <div class="playtime-job-name">${escapeHtml(j.label)}</div>
-                        <div class="playtime-job-hours">${j.hours} ч</div>
-                    </div>
-                `).join('')}
-            </div>
-        `;
+        renderPlaytimeFromJobs();
+        renderPlaytimeToJobs(document.getElementById('playtimeToSearch')?.value || '');
     } catch (e) {
-        list.innerHTML = `<p class="error">${escapeHtml(e.message)}</p>`;
+        playtimePlayerJobs = [];
+        if (fromContainer) fromContainer.innerHTML = `<p class="error">${escapeHtml(e.message)}</p>`;
     }
 }
 
 async function submitPlaytimeTransfer() {
     const result = document.getElementById('playtimeTransferResult');
-    const fromTracker = document.getElementById('playtimeFromRole')?.value;
-    const toTracker = document.getElementById('playtimeToRole')?.value;
     const minutes = parseFloat(document.getElementById('playtimeMinutes')?.value || '0');
     const nick = document.getElementById('playtimePlayerNick')?.value.trim() || '';
 
-    if (!fromTracker || !toTracker) {
-        alert('Выберите должности');
+    if (!playtimeSelectedFrom || !playtimeSelectedTo) {
+        alert('Выберите роли: откуда и куда');
         return;
     }
     if (!minutes || minutes <= 0) {
@@ -88,14 +143,16 @@ async function submitPlaytimeTransfer() {
     try {
         const data = await apiCall('POST', '/api/playtime/transfer', {
             player_nick: nick,
-            from_tracker: fromTracker,
-            to_tracker: toTracker,
+            from_tracker: playtimeSelectedFrom,
+            to_tracker: playtimeSelectedTo,
             minutes,
         });
         if (result) {
             result.innerHTML = `<p class="success">Перенесено ${data.minutes} мин: ${escapeHtml(data.from_label)} → ${escapeHtml(data.to_label)} (${escapeHtml(data.player_name || '')})</p>`;
         }
         document.getElementById('playtimeMinutes').value = '';
+        playtimeSelectedFrom = null;
+        playtimeSelectedTo = null;
         await loadPlaytimeJobs();
     } catch (e) {
         if (result) result.innerHTML = `<p class="error">${escapeHtml(e.message)}</p>`;
@@ -106,6 +163,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const nickInput = document.getElementById('playtimePlayerNick');
     if (nickInput && !nickInput.dataset.bound) {
         nickInput.dataset.bound = '1';
-        nickInput.addEventListener('change', () => loadPlaytimeJobs());
+        nickInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') loadPlaytimeJobs();
+        });
     }
 });

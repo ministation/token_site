@@ -26,30 +26,47 @@
 
         <div class="inventory-section playtime-transfer-section" id="playtimeTransferSection" hidden>
             <h3><i class="fa-solid fa-clock"></i> Перенос времени на роли</h3>
-            <p class="inventory-hint">Перенесите часы с одной должности на другую в игровой БД.</p>
+            <p class="inventory-hint">Выберите должность с наигранным временем и перенесите часы на другую роль.</p>
+
             <div id="playtimeKeeperFields" class="playtime-keeper-fields" hidden>
                 <label class="playtime-label" for="playtimePlayerNick">Игрок (ник в игре)</label>
-                <input type="text" id="playtimePlayerNick" placeholder="ckey / ник">
+                <div class="playtime-keeper-row">
+                    <input type="text" id="playtimePlayerNick" placeholder="ckey / ник">
+                    <button type="button" onclick="loadPlaytimeJobs()"><i class="fa-solid fa-magnifying-glass"></i> Найти</button>
+                </div>
             </div>
-            <div class="playtime-form-grid">
-                <div>
-                    <label class="playtime-label" for="playtimeFromRole">Откуда</label>
-                    <select id="playtimeFromRole"></select>
+
+            <p class="playtime-player-title" id="playtimePlayerTitle" hidden></p>
+
+            <div class="playtime-transfer-layout">
+                <div class="playtime-col">
+                    <h4 class="playtime-col-title"><i class="fa-solid fa-circle-minus"></i> Откуда</h4>
+                    <p class="playtime-col-hint">Роли с наигранным временем</p>
+                    <div id="playtimeFromJobs" class="playtime-jobs-pick"></div>
                 </div>
-                <div>
-                    <label class="playtime-label" for="playtimeToRole">Куда</label>
-                    <select id="playtimeToRole"></select>
+                <div class="playtime-transfer-arrow" aria-hidden="true">
+                    <i class="fa-solid fa-arrow-right"></i>
                 </div>
-                <div>
-                    <label class="playtime-label" for="playtimeMinutes">Минут</label>
+                <div class="playtime-col">
+                    <h4 class="playtime-col-title"><i class="fa-solid fa-circle-plus"></i> Куда</h4>
+                    <input type="text" id="playtimeToSearch" class="playtime-search" placeholder="Поиск роли..." oninput="filterPlaytimeToRoles()">
+                    <div id="playtimeToJobs" class="playtime-jobs-pick playtime-jobs-pick-scroll"></div>
+                </div>
+            </div>
+
+            <div class="playtime-amount-row">
+                <label class="playtime-label" for="playtimeMinutes">Сколько перенести (минут)</label>
+                <div class="playtime-amount-controls">
                     <input type="number" id="playtimeMinutes" min="1" step="1" placeholder="60">
+                    <button type="button" class="playtime-quick-btn" onclick="setPlaytimeMinutes(30)">30м</button>
+                    <button type="button" class="playtime-quick-btn" onclick="setPlaytimeMinutes(60)">1ч</button>
+                    <button type="button" class="playtime-quick-btn" onclick="setPlaytimeMinutes(180)">3ч</button>
+                    <button type="button" class="playtime-quick-btn" onclick="setPlaytimeMinutes(600)">10ч</button>
+                    <button type="button" class="playtime-submit-btn" onclick="submitPlaytimeTransfer()">
+                        <i class="fa-solid fa-right-left"></i> Перенести
+                    </button>
                 </div>
             </div>
-            <div class="playtime-actions">
-                <button type="button" onclick="loadPlaytimeJobs()"><i class="fa-solid fa-rotate"></i> Обновить</button>
-                <button type="button" onclick="submitPlaytimeTransfer()"><i class="fa-solid fa-right-left"></i> Перенести</button>
-            </div>
-            <div id="playtimeJobsList" class="playtime-jobs-list"></div>
             <div id="playtimeTransferResult" class="result"></div>
         </div>
     </div>
