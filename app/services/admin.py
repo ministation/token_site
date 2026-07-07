@@ -4,6 +4,7 @@ from app.services.bank import get_total_stats, get_bank_stats
 
 async def get_site_statistics() -> dict:
     social = social_db.get_site_stats()
+    visits = social_db.get_visit_stats()
     try:
         game_stats = await get_total_stats()
         bank_stats = await get_bank_stats()
@@ -12,6 +13,7 @@ async def get_site_statistics() -> dict:
         bank_stats = {}
     return {
         "social": social,
+        "visits": visits,
         "game": game_stats,
         "bank": bank_stats,
     }

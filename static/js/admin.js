@@ -39,9 +39,34 @@ async function loadAdminStats() {
     try {
         const data = await apiCall('GET', '/api/admin/stats');
         const s = data.social || {};
+        const v = data.visits || {};
         const g = data.game || {};
         const b = data.bank || {};
+        const dailyRows = (v.daily || []).map(d => `
+            <tr>
+                <td>${escapeHtml(d.day || '')}</td>
+                <td>${d.visits ?? 0}</td>
+                <td>${d.visitors ?? 0}</td>
+            </tr>
+        `).join('');
         container.innerHTML = `
+            <h3 class="admin-stats-heading"><i class="fa-solid fa-chart-simple"></i> Посещения сайта</h3>
+            <div class="stats-grid admin-stats-grid admin-visits-grid">
+                <div class="stat-item"><div class="stat-value">${v.visits_today ?? 0}</div><div class="stat-label">Просмотров сегодня</div></div>
+                <div class="stat-item"><div class="stat-value">${v.visitors_today ?? 0}</div><div class="stat-label">Уникальных сегодня</div></div>
+                <div class="stat-item"><div class="stat-value">${v.visits_7d ?? 0}</div><div class="stat-label">Просмотров за 7 дней</div></div>
+                <div class="stat-item"><div class="stat-value">${v.visitors_7d ?? 0}</div><div class="stat-label">Уникальных за 7 дней</div></div>
+                <div class="stat-item"><div class="stat-value">${v.visits_total ?? 0}</div><div class="stat-label">Просмотров всего</div></div>
+                <div class="stat-item"><div class="stat-value">${v.visitors_total ?? 0}</div><div class="stat-label">Уникальных всего</div></div>
+            </div>
+            ${dailyRows ? `
+            <div class="admin-visits-table-wrap table-scroll">
+                <table class="admin-visits-table">
+                    <thead><tr><th>День (МСК)</th><th>Просмотры</th><th>Уникальные</th></tr></thead>
+                    <tbody>${dailyRows}</tbody>
+                </table>
+            </div>` : ''}
+            <h3 class="admin-stats-heading"><i class="fa-solid fa-database"></i> Платформа</h3>
             <div class="stats-grid admin-stats-grid">
                 <div class="stat-item"><div class="stat-value">${s.users ?? 0}</div><div class="stat-label">Пользователей</div></div>
                 <div class="stat-item"><div class="stat-value">${s.posts ?? 0}</div><div class="stat-label">Постов</div></div>

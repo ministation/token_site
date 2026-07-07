@@ -218,6 +218,21 @@ def _migrate_schema():
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS site_visits (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            path TEXT NOT NULL,
+            visitor_key TEXT NOT NULL,
+            discord_id TEXT,
+            visited_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_site_visits_at ON site_visits(visited_at)
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_site_visits_key ON site_visits(visitor_key)
+    """)
     conn.commit()
     conn.close()
 
@@ -459,6 +474,59 @@ def get_site_stats() -> Dict:
         stats["private_messages"] = cursor.fetchone()[0]
     except sqlite3.OperationalError:
         stats["private_messages"] = 0
+    conn.close()
+    return stats
+
+
+def record_site_visit(path: str, visitor_key: str, discord_id: str | None = None) -> None:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO site_visits (path, visitor_key, discord_id) VALUES (?, ?, ?)",
+        (path, visitor_key, discord_id),
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_visit_stats() -> Dict:
+    conn = get_db()
+    cursor = conn.cursor()
+    stats: Dict = {}
+    cursor.execute("SELECT COUNT(*) FROM site_visits")
+    stats["visits_total"] = cursor.fetchone()[0]
+    cursor.execute("SELECT COUNT(DISTINCT visitor_key) FROM site_visits")
+    stats["visitors_total"] = cursor.fetchone()[0]
+    cursor.execute("""
+        SELECT COUNT(*) FROM site_visits
+        WHERE date(visited_at, '+3 hours') = date('now', '+3 hours')
+    """)
+    stats["visits_today"] = cursor.fetchone()[0]
+    cursor.execute("""
+        SELECT COUNT(DISTINCT visitor_key) FROM site_visits
+        WHERE date(visited_at, '+3 hours') = date('now', '+3 hours')
+    """)
+    stats["visitors_today"] = cursor.fetchone()[0]
+    cursor.execute("""
+        SELECT COUNT(*) FROM site_visits
+        WHERE visited_at >= datetime('now', '-7 days')
+    """)
+    stats["visits_7d"] = cursor.fetchone()[0]
+    cursor.execute("""
+        SELECT COUNT(DISTINCT visitor_key) FROM site_visits
+        WHERE visited_at >= datetime('now', '-7 days')
+    """)
+    stats["visitors_7d"] = cursor.fetchone()[0]
+    cursor.execute("""
+        SELECT date(visited_at, '+3 hours') AS day,
+               COUNT(*) AS visits,
+               COUNT(DISTINCT visitor_key) AS visitors
+        FROM site_visits
+        WHERE visited_at >= datetime('now', '-7 days')
+        GROUP BY day
+        ORDER BY day DESC
+    """)
+    stats["daily"] = [dict(row) for row in cursor.fetchall()]
     conn.close()
     return stats
 

@@ -1,4 +1,5 @@
 import asyncio
+import hashlib
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -6,7 +7,7 @@ from jinja2 import Environment, FileSystemLoader
 
 from app.routers import auth, bank, social, chat, pages, messages, bans, online, stats, inventory, admin
 from app.db.database import get_pg_pool, close_pg_pool
-from app.core.sessions import load_sessions
+from app.core.sessions import load_sessions, get_session
 from app.services.status_collector import collector_loop
 
 import database_social as social_db
@@ -17,6 +18,44 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 # Единое окружение Jinja2 для всех шаблонов
 env = Environment(loader=FileSystemLoader("templates"), auto_reload=True)
 app.state.templates_env = env
+
+
+def _visitor_key(request: Request) -> str:
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        ip = forwarded.split(",")[0].strip()
+    elif request.client:
+        ip = request.client.host
+    else:
+        ip = "unknown"
+    ua = request.headers.get("user-agent", "")
+    return hashlib.sha256(f"{ip}|{ua}".encode()).hexdigest()[:32]
+
+
+def _should_track_visit(request: Request) -> bool:
+    if request.method != "GET":
+        return False
+    path = request.url.path
+    if path.startswith("/static") or path.startswith("/api"):
+        return False
+    return path == "/" or path.startswith("/profile/")
+
+
+@app.middleware("http")
+async def track_page_visits(request: Request, call_next):
+    response = await call_next(request)
+    if response.status_code < 400 and _should_track_visit(request):
+        try:
+            discord_id = None
+            token = request.cookies.get("session_token")
+            if token:
+                session = get_session(token)
+                if session:
+                    discord_id = session.get("discord_id")
+            social_db.record_site_visit(request.url.path, _visitor_key(request), discord_id)
+        except Exception:
+            pass
+    return response
 
 
 @app.on_event("startup")
