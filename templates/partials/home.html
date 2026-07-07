@@ -35,7 +35,14 @@
     </div>
     <div class="server-widget-body">
         <div class="server-players-ring">
-            <svg class="players-ring" viewBox="0 0 120 120">
+            <svg class="players-ring" viewBox="0 0 120 120" aria-hidden="true">
+                <defs>
+                    <linearGradient id="playersRingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#f5c518"/>
+                        <stop offset="55%" stop-color="#f59e0b"/>
+                        <stop offset="100%" stop-color="#ea580c"/>
+                    </linearGradient>
+                </defs>
                 <circle class="ring-bg" cx="60" cy="60" r="52"></circle>
                 <circle class="ring-fill" id="playersRing" cx="60" cy="60" r="52"></circle>
             </svg>
