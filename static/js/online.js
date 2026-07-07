@@ -5,6 +5,20 @@ let onlineChartMeta = null;
 let onlineScrubberBound = false;
 let onlineFocusedIndex = -1;
 
+function cssColorAlpha(varName, alpha) {
+    const raw = cssVar(varName).trim();
+    if (!raw.startsWith('#')) return raw;
+    const hex = raw.slice(1);
+    const full = hex.length === 3
+        ? hex.split('').map((c) => c + c).join('')
+        : hex;
+    const n = parseInt(full, 16);
+    const r = (n >> 16) & 255;
+    const g = (n >> 8) & 255;
+    const b = n & 255;
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 function switchOnlineMode(mode, btn) {
     currentOnlineMode = mode;
 
@@ -296,8 +310,8 @@ function renderSingleChart(labels, values, xLabel, datasetLabel) {
             datasets: [{
                 label: datasetLabel,
                 data: values,
-                backgroundColor: 'rgba(30, 111, 217, 0.45)',
-                borderColor: cssVar('--accent'),
+                backgroundColor: cssColorAlpha('--success', 0.42),
+                borderColor: cssVar('--success'),
                 borderWidth: 1,
                 borderRadius: 3
             }]
@@ -345,7 +359,7 @@ function buildChartOptions(xLabel, isLine) {
                 backgroundColor: 'rgba(15, 23, 42, 0.94)',
                 titleColor: '#f8fafc',
                 bodyColor: '#e2e8f0',
-                borderColor: cssVar('--accent'),
+                borderColor: cssVar('--success'),
                 borderWidth: 1,
                 padding: 12,
                 titleFont: { size: mobile ? 13 : 12, weight: '700' },
@@ -431,8 +445,8 @@ function renderChart(labels, avgValues, maxValues, xLabel) {
                 {
                     label: 'Средний',
                     data: avgValues,
-                    borderColor: cssVar('--accent'),
-                    backgroundColor: 'rgba(30, 111, 217, 0.10)',
+                    borderColor: cssVar('--success'),
+                    backgroundColor: cssColorAlpha('--success', 0.12),
                     tension: 0.35,
                     fill: true,
                     pointRadius: isCoarsePointer() ? 0 : 2,
@@ -443,8 +457,8 @@ function renderChart(labels, avgValues, maxValues, xLabel) {
                 {
                     label: 'Максимум',
                     data: maxValues,
-                    borderColor: cssVar('--accent-3'),
-                    backgroundColor: 'rgba(11, 167, 180, 0.08)',
+                    borderColor: cssVar('--success-deep'),
+                    backgroundColor: cssColorAlpha('--success-deep', 0.08),
                     tension: 0.35,
                     fill: false,
                     pointRadius: isCoarsePointer() ? 0 : 2,

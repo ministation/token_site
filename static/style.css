@@ -40,7 +40,7 @@
     --discord: #5865F2;
 
     --grad-accent: linear-gradient(135deg, #ffc82e 0%, #f0780a 100%);
-    --grad-hero: linear-gradient(155deg, #fff0b8 0%, #ffc82e 32%, #f0780a 68%, #c4a0f5 100%);
+    --grad-hero: linear-gradient(150deg, #fff3c4 0%, #ffc82e 42%, #f0780a 100%);
     --grad-warm: linear-gradient(90deg, #ffc82e 0%, #f0780a 100%);
     --accent-glow: rgba(240, 120, 10, 0.22);
     --accent-soft: color-mix(in srgb, var(--accent) 22%, var(--panel));
@@ -78,7 +78,7 @@ html[data-theme="dark"] {
     --success-deep: #279a58;
 
     --grad-accent: linear-gradient(135deg, #ffd54f 0%, #ffb020 100%);
-    --grad-hero: linear-gradient(155deg, #3d2208 0%, #a85810 38%, #e07818 68%, #6b3fa8 100%);
+    --grad-hero: linear-gradient(150deg, #3d2808 0%, #c87810 48%, #e07818 100%);
     --grad-warm: linear-gradient(90deg, #ffd54f 0%, #ffb020 100%);
     --accent-glow: rgba(255, 176, 32, 0.28);
     --accent-soft: color-mix(in srgb, var(--accent) 24%, var(--panel));
@@ -113,16 +113,14 @@ body::before {
     z-index: -2;
     pointer-events: none;
     background:
-        radial-gradient(680px 400px at 8% -2%, rgba(255, 200, 46, 0.18), transparent 68%),
-        radial-gradient(600px 380px at 94% 4%, rgba(240, 120, 10, 0.15), transparent 68%),
-        radial-gradient(640px 440px at 48% 106%, rgba(168, 85, 247, 0.12), transparent 68%);
+        radial-gradient(680px 400px at 8% -2%, rgba(255, 200, 46, 0.16), transparent 68%),
+        radial-gradient(600px 380px at 94% 4%, rgba(240, 120, 10, 0.12), transparent 68%);
 }
 
 html[data-theme="dark"] body::before {
     background:
-        radial-gradient(640px 400px at 12% -6%, rgba(255, 176, 32, 0.14), transparent 68%),
-        radial-gradient(520px 360px at 90% 2%, rgba(199, 125, 255, 0.12), transparent 68%),
-        radial-gradient(700px 480px at 50% 108%, rgba(255, 140, 40, 0.10), transparent 68%);
+        radial-gradient(640px 400px at 12% -6%, rgba(255, 176, 32, 0.12), transparent 68%),
+        radial-gradient(520px 360px at 90% 2%, rgba(255, 140, 40, 0.10), transparent 68%);
 }
 
 /* === Animated ambient particles === */
@@ -157,67 +155,40 @@ html[data-theme="dark"] body::before {
     animation: glowDrift1 28s ease-in-out infinite;
 }
 .bg-glow--2 {
-    width: 420px;
-    height: 420px;
-    top: 54%;
+    width: 380px;
+    height: 380px;
+    top: 58%;
     right: 2%;
-    background: rgba(240, 120, 10, 0.26);
-    animation: glowDrift2 34s ease-in-out infinite;
-}
-.bg-glow--3 {
-    width: 320px;
-    height: 320px;
-    bottom: 10%;
-    left: 36%;
-    background: rgba(168, 85, 247, 0.22);
-    animation: glowDrift3 31s ease-in-out infinite;
+    background: rgba(240, 120, 10, 0.22);
+    animation: glowDrift2 38s ease-in-out infinite;
 }
 
-.bg-dust {
+.bg-dust-field {
     position: absolute;
-    inset: -50%;
-    opacity: 0.78;
-    background-image:
-        radial-gradient(circle, rgba(255, 200, 46, 0.75) 2.8px, transparent 2.8px),
-        radial-gradient(circle, rgba(240, 120, 10, 0.55) 3.4px, transparent 3.4px),
-        radial-gradient(circle, rgba(168, 85, 247, 0.45) 2.4px, transparent 2.4px);
-    background-size: 78px 78px, 118px 118px, 96px 96px;
-    background-position: 0 0, 39px 20px, 20px 58px;
-    animation: dustDrift1 55s linear infinite;
-}
-.bg-dust--alt {
-    opacity: 0.58;
-    background-size: 62px 62px, 98px 98px, 128px 128px;
-    background-position: 14px 10px, 48px 32px, 10px 64px;
-    animation: dustDrift2 80s linear infinite reverse;
-}
-.bg-dust--fine {
-    opacity: 0.45;
-    background-image:
-        radial-gradient(circle, rgba(255, 255, 255, 0.65) 2px, transparent 2px),
-        radial-gradient(circle, rgba(255, 200, 46, 0.45) 2.6px, transparent 2.6px);
-    background-size: 46px 46px, 72px 72px;
-    background-position: 0 0, 22px 22px;
-    animation: dustDrift3 42s linear infinite;
+    inset: 0;
+    overflow: hidden;
 }
 
-html[data-theme="dark"] .bg-glow--1 { background: rgba(255, 176, 32, 0.24); opacity: 0.8; }
-html[data-theme="dark"] .bg-glow--2 { background: rgba(199, 125, 255, 0.20); }
-html[data-theme="dark"] .bg-glow--3 { background: rgba(255, 140, 40, 0.18); }
-html[data-theme="dark"] .bg-dust {
-    opacity: 0.62;
-    background-image:
-        radial-gradient(circle, rgba(255, 255, 255, 0.80) 2.6px, transparent 2.6px),
-        radial-gradient(circle, rgba(255, 176, 32, 0.50) 3.2px, transparent 3.2px),
-        radial-gradient(circle, rgba(199, 125, 255, 0.42) 2.4px, transparent 2.4px);
+.dust-particle {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+    will-change: transform, opacity;
+    animation: dustParticleFloat var(--dur, 36s) ease-in-out infinite;
+    animation-delay: var(--delay, 0s);
 }
-html[data-theme="dark"] .bg-dust--fine {
-    opacity: 0.68;
-    background-image:
-        radial-gradient(circle, rgba(255, 255, 255, 0.95) 2.4px, transparent 2.4px),
-        radial-gradient(circle, rgba(255, 255, 255, 0.50) 1.8px, transparent 1.8px),
-        radial-gradient(circle, rgba(199, 125, 255, 0.45) 2.2px, transparent 2.2px);
-    background-size: 38px 38px, 62px 62px, 84px 84px;
+
+html[data-theme="dark"] .bg-glow--1 { background: rgba(255, 176, 32, 0.20); opacity: 0.7; }
+html[data-theme="dark"] .bg-glow--2 { background: rgba(255, 140, 40, 0.16); }
+html[data-theme="dark"] .dust-particle {
+    box-shadow: 0 0 6px rgba(255, 200, 80, 0.25);
+}
+
+@keyframes dustParticleFloat {
+    0% { transform: translate(0, 0); opacity: 0; }
+    12% { opacity: var(--op, 0.45); }
+    88% { opacity: var(--op, 0.45); }
+    100% { transform: translate(var(--tx), var(--ty)); opacity: 0; }
 }
 
 @keyframes glowDrift1 {
@@ -230,26 +201,9 @@ html[data-theme="dark"] .bg-dust--fine {
     40% { transform: translate(-56px, -40px) scale(1.1); }
     70% { transform: translate(-24px, 28px) scale(0.92); }
 }
-@keyframes glowDrift3 {
-    0%, 100% { transform: translate(0, 0) scale(1); }
-    50% { transform: translate(36px, -48px) scale(1.06); }
-}
-@keyframes dustDrift1 {
-    0% { transform: translate(0, 0); }
-    100% { transform: translate(120px, 180px); }
-}
-@keyframes dustDrift2 {
-    0% { transform: translate(0, 0); }
-    100% { transform: translate(-160px, 140px); }
-}
-@keyframes dustDrift3 {
-    0% { transform: translate(0, 0); }
-    100% { transform: translate(90px, 220px); }
-}
 
 @media (prefers-reduced-motion: reduce) {
-    .bg-ambient .bg-glow,
-    .bg-ambient .bg-dust {
+    .bg-ambient .bg-glow {
         animation: none !important;
     }
 }
@@ -1252,8 +1206,8 @@ html[data-theme="dark"] .status-meta {
     font-size: 0.95rem;
 }
 
-.online-readout-chip.avg b { color: var(--accent); }
-.online-readout-chip.max b { color: var(--accent-3); }
+.online-readout-chip.avg b { color: var(--success); }
+.online-readout-chip.max b { color: var(--success-deep); }
 
 .online-chart-scrubber-wrap {
     margin-top: 12px;
@@ -1264,7 +1218,7 @@ html[data-theme="dark"] .status-meta {
     width: 100%;
     height: 28px;
     margin: 0;
-    accent-color: var(--accent);
+    accent-color: var(--success);
     cursor: pointer;
 }
 
@@ -1677,7 +1631,7 @@ html[data-theme="dark"] .status-meta {
 }
 .ring-fill {
     fill: none;
-    stroke: url(#playersRingGrad);
+    stroke: var(--success);
     stroke-width: 10;
     stroke-linecap: round;
     stroke-dasharray: 326.73;
@@ -1704,7 +1658,7 @@ html[data-theme="dark"] .status-meta {
 .players-count strong {
     font-size: 1.45em;
     font-weight: 400;
-    color: var(--accent);
+    color: var(--success);
     line-height: 1;
 }
 .players-max {
@@ -1758,8 +1712,8 @@ html[data-theme="dark"] .status-meta {
 }
 .server-bar {
     height: 100%;
-    background: var(--accent);
-    opacity: 0.85;
+    background: var(--success);
+    opacity: 0.9;
     width: 0%;
     transition: width 0.5s ease;
 }
