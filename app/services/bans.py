@@ -387,16 +387,16 @@ async def create_server_ban(
 async def create_role_ban(
     admin_uuid: str | None,
     player_query: str,
-    role_id: str,
+    role_ids: list[str],
     reason: str,
     length_minutes: int = 0,
 ) -> dict:
     reason = (reason or "").strip()
-    role_id = (role_id or "").strip()
+    roles = [r.strip() for r in role_ids if r and r.strip()]
     if not reason:
         raise ValueError("Укажите причину бана")
-    if not role_id:
-        raise ValueError("Выберите должность")
+    if not roles:
+        raise ValueError("Выберите хотя бы одну должность")
 
     player_uid = await resolve_player_identifier(player_query)
     if not player_uid:
@@ -423,15 +423,16 @@ async def create_role_ban(
                 "INSERT INTO ban_player (user_id, ban_id) VALUES ($1, $2)",
                 player_uid, ban_id,
             )
-            await conn.execute(
-                "INSERT INTO ban_role (role_type, role_id, ban_id) VALUES ('Job', $1, $2)",
-                role_id, ban_id,
-            )
+            for role_id in roles:
+                await conn.execute(
+                    "INSERT INTO ban_role (role_type, role_id, ban_id) VALUES ('Job', $1, $2)",
+                    role_id, ban_id,
+                )
 
     return {
         "ban_id": ban_id,
         "type": BAN_TYPE_ROLE,
         "player_uuid": str(player_uid),
-        "role_id": role_id,
-        "role_label": translate_role(role_id),
+        "role_ids": roles,
+        "role_labels": [translate_role(r) for r in roles],
     }

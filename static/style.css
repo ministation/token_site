@@ -1470,6 +1470,13 @@ html[data-theme="dark"] .status-meta {
     min-height: 140px;
     padding: 6px;
 }
+.ss14-field select[multiple] {
+    min-height: 180px;
+}
+.ss14-field select[multiple] option:checked {
+    background: color-mix(in srgb, var(--ban-job) 22%, var(--panel-2));
+    color: var(--ink);
+}
 .ss14-field-hint { font-size: 0.72rem; color: var(--dim); white-space: nowrap; }
 .ss14-duration-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .ss14-duration-row input { width: 110px; }
@@ -1541,7 +1548,18 @@ html[data-theme="dark"] .status-meta {
     flex-wrap: wrap;
 }
 .ss14-ban-row-id { font-weight: 800; font-size: 0.82rem; }
-.ss14-ban-row-player { font-weight: 700; }
+.ss14-ban-row-player { font-weight: 700; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.ss14-ban-row-player .ss14-copyable-ckey {
+    padding: 0;
+    background: none;
+    border: none;
+    box-shadow: none;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    transform: none;
+}
+.ss14-ban-row-player .ss14-copyable-ckey:hover { transform: none; }
 .ss14-ban-row-meta {
     display: flex;
     flex-wrap: wrap;

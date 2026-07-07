@@ -541,27 +541,32 @@ async function loadGameJobs() {
         gameJobsLoaded = true;
         renderRoleBanJobOptions();
     } catch (e) {
-        select.innerHTML = `<option value="">Ошибка: ${escapeHtml(e.message)}</option>`;
+        select.innerHTML = `<option value="" disabled>Ошибка: ${escapeHtml(e.message)}</option>`;
     }
+}
+
+function getRoleBanSelectedIds() {
+    const select = document.getElementById('roleBanJob');
+    if (!select) return [];
+    return Array.from(select.selectedOptions).map(o => o.value).filter(Boolean);
 }
 
 function renderRoleBanJobOptions(filter = '') {
     const select = document.getElementById('roleBanJob');
     if (!select) return;
+    const selected = new Set(getRoleBanSelectedIds());
     const q = filter.trim().toLowerCase();
     const jobs = q
         ? gameJobsList.filter(j => j.label.toLowerCase().includes(q) || j.id.toLowerCase().includes(q))
         : gameJobsList;
     if (!jobs.length) {
-        select.innerHTML = '<option value="">Ничего не найдено</option>';
+        select.innerHTML = '<option value="" disabled>Ничего не найдено</option>';
         return;
     }
-    const current = select.value;
-    select.innerHTML = jobs.map(j =>
-        `<option value="${escapeHtml(j.id)}">${escapeHtml(j.label)}</option>`
-    ).join('');
-    if (current && jobs.some(j => j.id === current)) select.value = current;
-    else if (jobs.length) select.selectedIndex = 0;
+    select.innerHTML = jobs.map(j => {
+        const sel = selected.has(j.id) ? ' selected' : '';
+        return `<option value="${escapeHtml(j.id)}"${sel}>${escapeHtml(j.label)}</option>`;
+    }).join('');
 }
 
 function filterRoleBanJobs() {
@@ -670,7 +675,7 @@ function renderAdminBanRow(b) {
         ? (b.player_names || []).map((name, i) => {
             const pid = (b.player_ids || [])[i];
             if (pid && typeof openPlayerDossier === 'function') {
-                return `<button type="button" class="ss14-copyable-ckey" onclick="openPlayerDossier('${escapeHtml(pid)}')">${escapeHtml(name)}</button>`;
+                return `<button type="button" class="ss14-copyable-ckey" onclick="openPlayerDossier(${JSON.stringify(pid)})">${escapeHtml(name)}</button>`;
             }
             return escapeHtml(name);
         }).join(', ')
@@ -693,7 +698,7 @@ function renderAdminBanRow(b) {
                     <span class="ss14-ban-row-id">#${b.ban_id}</span>
                     ${status}
                 </div>
-                <div class="ss14-ban-row-player">${escapeHtml(players)}</div>
+                <div class="ss14-ban-row-player">${players}</div>
                 <div class="ss14-ban-row-meta">
                     <span><b>Выдан:</b> ${time}</span>
                     <span><b>Срок:</b> ${exp}</span>
@@ -763,7 +768,7 @@ async function submitServerBan() {
 
 async function submitRoleBan() {
     const player = document.getElementById('roleBanPlayer')?.value.trim();
-    const role_id = document.getElementById('roleBanJob')?.value;
+    const role_ids = getRoleBanSelectedIds();
     const reason = document.getElementById('roleBanReason')?.value.trim();
     const length_minutes = parseInt(document.getElementById('roleBanMinutes')?.value || '0', 10);
     const result = document.getElementById('roleBanResult');
@@ -771,17 +776,20 @@ async function submitRoleBan() {
         if (result) result.innerHTML = '<p class="error">Укажите игрока и причину</p>';
         return;
     }
-    if (!role_id) {
-        if (result) result.innerHTML = '<p class="error">Выберите должность из списка</p>';
+    if (!role_ids.length) {
+        if (result) result.innerHTML = '<p class="error">Выберите хотя бы одну должность</p>';
         return;
     }
     if (result) result.innerHTML = '<p class="empty-state">Выдаём джоббан...</p>';
     try {
         const data = await apiCall('POST', '/api/admin/bans/role', {
-            player, role_id, reason, length_minutes: Number.isFinite(length_minutes) ? length_minutes : 0,
+            player, role_ids, reason, length_minutes: Number.isFinite(length_minutes) ? length_minutes : 0,
         });
-        if (result) result.innerHTML = `<p class="success">Джоббан #${data.ban_id} выдан (${escapeHtml(data.role_label || role_id)})</p>`;
+        const labels = (data.role_labels || role_ids).map(escapeHtml).join(', ');
+        if (result) result.innerHTML = `<p class="success">Джоббан #${data.ban_id} выдан (${labels})</p>`;
         document.getElementById('roleBanReason').value = '';
+        const select = document.getElementById('roleBanJob');
+        if (select) Array.from(select.options).forEach(o => { o.selected = false; });
         loadGameBans(false);
         if (gameSelectedPlayer) openPlayerDossier(gameSelectedPlayer.user_uuid);
     } catch (e) {

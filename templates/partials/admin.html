@@ -150,9 +150,10 @@
                         <input type="text" id="roleBanPlayer" placeholder="Сикей или UUID">
                     </label>
                     <label class="ss14-field">
-                        <span>Должность</span>
+                        <span>Должности</span>
                         <input type="text" id="roleBanJobFilter" placeholder="Поиск должности..." oninput="filterRoleBanJobs()">
-                        <select id="roleBanJob" size="6"><option value="">Загрузка...</option></select>
+                        <select id="roleBanJob" size="8" multiple></select>
+                        <span class="ss14-field-hint">Ctrl+клик или Shift+клик — несколько ролей</span>
                     </label>
                     <label class="ss14-field">
                         <span>Причина</span>

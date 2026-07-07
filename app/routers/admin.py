@@ -35,7 +35,8 @@ class CreateServerBanRequest(BaseModel):
 
 class CreateRoleBanRequest(BaseModel):
     player: str
-    role_id: str
+    role_id: str | None = None
+    role_ids: list[str] | None = None
     reason: str
     length_minutes: int = 0
 
@@ -217,11 +218,16 @@ async def admin_create_server_ban(req: CreateServerBanRequest, request: Request)
 @router.post("/bans/role")
 async def admin_create_role_ban(req: CreateRoleBanRequest, request: Request):
     admin = await get_current_admin(request)
+    role_ids = [r.strip() for r in (req.role_ids or []) if r and r.strip()]
+    if not role_ids and req.role_id:
+        role_ids = [req.role_id.strip()]
+    if not role_ids:
+        raise HTTPException(status_code=400, detail="Выберите хотя бы одну должность")
     try:
         result = await create_role_ban(
             _admin_game_uuid(admin),
             req.player,
-            req.role_id,
+            role_ids,
             req.reason,
             req.length_minutes,
         )
