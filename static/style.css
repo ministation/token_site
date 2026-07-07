@@ -318,44 +318,21 @@ body {
     padding: 5px 8px 5px 12px;
     border: 2px solid var(--border);
     border-radius: var(--radius);
-    min-width: 0;
 }
-#userPanel .user-avatar-btn {
+#userPanel img {
     width: 28px;
     height: 28px;
-    min-width: 28px;
-    padding: 0;
-    border: none;
-    border-radius: 50%;
-    background: var(--panel-3);
-    color: var(--muted);
-    box-shadow: none;
-    overflow: hidden;
-    flex-shrink: 0;
-    cursor: pointer;
-}
-#userPanel .user-avatar-btn img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
     border-radius: 50%;
     border: 2px solid var(--accent);
-}
-#userPanel .user-avatar-btn:hover {
-    background: var(--panel);
-    color: var(--ink);
-    transform: none;
+    flex-shrink: 0;
+    object-fit: cover;
 }
 #userName, #userPanel > span:not(.admin-badge):not(.mod-badge) {
     color: var(--ink);
     font-weight: 700;
     font-size: 0.875rem;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
 }
-#userPanel .user-logout-btn {
+#userPanel button {
     background: var(--danger);
     border-color: var(--danger-deep);
     box-shadow: var(--shadow-btn-color);
@@ -364,7 +341,20 @@ body {
     font-size: 0.78rem;
     flex-shrink: 0;
 }
-#userPanel .user-logout-btn:hover { background: var(--danger-deep); color: #fff; }
+#userPanel button:hover { background: var(--danger-deep); color: #fff; }
+#userPanel button[title="Мой профиль"] {
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+    padding: 0;
+    background: var(--panel-3);
+    border-color: var(--border-strong);
+    box-shadow: var(--shadow-btn);
+}
+#userPanel button[title="Мой профиль"]:hover {
+    background: var(--panel);
+    color: var(--ink);
+}
 
 .admin-badge {
     display: inline-block;
@@ -3732,63 +3722,58 @@ label.chat-tool-btn input[type="file"] {
         display: inline-flex;
         order: -1;
         flex-shrink: 0;
-        margin-right: 0;
-        padding: 8px 10px;
-        font-size: 0;
-        gap: 0;
-        min-width: 40px;
     }
-    .nav-toggle i { font-size: 1rem; }
     .topbar-inner {
-        flex-wrap: nowrap;
-        padding: 8px 10px;
-        gap: 6px;
+        flex-wrap: wrap;
+        align-items: center;
+        padding: 10px 12px;
+        gap: 8px;
         width: 100%;
         box-sizing: border-box;
-        overflow: hidden;
     }
     .logo {
-        flex: 1 1 auto;
+        order: 0;
+        flex: 1;
         min-width: 0;
-        overflow: hidden;
     }
-    .logo img { width: 32px; height: 32px; }
-    .logo h1 {
-        font-size: 0.68rem;
+    .logo h1 { font-size: 0.72rem; }
+    #userInfo {
+        display: contents;
+    }
+    .theme-toggle {
+        order: 1;
+        margin-left: auto;
+        width: 38px;
+        height: 38px;
+    }
+    #loginBtn { order: 2; }
+    #userPanel {
+        order: 3;
+        width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
+        justify-content: flex-end;
+        padding: 4px 8px 4px 10px;
+        gap: 8px;
+    }
+    #userPanel img { width: 26px; height: 26px; }
+    #userPanel #userName {
+        min-width: 0;
+        max-width: 9rem;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+        font-size: 0.8rem;
     }
-    #userInfo {
-        flex: 0 0 auto;
-        min-width: 0;
-        justify-content: flex-end;
-        margin-left: 0;
-        gap: 4px;
+    #userPanel button[title="Мой профиль"] {
+        width: 32px;
+        height: 32px;
+        min-width: 32px;
     }
-    #userPanel {
-        padding: 3px 4px;
-        gap: 4px;
-        max-width: 88px;
+    #userPanel button:not([title="Мой профиль"]) {
+        padding: 5px 10px;
+        font-size: 0.72rem;
     }
-    #userPanel .user-avatar-btn {
-        width: 30px;
-        height: 30px;
-        min-width: 30px;
-    }
-    #userPanel #userName { display: none; }
-    #userPanel .user-logout-btn {
-        width: 30px;
-        height: 30px;
-        min-width: 30px;
-        padding: 0;
-        font-size: 0;
-    }
-    #userPanel .user-logout-btn i { font-size: 0.85rem; }
-    #userPanel .user-logout-text { display: none; }
-    .theme-toggle { width: 34px; height: 34px; min-width: 34px; font-size: 0.9rem; }
-    #loginBtn { padding: 8px 10px; font-size: 0; gap: 0; }
-    #loginBtn i { font-size: 1rem; }
 
     .sidebar {
         position: fixed;
