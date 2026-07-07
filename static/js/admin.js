@@ -317,9 +317,73 @@ async function adminDeletePost(postId) {
 }
 
 function initGameModerationTab() {
+    showGamePage('hub');
     if (!gameJobsLoaded) loadGameJobs();
     bindGameDurationPresets();
-    loadGameBans(false);
+}
+
+const GAME_PAGE_IDS = {
+    hub: 'gamePageHub',
+    'server-ban': 'gamePageServerBan',
+    'job-ban': 'gamePageJobBan',
+    bans: 'gamePageBans',
+};
+
+function showGamePage(page, btn) {
+    Object.entries(GAME_PAGE_IDS).forEach(([key, id]) => {
+        const el = document.getElementById(id);
+        if (el) el.hidden = key !== page;
+    });
+    document.querySelectorAll('.ss14-subnav-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.page === page);
+    });
+    if (page === 'bans') loadGameBans(false);
+    updateGameSelectedChip();
+}
+
+async function copyGameText(text, btn) {
+    if (!text) return;
+    try {
+        await navigator.clipboard.writeText(text);
+        if (btn) {
+            if (btn.classList.contains('ss14-copyable-ckey')) {
+                btn.classList.add('ss14-copy-ok');
+                setTimeout(() => btn.classList.remove('ss14-copy-ok'), 1400);
+                return;
+            }
+            const icon = btn.querySelector('i');
+            const prevClass = icon?.className;
+            if (icon) icon.className = 'fa-solid fa-check';
+            btn.classList.add('ss14-copy-ok');
+            setTimeout(() => {
+                if (icon && prevClass) icon.className = prevClass;
+                btn.classList.remove('ss14-copy-ok');
+            }, 1400);
+        }
+    } catch {
+        alert('Не удалось скопировать');
+    }
+}
+
+function shortUuid(uuid) {
+    if (!uuid || uuid.length < 12) return uuid || '';
+    return uuid.slice(0, 8) + '…';
+}
+
+function renderGamePlayerHit(p) {
+    const name = p.name || 'Без ника';
+    const selected = gameSelectedPlayer?.user_uuid === p.user_uuid;
+    const safeName = escapeHtml(name);
+    const safeUuid = escapeHtml(p.user_uuid);
+    const nameJson = JSON.stringify(name);
+    return `
+        <div class="ss14-player-hit${selected ? ' is-selected' : ''}" data-uuid="${safeUuid}">
+            <button type="button" class="ss14-player-hit-main" onclick="selectGamePlayer('${safeUuid}')">
+                <span class="ss14-player-hit-name ss14-copyable-ckey" title="Нажмите, чтобы скопировать сикей"
+                    onclick="event.stopPropagation(); copyGameText(${nameJson}, this)">${safeName}</span>
+                <span class="ss14-player-hit-uuid" title="${safeUuid}">${escapeHtml(shortUuid(p.user_uuid))}</span>
+            </button>
+        </div>`;
 }
 
 function bindGameDurationPresets() {
@@ -336,20 +400,6 @@ function bindGameDurationPresets() {
             btn.classList.add('active');
         });
     });
-}
-
-function switchGameBanForm(mode, btn) {
-    const serverForm = document.getElementById('gameBanFormServer');
-    const roleForm = document.getElementById('gameBanFormRole');
-    const serverTab = document.getElementById('gameBanTabServer');
-    const roleTab = document.getElementById('gameBanTabRole');
-    const isServer = mode === 'server';
-    if (serverForm) serverForm.hidden = !isServer;
-    if (roleForm) roleForm.hidden = isServer;
-    if (serverTab) serverTab.classList.toggle('active', isServer);
-    if (roleTab) roleTab.classList.toggle('active', !isServer);
-    document.querySelectorAll('.ss14-punish-tab').forEach(t => t.classList.remove('active'));
-    if (btn) btn.classList.add('active');
 }
 
 async function loadGameJobs() {
@@ -392,8 +442,12 @@ function setGameSelectedPlayer(player) {
     gameSelectedPlayer = player;
     const profile = document.getElementById('gamePlayerProfile');
     const results = document.getElementById('gamePlayerResults');
+    const quick = document.getElementById('gameQuickActions');
     if (!player) {
         if (profile) profile.hidden = true;
+        if (quick) quick.hidden = true;
+        if (results) results.querySelectorAll('.ss14-player-hit').forEach(el => el.classList.remove('is-selected'));
+        updateGameSelectedChip();
         return;
     }
     const label = player.name || player.user_uuid;
@@ -407,15 +461,23 @@ function setGameSelectedPlayer(player) {
             el.classList.toggle('is-selected', el.dataset.uuid === player.user_uuid);
         });
     }
+    if (quick) quick.hidden = false;
     if (profile) {
         profile.hidden = false;
         const lastSeen = player.last_seen ? new Date(player.last_seen).toLocaleString('ru-RU') : '—';
         const activeBans = (player.bans || []).filter(b => b.is_active).length;
+        const name = player.name || 'Без ника';
         profile.innerHTML = `
             <div class="ss14-player-card-head">
-                <div>
-                    <div class="ss14-player-card-name">${escapeHtml(player.name || 'Без ника')}</div>
-                    <div class="ss14-player-card-uuid">${escapeHtml(player.user_uuid)}</div>
+                <div class="ss14-player-card-title">
+                    <button type="button" class="ss14-copyable-name" title="Скопировать сикей"
+                        onclick="copyGameText(${JSON.stringify(name)}, this)">
+                        ${escapeHtml(name)} <i class="fa-regular fa-copy"></i>
+                    </button>
+                    <button type="button" class="ss14-copyable-uuid" title="Скопировать UUID"
+                        onclick="copyGameText('${player.user_uuid}', this)">
+                        ${escapeHtml(player.user_uuid)} <i class="fa-regular fa-copy"></i>
+                    </button>
                 </div>
             </div>
             <div class="ss14-player-stats">
@@ -425,11 +487,48 @@ function setGameSelectedPlayer(player) {
                 <div class="ss14-player-stat"><b>${(player.bans || []).length}</b>Всего в истории</div>
             </div>
             <div class="ss14-player-actions">
-                <button type="button" class="btn-sm" onclick="filterGameBansByPlayer('${player.user_uuid}')">
+                <button type="button" class="btn-sm" onclick="filterGameBansByPlayer('${player.user_uuid}'); showGamePage('bans')">
                     <i class="fa-solid fa-filter"></i> Баны игрока
+                </button>
+                <button type="button" class="btn-sm ss14-quick-btn--server" onclick="showGamePage('server-ban')">
+                    <i class="fa-solid fa-ban"></i> Бан
+                </button>
+                <button type="button" class="btn-sm ss14-quick-btn--job" onclick="showGamePage('job-ban')">
+                    <i class="fa-solid fa-user-slash"></i> Джоббан
                 </button>
             </div>`;
     }
+    updateGameSelectedChip();
+}
+
+function updateGameSelectedChip() {
+    const chip = document.getElementById('gameSelectedPlayerChip');
+    if (!chip) return;
+    if (!gameSelectedPlayer) {
+        chip.hidden = true;
+        chip.innerHTML = '';
+        return;
+    }
+    const name = gameSelectedPlayer.name || 'Без ника';
+    chip.hidden = false;
+    chip.innerHTML = `
+        <span class="ss14-selected-chip-label">Выбран:</span>
+        <button type="button" class="ss14-selected-chip-name" title="Скопировать сикей"
+            onclick="copyGameText(${JSON.stringify(name)}, this)">
+            ${escapeHtml(name)} <i class="fa-regular fa-copy"></i>
+        </button>
+        <button type="button" class="ss14-selected-chip-clear" onclick="clearGameSelectedPlayer()" title="Сбросить">
+            <i class="fa-solid fa-xmark"></i>
+        </button>`;
+}
+
+function clearGameSelectedPlayer() {
+    gameSelectedPlayer = null;
+    setGameSelectedPlayer(null);
+    const serverInput = document.getElementById('serverBanPlayer');
+    const roleInput = document.getElementById('roleBanPlayer');
+    if (serverInput) serverInput.value = '';
+    if (roleInput) roleInput.value = '';
 }
 
 async function searchGamePlayers() {
@@ -448,13 +547,7 @@ async function searchGamePlayers() {
             container.innerHTML = '<p class="empty-state">Игроки не найдены</p>';
             return;
         }
-        container.innerHTML = players.map(p => `
-            <button type="button" class="ss14-player-hit" data-uuid="${escapeHtml(p.user_uuid)}"
-                onclick="selectGamePlayer('${p.user_uuid}')">
-                <span class="ss14-player-hit-name">${escapeHtml(p.name || 'Без ника')}</span>
-                <span class="ss14-player-hit-meta">${escapeHtml(p.user_uuid)}</span>
-            </button>
-        `).join('');
+        container.innerHTML = players.map(p => renderGamePlayerHit(p)).join('');
     } catch (e) {
         container.innerHTML = `<p class="error">${escapeHtml(e.message)}</p>`;
     }

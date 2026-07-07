@@ -56,109 +56,135 @@
     </div>
 
     <div id="adminGameTab" class="admin-tab-content" style="display:none;">
-        <p class="admin-hint">Серверные баны, джоббаны и разбаны напрямую в игровой базе (как SS14.Admin).</p>
+        <p class="admin-hint">Игровая модерация — баны и джоббаны напрямую в БД сервера.</p>
 
-        <div class="ss14-panel">
-            <div class="ss14-panel-columns">
-                <section class="ss14-block ss14-block-player">
-                    <div class="ss14-block-head">
-                        <h3><i class="fa-solid fa-user"></i> Игрок</h3>
-                    </div>
-                    <div class="ss14-search-row">
-                        <input type="text" id="gamePlayerSearch" placeholder="Ник или UUID..." autocomplete="off"
-                            onkeydown="if(event.key==='Enter')searchGamePlayers()">
-                        <button type="button" class="btn-sm" onclick="searchGamePlayers()">
-                            <i class="fa-solid fa-magnifying-glass"></i>
-                        </button>
-                    </div>
-                    <div id="gamePlayerResults" class="ss14-player-results"></div>
-                    <div id="gamePlayerProfile" class="ss14-player-card" hidden></div>
-                </section>
+        <nav class="ss14-subnav" aria-label="Разделы игровой панели">
+            <button type="button" class="ss14-subnav-btn active" data-page="hub" onclick="showGamePage('hub', this)">
+                <i class="fa-solid fa-user"></i> Игрок
+            </button>
+            <button type="button" class="ss14-subnav-btn ss14-subnav-btn--server" data-page="server-ban" onclick="showGamePage('server-ban', this)">
+                <i class="fa-solid fa-ban"></i> Серверный бан
+            </button>
+            <button type="button" class="ss14-subnav-btn ss14-subnav-btn--job" data-page="job-ban" onclick="showGamePage('job-ban', this)">
+                <i class="fa-solid fa-user-slash"></i> Джоббан
+            </button>
+            <button type="button" class="ss14-subnav-btn" data-page="bans" onclick="showGamePage('bans', this)">
+                <i class="fa-solid fa-list"></i> Журнал
+            </button>
+        </nav>
 
-                <section class="ss14-block ss14-block-punish">
-                    <div class="ss14-block-head">
-                        <h3><i class="fa-solid fa-gavel"></i> Наказание</h3>
-                        <div class="ss14-punish-tabs" role="tablist">
-                            <button type="button" class="ss14-punish-tab ss14-punish-tab--server active"
-                                id="gameBanTabServer" onclick="switchGameBanForm('server', this)">
-                                <i class="fa-solid fa-ban"></i> Серверный бан
-                            </button>
-                            <button type="button" class="ss14-punish-tab ss14-punish-tab--job"
-                                id="gameBanTabRole" onclick="switchGameBanForm('role', this)">
-                                <i class="fa-solid fa-user-slash"></i> Джоббан
-                            </button>
+        <div id="gameSelectedPlayerChip" class="ss14-selected-chip" hidden></div>
+
+        <div id="gamePageHub" class="ss14-page">
+            <section class="ss14-block">
+                <div class="ss14-block-head">
+                    <h3><i class="fa-solid fa-magnifying-glass"></i> Поиск игрока</h3>
+                </div>
+                <div class="ss14-search-row">
+                    <input type="text" id="gamePlayerSearch" placeholder="Сикей или UUID..." autocomplete="off"
+                        onkeydown="if(event.key==='Enter')searchGamePlayers()">
+                    <button type="button" class="btn-sm" onclick="searchGamePlayers()">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                    </button>
+                </div>
+                <div id="gamePlayerResults" class="ss14-player-results"></div>
+                <div id="gamePlayerProfile" class="ss14-player-card" hidden></div>
+                <div class="ss14-quick-actions" id="gameQuickActions" hidden>
+                    <button type="button" class="ss14-quick-btn ss14-quick-btn--server" onclick="showGamePage('server-ban')">
+                        <i class="fa-solid fa-ban"></i> Серверный бан
+                    </button>
+                    <button type="button" class="ss14-quick-btn ss14-quick-btn--job" onclick="showGamePage('job-ban')">
+                        <i class="fa-solid fa-user-slash"></i> Джоббан
+                    </button>
+                    <button type="button" class="ss14-quick-btn" onclick="showGamePage('bans')">
+                        <i class="fa-solid fa-list"></i> Журнал банов
+                    </button>
+                </div>
+            </section>
+        </div>
+
+        <div id="gamePageServerBan" class="ss14-page" hidden>
+            <section class="ss14-block">
+                <div class="ss14-block-head">
+                    <h3><i class="fa-solid fa-ban"></i> Серверный бан</h3>
+                </div>
+                <div id="gameBanFormServer" class="ss14-punish-form ss14-punish-form--server">
+                    <label class="ss14-field">
+                        <span>Игрок</span>
+                        <input type="text" id="serverBanPlayer" placeholder="Сикей или UUID">
+                    </label>
+                    <label class="ss14-field">
+                        <span>Причина</span>
+                        <textarea id="serverBanReason" rows="3" placeholder="Причина серверного бана"></textarea>
+                    </label>
+                    <div class="ss14-field">
+                        <span>Срок</span>
+                        <div class="ss14-duration-row">
+                            <input type="number" id="serverBanMinutes" min="0" value="1440" title="0 = навсегда">
+                            <span class="ss14-field-hint">мин. (0 — навсегда)</span>
+                        </div>
+                        <div class="ss14-duration-presets" data-target="serverBanMinutes">
+                            <button type="button" data-mins="60">1 ч</button>
+                            <button type="button" data-mins="1440">1 д</button>
+                            <button type="button" data-mins="10080">7 д</button>
+                            <button type="button" data-mins="43200">30 д</button>
+                            <button type="button" data-mins="0">∞</button>
                         </div>
                     </div>
+                    <label class="ss14-check">
+                        <input type="checkbox" id="serverBanUseIp">
+                        <span>Также забанить последний IP</span>
+                    </label>
+                    <button type="button" class="ss14-submit ss14-submit--server" onclick="submitServerBan()">
+                        <i class="fa-solid fa-ban"></i> Выдать серверный бан
+                    </button>
+                    <div id="serverBanResult" class="result"></div>
+                </div>
+            </section>
+        </div>
 
-                    <div id="gameBanFormServer" class="ss14-punish-form ss14-punish-form--server">
-                        <label class="ss14-field">
-                            <span>Игрок</span>
-                            <input type="text" id="serverBanPlayer" placeholder="Ник или UUID">
-                        </label>
-                        <label class="ss14-field">
-                            <span>Причина</span>
-                            <textarea id="serverBanReason" rows="3" placeholder="Причина серверного бана"></textarea>
-                        </label>
-                        <div class="ss14-field">
-                            <span>Срок</span>
-                            <div class="ss14-duration-row">
-                                <input type="number" id="serverBanMinutes" min="0" value="1440" title="0 = навсегда">
-                                <span class="ss14-field-hint">мин. (0 — навсегда)</span>
-                            </div>
-                            <div class="ss14-duration-presets" data-target="serverBanMinutes">
-                                <button type="button" data-mins="60">1 ч</button>
-                                <button type="button" data-mins="1440">1 д</button>
-                                <button type="button" data-mins="10080">7 д</button>
-                                <button type="button" data-mins="43200">30 д</button>
-                                <button type="button" data-mins="0">∞</button>
-                            </div>
+        <div id="gamePageJobBan" class="ss14-page" hidden>
+            <section class="ss14-block">
+                <div class="ss14-block-head">
+                    <h3><i class="fa-solid fa-user-slash"></i> Джоббан</h3>
+                </div>
+                <div id="gameBanFormRole" class="ss14-punish-form ss14-punish-form--job">
+                    <label class="ss14-field">
+                        <span>Игрок</span>
+                        <input type="text" id="roleBanPlayer" placeholder="Сикей или UUID">
+                    </label>
+                    <label class="ss14-field">
+                        <span>Должность</span>
+                        <input type="text" id="roleBanJobFilter" placeholder="Поиск должности..." oninput="filterRoleBanJobs()">
+                        <select id="roleBanJob" size="6"><option value="">Загрузка...</option></select>
+                    </label>
+                    <label class="ss14-field">
+                        <span>Причина</span>
+                        <textarea id="roleBanReason" rows="3" placeholder="Причина джоббана"></textarea>
+                    </label>
+                    <div class="ss14-field">
+                        <span>Срок</span>
+                        <div class="ss14-duration-row">
+                            <input type="number" id="roleBanMinutes" min="0" value="10080" title="0 = навсегда">
+                            <span class="ss14-field-hint">мин. (0 — навсегда)</span>
                         </div>
-                        <label class="ss14-check">
-                            <input type="checkbox" id="serverBanUseIp">
-                            <span>Также забанить последний IP</span>
-                        </label>
-                        <button type="button" class="ss14-submit ss14-submit--server" onclick="submitServerBan()">
-                            <i class="fa-solid fa-ban"></i> Выдать серверный бан
-                        </button>
-                        <div id="serverBanResult" class="result"></div>
-                    </div>
-
-                    <div id="gameBanFormRole" class="ss14-punish-form ss14-punish-form--job" hidden>
-                        <label class="ss14-field">
-                            <span>Игрок</span>
-                            <input type="text" id="roleBanPlayer" placeholder="Ник или UUID">
-                        </label>
-                        <label class="ss14-field">
-                            <span>Должность</span>
-                            <input type="text" id="roleBanJobFilter" placeholder="Поиск должности..." oninput="filterRoleBanJobs()">
-                            <select id="roleBanJob" size="6"><option value="">Загрузка...</option></select>
-                        </label>
-                        <label class="ss14-field">
-                            <span>Причина</span>
-                            <textarea id="roleBanReason" rows="3" placeholder="Причина джоббана"></textarea>
-                        </label>
-                        <div class="ss14-field">
-                            <span>Срок</span>
-                            <div class="ss14-duration-row">
-                                <input type="number" id="roleBanMinutes" min="0" value="10080" title="0 = навсегда">
-                                <span class="ss14-field-hint">мин. (0 — навсегда)</span>
-                            </div>
-                            <div class="ss14-duration-presets" data-target="roleBanMinutes">
-                                <button type="button" data-mins="1440">1 д</button>
-                                <button type="button" data-mins="10080">7 д</button>
-                                <button type="button" data-mins="43200">30 д</button>
-                                <button type="button" data-mins="129600">90 д</button>
-                                <button type="button" data-mins="0">∞</button>
-                            </div>
+                        <div class="ss14-duration-presets" data-target="roleBanMinutes">
+                            <button type="button" data-mins="1440">1 д</button>
+                            <button type="button" data-mins="10080">7 д</button>
+                            <button type="button" data-mins="43200">30 д</button>
+                            <button type="button" data-mins="129600">90 д</button>
+                            <button type="button" data-mins="0">∞</button>
                         </div>
-                        <button type="button" class="ss14-submit ss14-submit--job" onclick="submitRoleBan()">
-                            <i class="fa-solid fa-user-slash"></i> Выдать джоббан
-                        </button>
-                        <div id="roleBanResult" class="result"></div>
                     </div>
-                </section>
-            </div>
+                    <button type="button" class="ss14-submit ss14-submit--job" onclick="submitRoleBan()">
+                        <i class="fa-solid fa-user-slash"></i> Выдать джоббан
+                    </button>
+                    <div id="roleBanResult" class="result"></div>
+                </div>
+            </section>
+        </div>
 
+        <div id="gamePageBans" class="ss14-page" hidden>
             <section class="ss14-block ss14-block-bans">
                 <div class="ss14-block-head ss14-block-head-split">
                     <h3><i class="fa-solid fa-list"></i> Журнал банов</h3>
@@ -173,7 +199,7 @@
                             <option value="all">Все</option>
                             <option value="expired">Истёкшие / снятые</option>
                         </select>
-                        <input type="text" id="gameBanSearch" placeholder="Поиск по нику, причине, ID..." oninput="debounceGameBanSearch()">
+                        <input type="text" id="gameBanSearch" placeholder="Поиск..." oninput="debounceGameBanSearch()">
                         <button type="button" class="btn-sm ss14-filter-clear" id="gameBanPlayerClear" style="display:none" onclick="clearGamePlayerBanFilter()">
                             <i class="fa-solid fa-xmark"></i> Сбросить игрока
                         </button>

@@ -219,6 +219,16 @@ html[data-theme="dark"] .dust-particle {
 
 img { max-width: 100%; }
 
+html {
+    overflow-x: hidden;
+    max-width: 100%;
+}
+
+body {
+    overflow-x: hidden;
+    max-width: 100%;
+}
+
 /* Пиксельный шрифт для заголовков и управления */
 .pixel, .logo h1, .card h2, .side-group-title,
 .nav-btn, .side-link, .tab, .chart-tab, .nav-toggle,
@@ -364,11 +374,14 @@ body.nav-open { overflow: hidden; }
 /* === Layout: sidebar + content === */
 .layout {
     max-width: 1280px;
+    width: 100%;
     margin: 0 auto;
     display: flex;
     align-items: flex-start;
     gap: 18px;
     padding: 18px 18px 56px;
+    box-sizing: border-box;
+    min-width: 0;
 }
 
 .sidebar {
@@ -448,7 +461,14 @@ body.nav-open { overflow: hidden; }
 }
 .sidebar .nav-btn.active i { color: #fff; }
 
-.content { flex: 1; min-width: 0; }
+.content { flex: 1; min-width: 0; max-width: 100%; overflow-x: hidden; }
+
+.section {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
+}
 
 /* === Nav toggle (mobile) === */
 .nav-toggle {
@@ -1150,7 +1170,120 @@ html[data-theme="dark"] .status-meta {
 .ban-type-badge--job { background: var(--ban-job-soft); color: var(--ban-job); }
 
 /* === SS14 game admin panel === */
-.ss14-panel { display: grid; gap: 16px; }
+.ss14-subnav {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+}
+.ss14-subnav-btn {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 9px 12px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--panel);
+    color: var(--muted);
+    font-size: 0.58rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+.ss14-subnav-btn.active {
+    background: var(--panel-3);
+    border-color: var(--border-strong);
+    color: var(--ink);
+    box-shadow: inset 0 0 0 1px var(--border-strong);
+}
+.ss14-subnav-btn--server.active {
+    background: rgba(217, 69, 58, 0.12);
+    border-color: var(--danger);
+    color: var(--danger);
+}
+.ss14-subnav-btn--job.active {
+    background: var(--ban-job-soft);
+    border-color: var(--ban-job);
+    color: var(--ban-job);
+}
+.ss14-page { min-width: 0; }
+.ss14-selected-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+    padding: 8px 10px;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 0.82rem;
+}
+.ss14-selected-chip-label { color: var(--muted); font-size: 0.72rem; }
+.ss14-selected-chip-name,
+.ss14-copyable-name,
+.ss14-copyable-uuid {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--panel);
+    color: var(--ink);
+    font-weight: 700;
+    font-size: 0.82rem;
+    cursor: pointer;
+}
+.ss14-copyable-uuid {
+    font-weight: 500;
+    font-size: 0.72rem;
+    color: var(--muted);
+    word-break: break-all;
+    text-align: left;
+}
+.ss14-selected-chip-name i,
+.ss14-copyable-name i,
+.ss14-copyable-uuid i,
+.ss14-copy-chip i { font-size: 0.72rem; color: var(--muted); }
+.ss14-copy-ok i { color: var(--success) !important; }
+.ss14-selected-chip-clear {
+    margin-left: auto;
+    padding: 4px 8px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    border-radius: var(--radius-sm);
+    color: var(--muted);
+    cursor: pointer;
+}
+.ss14-quick-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+}
+.ss14-quick-btn {
+    flex: 1 1 auto;
+    min-width: 120px;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--panel);
+    color: var(--ink);
+    font-size: 0.62rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+.ss14-quick-btn--server { border-color: color-mix(in srgb, var(--danger) 35%, var(--border)); color: var(--danger); }
+.ss14-quick-btn--job { border-color: color-mix(in srgb, var(--ban-job) 35%, var(--border)); color: var(--ban-job); }
+
+.ss14-panel { display: grid; gap: 16px; min-width: 0; }
 .ss14-panel-columns {
     display: grid;
     grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
@@ -1188,24 +1321,80 @@ html[data-theme="dark"] .status-meta {
 .ss14-player-results { display: grid; gap: 6px; max-height: 220px; overflow: auto; }
 .ss14-player-hit {
     display: flex;
-    flex-direction: column;
-    gap: 2px;
+    align-items: center;
+    gap: 8px;
     width: 100%;
-    text-align: left;
-    padding: 10px 12px;
+    padding: 6px 8px;
     background: var(--panel);
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
-    cursor: pointer;
     transition: border-color var(--transition), background var(--transition);
+    min-width: 0;
 }
 .ss14-player-hit:hover,
 .ss14-player-hit.is-selected {
     border-color: var(--border-strong);
     background: var(--panel-3);
 }
-.ss14-player-hit-name { font-weight: 700; font-size: 0.88rem; color: var(--ink); }
-.ss14-player-hit-meta { font-size: 0.72rem; color: var(--muted); word-break: break-all; }
+.ss14-player-hit-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 2px 4px;
+    background: none;
+    border: none;
+    text-align: left;
+    cursor: pointer;
+    color: inherit;
+    font: inherit;
+    box-shadow: none;
+}
+.ss14-player-hit-main:hover { transform: none; background: none; }
+.ss14-player-hit-name {
+    font-weight: 700;
+    font-size: 0.84rem;
+    color: var(--ink);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    min-width: 0;
+}
+.ss14-copyable-ckey {
+    cursor: copy;
+    border-bottom: 1px dotted var(--border-strong);
+}
+.ss14-copyable-ckey:hover { color: var(--link); }
+.ss14-copyable-ckey.ss14-copy-ok { color: var(--success); border-bottom-color: transparent; }
+.ss14-player-hit-uuid {
+    font-size: 0.68rem;
+    color: var(--dim);
+    font-family: ui-monospace, monospace;
+    flex-shrink: 0;
+}
+.ss14-copy-chip {
+    flex-shrink: 0;
+    width: 30px;
+    height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--panel-2);
+    color: var(--muted);
+    cursor: pointer;
+    box-shadow: none;
+}
+.ss14-copy-chip:hover {
+    border-color: var(--border-strong);
+    color: var(--ink);
+    background: var(--panel-3);
+    transform: none;
+}
 .ss14-player-card {
     margin-top: 12px;
     padding: 12px;
@@ -1213,6 +1402,7 @@ html[data-theme="dark"] .status-meta {
     border: 1px solid var(--border);
     background: var(--panel);
 }
+.ss14-player-card-title { display: grid; gap: 6px; min-width: 0; }
 .ss14-player-card-head {
     display: flex;
     justify-content: space-between;
@@ -1418,10 +1608,10 @@ html[data-theme="dark"] .status-meta {
 }
 
 .chart-canvas-wrap {
-    overflow-x: auto;
+    overflow-x: hidden;
     width: 100%;
-    -webkit-overflow-scrolling: touch;
-    touch-action: pan-x pan-y;
+    max-width: 100%;
+    min-width: 0;
 }
 
 #onlineChartWrap {
@@ -1432,6 +1622,7 @@ html[data-theme="dark"] .status-meta {
     display: block;
     width: 100% !important;
     max-width: 100%;
+    height: auto !important;
     background: var(--panel-2);
     border-radius: var(--radius-sm);
     margin-top: 8px;
@@ -2860,13 +3051,13 @@ html[data-theme="dark"] .status-meta {
 }
 
 @media (max-width: 768px) {
-    .layout { flex-direction: column; padding: 12px 10px 36px; }
+    .layout { flex-direction: column; padding: 12px 10px 36px; width: 100%; max-width: 100%; }
     .nav-toggle {
         display: inline-flex;
         order: -1;
         margin-right: auto;
     }
-    .topbar-inner { flex-wrap: wrap; padding: 10px 12px; gap: 8px; }
+    .topbar-inner { flex-wrap: wrap; padding: 10px 12px; gap: 8px; width: 100%; box-sizing: border-box; }
     .logo { flex: 1; min-width: 0; }
     .logo h1 { font-size: 0.72rem; }
     #userInfo { width: 100%; justify-content: flex-end; margin-left: 0; }
@@ -2895,7 +3086,22 @@ html[data-theme="dark"] .status-meta {
     .chart-controls { flex-wrap: wrap; }
     .chart-tab { flex: 1; min-width: calc(50% - 0.25rem); }
     #dayPicker { width: 100%; margin-left: 0; }
-    .card { padding: 14px; }
+    .card { padding: 14px; overflow-x: hidden; max-width: 100%; }
+    #onlineSection .card,
+    .stats-playtime,
+    .playtime-compact,
+    .admin-rating-section {
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+    .playtime-chart-wrap,
+    .stats-chart-wrap {
+        max-width: 100%;
+        min-width: 0;
+    }
+    .ss14-subnav-btn {
+        flex: 1 1 calc(50% - 4px);
+    }
     .profile-header { flex-direction: column; align-items: center; text-align: center; }
     .profile-actions { justify-content: center; }
     input, select, textarea { font-size: 16px; }

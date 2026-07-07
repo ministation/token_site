@@ -327,9 +327,24 @@ function sizeCanvas(canvas) {
     const wrap = canvas.closest('.chart-canvas-wrap') || canvas.parentElement;
     if (wrap) {
         const mobile = window.innerWidth < 768;
-        canvas.width = Math.max(280, wrap.clientWidth - 8);
-        canvas.height = mobile ? 260 : Math.min(320, Math.max(220, 300));
+        const viewportW = document.documentElement.clientWidth || window.innerWidth;
+        const available = Math.min(wrap.clientWidth, viewportW - 24);
+        canvas.width = Math.max(200, Math.floor(available - 8));
+        canvas.height = mobile ? 240 : Math.min(320, Math.max(220, 300));
+        canvas.style.width = '100%';
+        canvas.style.height = canvas.height + 'px';
     }
+}
+
+if (!window._onlineChartResizeBound) {
+    window._onlineChartResizeBound = true;
+    window.addEventListener('resize', () => {
+        const canvas = document.getElementById('onlineChart');
+        if (!canvas || !onlineChart) return;
+        sizeCanvas(canvas);
+        onlineChart.resize();
+        onlineChart.update('none');
+    });
 }
 
 function buildChartOptions(xLabel, isLine) {
