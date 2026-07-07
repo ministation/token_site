@@ -37,6 +37,12 @@ def get_chat_badges(discord_username: str = "", discord_id: str | None = None) -
             "label": "КОНТЕНТ",
             "class": "content-maker-badge",
         })
+    if discord_id and social_db.is_time_keeper(discord_id):
+        badges.append({
+            "id": "time_keeper",
+            "label": "ХРАНИТЕЛЬ",
+            "class": "time-keeper-badge",
+        })
     return badges
 
 
@@ -54,10 +60,13 @@ def is_staff(username: str = "", discord_id: str | None = None) -> bool:
 
 
 def apply_roles(session: dict) -> dict:
-    role = get_staff_role(session.get("username", ""), session.get("discord_id"))
+    discord_id = session.get("discord_id")
+    role = get_staff_role(session.get("username", ""), discord_id)
     session["staff_role"] = role
     session["is_admin"] = role == ROLE_ADMIN
     session["is_moderator"] = role in (ROLE_ADMIN, ROLE_MODERATOR)
+    session["is_content_maker"] = bool(discord_id and social_db.is_content_maker(discord_id))
+    session["is_time_keeper"] = bool(discord_id and social_db.is_time_keeper(discord_id))
     return session
 
 

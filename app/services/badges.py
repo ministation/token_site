@@ -49,6 +49,12 @@ def get_member_badges(
             "label": "КОНТЕНТ",
             "class": "content-maker-badge",
         })
+    if discord_id and social_db.is_time_keeper(discord_id):
+        badges.append({
+            "id": "time_keeper",
+            "label": "ХРАНИТЕЛЬ",
+            "class": "time-keeper-badge",
+        })
     badges.append({"id": "member", "label": "УЧАСТНИК", "class": "member-badge"})
 
     created = _parse_created_at(created_at)

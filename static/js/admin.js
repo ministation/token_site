@@ -812,26 +812,53 @@ async function loadAdminList() {
     const container = document.getElementById('adminListContent');
     if (!container) return;
     try {
-        const admins = await apiCall('GET', '/api/admin/admins');
-        if (!admins.length) {
-            container.innerHTML = '<p class="empty-state">Нет администраторов</p>';
-            return;
-        }
-        container.innerHTML = admins.map(a => {
-            const roleBadge = (a.role === 'moderator')
+        const [admins, badges] = await Promise.all([
+            apiCall('GET', '/api/admin/admins'),
+            apiCall('GET', '/api/admin/badges'),
+        ]);
+        const items = [];
+        admins.forEach(a => {
+            const roleBadge = a.role === 'moderator'
                 ? '<span class="mod-badge">MOD</span>'
                 : '<span class="admin-badge">ADMIN</span>';
-            return `
+            items.push({ discord_id: a.discord_id, username: a.discord_username || a.discord_id, badge: roleBadge, granted_by: a.granted_by, removable: true, revoke: 'admin' });
+        });
+        (badges.content_makers || []).forEach(a => {
+            if (items.some(i => i.discord_id === a.discord_id)) return;
+            items.push({ discord_id: a.discord_id, username: a.discord_username || a.discord_id, badge: '<span class="content-maker-badge">КОНТЕНТ</span>', granted_by: a.granted_by, removable: true, revoke: 'content' });
+        });
+        (badges.time_keepers || []).forEach(a => {
+            if (items.some(i => i.discord_id === a.discord_id)) return;
+            items.push({ discord_id: a.discord_id, username: a.discord_username || a.discord_id, badge: '<span class="time-keeper-badge">ХРАНИТЕЛЬ</span>', granted_by: a.granted_by, removable: true, revoke: 'time' });
+        });
+        if (!items.length) {
+            container.innerHTML = '<p class="empty-state">Нет назначенного staff</p>';
+            return;
+        }
+        container.innerHTML = items.map(a => `
             <div class="admin-list-item">
-                <span><i class="fa-brands fa-discord"></i> ${escapeHtml(a.discord_username || a.discord_id)} ${roleBadge}</span>
+                <span><i class="fa-brands fa-discord"></i> ${escapeHtml(a.username)} ${a.badge}</span>
                 <span class="admin-meta">назначил: ${escapeHtml(a.granted_by || '—')}</span>
                 ${a.discord_id !== currentUser.discord_id
-                    ? `<button type="button" class="btn-danger-sm" onclick="revokeAdmin('${a.discord_id}')">Снять</button>`
+                    ? `<button type="button" class="btn-danger-sm" onclick="revokeStaffBadge('${a.discord_id}', '${a.revoke}')">Снять</button>`
                     : '<span class="admin-badge">Вы</span>'}
-            </div>`;
-        }).join('');
+            </div>
+        `).join('');
     } catch (e) {
         container.innerHTML = `<p class="error">${escapeHtml(e.message)}</p>`;
+    }
+}
+
+async function revokeStaffBadge(discordId, kind) {
+    const labels = { admin: 'staff', content: 'контент-мейкера', time: 'хранителя времени' };
+    if (!confirm(`Снять ${labels[kind] || 'права'}?`)) return;
+    try {
+        if (kind === 'content') await apiCall('DELETE', '/api/admin/content-makers/' + discordId);
+        else if (kind === 'time') await apiCall('DELETE', '/api/admin/time-keepers/' + discordId);
+        else await apiCall('DELETE', '/api/admin/admins/' + discordId);
+        loadAdminList();
+    } catch (e) {
+        alert(e.message);
     }
 }
 
@@ -845,7 +872,12 @@ async function grantAdmin() {
     try {
         await apiCall('POST', '/api/admin/admins', { discord_username: username, role });
         if (input) input.value = '';
-        if (res) res.innerHTML = `<p class="success">${role === 'admin' ? 'Администратор' : 'Модератор'} назначен</p>`;
+        if (res) res.innerHTML = `<p class="success">${
+            role === 'admin' ? 'Администратор'
+            : role === 'moderator' ? 'Модератор'
+            : role === 'content_maker' ? 'Контент-мейкер'
+            : 'Хранитель времени'
+        } назначен</p>`;
         loadAdminList();
     } catch (e) {
         if (res) res.innerHTML = `<p class="error">${escapeHtml(e.message)}</p>`;

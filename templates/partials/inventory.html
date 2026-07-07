@@ -23,5 +23,34 @@
         <div id="inventoryContent">
             <p class="empty-state">Загрузка...</p>
         </div>
+
+        <div class="inventory-section playtime-transfer-section" id="playtimeTransferSection" hidden>
+            <h3><i class="fa-solid fa-clock"></i> Перенос времени на роли</h3>
+            <p class="inventory-hint">Перенесите часы с одной должности на другую в игровой БД.</p>
+            <div id="playtimeKeeperFields" class="playtime-keeper-fields" hidden>
+                <label class="playtime-label" for="playtimePlayerNick">Игрок (ник в игре)</label>
+                <input type="text" id="playtimePlayerNick" placeholder="ckey / ник">
+            </div>
+            <div class="playtime-form-grid">
+                <div>
+                    <label class="playtime-label" for="playtimeFromRole">Откуда</label>
+                    <select id="playtimeFromRole"></select>
+                </div>
+                <div>
+                    <label class="playtime-label" for="playtimeToRole">Куда</label>
+                    <select id="playtimeToRole"></select>
+                </div>
+                <div>
+                    <label class="playtime-label" for="playtimeMinutes">Минут</label>
+                    <input type="number" id="playtimeMinutes" min="1" step="1" placeholder="60">
+                </div>
+            </div>
+            <div class="playtime-actions">
+                <button type="button" onclick="loadPlaytimeJobs()"><i class="fa-solid fa-rotate"></i> Обновить</button>
+                <button type="button" onclick="submitPlaytimeTransfer()"><i class="fa-solid fa-right-left"></i> Перенести</button>
+            </div>
+            <div id="playtimeJobsList" class="playtime-jobs-list"></div>
+            <div id="playtimeTransferResult" class="result"></div>
+        </div>
     </div>
 </div>

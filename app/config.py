@@ -28,6 +28,24 @@ MODERATOR_USERNAMES = [
     if x.strip()
 ]
 
+# Discord-сервер и роли для автоматических тэгов
+DISCORD_BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN", "")
+DISCORD_GUILD_ID = os.getenv("DISCORD_GUILD_ID", "")
+CONTENT_MAKER_ROLE_IDS = [int(x.strip()) for x in os.getenv("CONTENT_MAKER_ROLE_IDS", "").split(",") if x.strip()]
+TIME_KEEPER_ROLE_IDS = [int(x.strip()) for x in os.getenv("TIME_KEEPER_ROLE_IDS", "").split(",") if x.strip()]
+CONTENT_MAKER_DISCORD_IDS = [x.strip() for x in os.getenv("CONTENT_MAKER_DISCORD_IDS", "").split(",") if x.strip()]
+TIME_KEEPER_DISCORD_IDS = [x.strip() for x in os.getenv("TIME_KEEPER_DISCORD_IDS", "").split(",") if x.strip()]
+CONTENT_MAKER_USERNAMES = [
+    x.strip().lower()
+    for x in os.getenv("CONTENT_MAKER_USERNAMES", "").split(",")
+    if x.strip()
+]
+TIME_KEEPER_USERNAMES = [
+    x.strip().lower()
+    for x in os.getenv("TIME_KEEPER_USERNAMES", "").split(",")
+    if x.strip()
+]
+
 # Банк
 BANK_DEPOSIT_MIN = int(os.getenv("BANK_DEPOSIT_MIN", "10"))
 BANK_DEPOSIT_RATE = int(os.getenv("BANK_DEPOSIT_RATE", "20"))

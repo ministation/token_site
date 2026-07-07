@@ -1,7 +1,10 @@
 function staffBadgeHtml(user) {
     if (user?.is_admin) return ' <span class="admin-badge">ADMIN</span>';
     if (user?.is_moderator) return ' <span class="mod-badge">MOD</span>';
-    return '';
+    let html = '';
+    if (user?.is_content_maker) html += ' <span class="content-maker-badge">КОНТЕНТ</span>';
+    if (user?.is_time_keeper) html += ' <span class="time-keeper-badge">ХРАНИТЕЛЬ</span>';
+    return html;
 }
 
 async function checkAuth() {

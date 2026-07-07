@@ -88,6 +88,7 @@ async function loadInventory() {
         html += '</div>';
 
         container.innerHTML = html;
+        if (typeof initPlaytimeTransfer === 'function') initPlaytimeTransfer();
     } catch (e) {
         container.innerHTML = `<p class="error">${escapeHtml(e.message)}</p>`;
     }

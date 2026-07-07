@@ -6,6 +6,7 @@ from fastapi.responses import RedirectResponse
 from app.config import DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, DISCORD_REDIRECT_URI
 from app.services.roles import apply_roles, ROLE_ADMIN, ROLE_MODERATOR
 from app.services.game_staff import sync_game_moderator_site_role
+from app.services.discord_badges import sync_member_badges
 from app.core.sessions import (
     get_session, set_session, delete_session, generate_session_token, user_sessions
 )
@@ -17,8 +18,10 @@ import database_social as social_db
 
 async def _sync_roles_from_game(session_data: dict) -> None:
     discord_id = session_data.get("discord_id")
+    username = session_data.get("username", "")
     if discord_id and social_db.get_social_user_by_discord_id(discord_id):
-        await sync_game_moderator_site_role(discord_id, session_data.get("username", ""))
+        await sync_game_moderator_site_role(discord_id, username)
+        await sync_member_badges(discord_id, username)
 
 
 def _apply_staff_flags(session_data: dict) -> dict:

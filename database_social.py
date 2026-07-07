@@ -246,6 +246,14 @@ def _migrate_schema():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS site_time_keepers (
+            discord_id TEXT PRIMARY KEY,
+            discord_username TEXT,
+            granted_by TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
     post_cols = _table_columns(cursor, "posts")
     if "category" not in post_cols:
         cursor.execute("ALTER TABLE posts ADD COLUMN category TEXT DEFAULT 'forum'")
@@ -462,6 +470,17 @@ def is_content_maker(discord_id: str) -> bool:
     return row is not None
 
 
+def get_content_maker_source(discord_id: str) -> str | None:
+    if not discord_id:
+        return None
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT granted_by FROM site_content_makers WHERE discord_id = ?", (discord_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return row["granted_by"] if row else None
+
+
 def add_content_maker(discord_id: str, discord_username: str, granted_by: str) -> bool:
     conn = get_db()
     cursor = conn.cursor()
@@ -470,7 +489,10 @@ def add_content_maker(discord_id: str, discord_username: str, granted_by: str) -
         VALUES (?, ?, ?)
         ON CONFLICT(discord_id) DO UPDATE SET
             discord_username = excluded.discord_username,
-            granted_by = excluded.granted_by
+            granted_by = CASE
+                WHEN site_content_makers.granted_by IN ('admin', 'manual') THEN site_content_makers.granted_by
+                ELSE excluded.granted_by
+            END
     """, (discord_id, discord_username, granted_by))
     conn.commit()
     conn.close()
@@ -491,6 +513,74 @@ def list_content_makers() -> List[Dict]:
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM site_content_makers ORDER BY created_at ASC")
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return rows
+
+
+def is_time_keeper(discord_id: str) -> bool:
+    if not discord_id:
+        return False
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT 1 FROM site_time_keepers WHERE discord_id = ? LIMIT 1", (discord_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return row is not None
+
+
+def get_time_keeper_source(discord_id: str) -> str | None:
+    if not discord_id:
+        return None
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT granted_by FROM site_time_keepers WHERE discord_id = ?", (discord_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return row["granted_by"] if row else None
+
+
+def add_time_keeper(discord_id: str, discord_username: str, granted_by: str) -> bool:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO site_time_keepers (discord_id, discord_username, granted_by)
+        VALUES (?, ?, ?)
+        ON CONFLICT(discord_id) DO UPDATE SET
+            discord_username = excluded.discord_username,
+            granted_by = CASE
+                WHEN site_time_keepers.granted_by IN ('admin', 'manual') THEN site_time_keepers.granted_by
+                ELSE excluded.granted_by
+            END
+    """, (discord_id, discord_username, granted_by))
+    conn.commit()
+    conn.close()
+    return True
+
+
+def remove_time_keeper(discord_id: str) -> bool:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM site_time_keepers WHERE discord_id = ?", (discord_id,))
+    conn.commit()
+    ok = cursor.rowcount > 0
+    conn.close()
+    return ok
+
+
+def list_time_keepers() -> List[Dict]:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM site_time_keepers ORDER BY created_at ASC")
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return rows
+
+
+def list_all_social_users() -> List[Dict]:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT discord_id, discord_username FROM social_users WHERE discord_id IS NOT NULL")
     rows = [dict(r) for r in cursor.fetchall()]
     conn.close()
     return rows
@@ -547,6 +637,20 @@ def seed_moderator_by_username(username: str, granted_by: str = "config") -> boo
     if not user:
         return False
     return add_site_moderator(user["discord_id"], user.get("discord_username") or username, granted_by)
+
+
+def seed_content_maker_by_username(username: str, granted_by: str = "config") -> bool:
+    user = get_social_user_by_discord_username(username)
+    if not user:
+        return False
+    return add_content_maker(user["discord_id"], user.get("discord_username") or username, granted_by)
+
+
+def seed_time_keeper_by_username(username: str, granted_by: str = "config") -> bool:
+    user = get_social_user_by_discord_username(username)
+    if not user:
+        return False
+    return add_time_keeper(user["discord_id"], user.get("discord_username") or username, granted_by)
 
 
 def get_ban_appeal_by_id(appeal_id: int) -> Optional[Dict]:

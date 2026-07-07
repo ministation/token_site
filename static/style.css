@@ -392,6 +392,18 @@ body {
     margin-left: 4px;
 }
 
+.time-keeper-badge {
+    display: inline-block;
+    font-family: var(--font-pixel);
+    font-size: 0.45rem;
+    background: #2f9e44;
+    color: #fff;
+    padding: 3px 6px;
+    border-radius: 4px;
+    vertical-align: middle;
+    margin-left: 4px;
+}
+
 .member-badge {
     display: inline-block;
     font-family: var(--font-pixel);
@@ -3364,6 +3376,46 @@ label.chat-tool-btn input[type="file"] {
 
 /* === Inventory === */
 .inventory-hint { color: var(--muted); font-size: 0.85rem; margin-bottom: 16px; }
+.playtime-transfer-section {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+}
+.playtime-form-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 12px;
+}
+.playtime-label {
+    display: block;
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-bottom: 4px;
+}
+.playtime-keeper-fields { margin-bottom: 12px; }
+.playtime-keeper-fields input { margin-bottom: 0; }
+.playtime-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+.playtime-jobs-list { margin-top: 8px; }
+.playtime-player-title { margin-bottom: 8px; color: var(--ink); font-size: 0.9rem; }
+.playtime-jobs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 8px;
+}
+.playtime-job-card {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px;
+}
+.playtime-job-name { font-size: 0.82rem; color: var(--ink); margin-bottom: 4px; }
+.playtime-job-hours { font-size: 0.95rem; font-weight: 700; color: var(--link); }
 .inventory-section { margin-bottom: 24px; }
 .inventory-section h3 {
     font-size: 0.95rem;
