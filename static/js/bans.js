@@ -29,12 +29,22 @@ async function loadBans() {
     }
 }
 
-function renderBanCard(b) {
+function renderBanCard(b, options = {}) {
     const typeClass = b.type === 0 ? 'type-server' : 'type-role';
-    const names = {0: 'Серверный', 1: 'Ролевой'};
-    const exp = b.expiration_time ? new Date(b.expiration_time).toLocaleString() : 'Навсегда';
-    const time = b.ban_time ? new Date(b.ban_time).toLocaleString() : '-';
+    const typeLabel = b.type === 0 ? 'Серверный' : 'Джоббан';
+    const exp = b.expiration_time ? new Date(b.expiration_time).toLocaleString('ru-RU') : 'Навсегда';
+    const time = b.ban_time ? new Date(b.ban_time).toLocaleString('ru-RU') : '—';
     const roles = (b.roles && b.roles.length) ? b.roles.join(', ') : '';
+    const players = (b.player_names && b.player_names.length) ? b.player_names.join(', ') : '';
+
+    let statusHtml = '';
+    if (b.is_unbanned) {
+        statusHtml = '<span class="ban-status ban-status-unbanned">Снят</span>';
+    } else if (b.is_active) {
+        statusHtml = '<span class="ban-status ban-status-active">Активен</span>';
+    } else if (b.is_active === false) {
+        statusHtml = '<span class="ban-status ban-status-expired">Истёк</span>';
+    }
 
     let appealHtml = '';
     if (b.appeal) {
@@ -43,21 +53,32 @@ function renderBanCard(b) {
             <b>Обжалование:</b> ${statusLabels[b.appeal.status] || b.appeal.status}
             ${b.appeal.admin_response ? '<br><b>Ответ:</b> ' + escapeHtml(b.appeal.admin_response) : ''}
         </div>`;
-    } else if (currentUser?.authenticated) {
+    } else if (currentUser?.authenticated && !options.admin && b.is_active) {
         appealHtml = `<button type="button" class="ban-appeal-btn" onclick="openAppealModal(${b.ban_id})">
             <i class="fa-solid fa-scale-balanced"></i> Обжаловать
         </button>`;
     }
 
-    return '<div class="ban-card ' + typeClass + '">' +
-        '<div class="ban-card-header">' +
-        '<h3 class="ban-card-title">' + names[b.type] + ' бан #' + b.ban_id + '</h3>' +
-        '<span class="ban-card-time">' + time + '</span></div>' +
-        '<div class="ban-card-meta"><b>Админ:</b> ' + escapeHtml(b.admin_name || '-') +
-        ' &nbsp;·&nbsp; <b>Срок:</b> ' + exp + '</div>' +
-        (roles ? '<div class="ban-card-meta" style="margin-top:6px;"><b>Роли:</b> ' + escapeHtml(roles) + '</div>' : '') +
-        '<div class="ban-card-reason"><b>Причина:</b> ' + escapeHtml(b.reason || '-') + '</div>' +
-        appealHtml + '</div>';
+    const unbanHtml = (options.admin && b.is_active)
+        ? `<button type="button" class="ss14-unban-btn" onclick="unbanGameBan(${b.ban_id})">
+            <i class="fa-solid fa-unlock"></i> Разбанить
+           </button>`
+        : '';
+
+    return `<div class="ban-card ${typeClass}">
+        <div class="ban-card-header">
+            <h3 class="ban-card-title">${typeLabel} #${b.ban_id} ${statusHtml}</h3>
+            <span class="ban-card-time">${time}</span>
+        </div>
+        ${players ? `<div class="ban-card-meta"><b>Игрок:</b> ${escapeHtml(players)}</div>` : ''}
+        <div class="ban-card-meta"><b>Админ:</b> ${escapeHtml(b.admin_name || '—')}
+            &nbsp;·&nbsp; <b>Срок:</b> ${exp}</div>
+        ${b.is_unbanned && b.unban_time ? `<div class="ban-card-meta"><b>Снят:</b> ${new Date(b.unban_time).toLocaleString('ru-RU')}
+            ${b.unban_admin_name ? ' · ' + escapeHtml(b.unban_admin_name) : ''}</div>` : ''}
+        ${roles ? `<div class="ban-card-meta" style="margin-top:6px;"><b>Должности:</b> ${escapeHtml(roles)}</div>` : ''}
+        <div class="ban-card-reason"><b>Причина:</b> ${escapeHtml(b.reason || '—')}</div>
+        ${unbanHtml}${appealHtml}
+    </div>`;
 }
 
 function openAppealModal(banId) {

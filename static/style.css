@@ -34,6 +34,9 @@
     --gold: #f5b800;
     --danger: #d9453a;
     --danger-deep: #b23227;
+    --ban-job: #3b82f6;
+    --ban-job-deep: #2563eb;
+    --ban-job-soft: rgba(59, 130, 246, 0.12);
     --success: #1f9a55;
     --success-deep: #177a43;
     --purple: #7a5cd6;
@@ -74,6 +77,9 @@ html[data-theme="dark"] {
     --gold: #ffca28;
     --danger: #ef6a5e;
     --danger-deep: #cf4a3e;
+    --ban-job: #60a5fa;
+    --ban-job-deep: #3b82f6;
+    --ban-job-soft: rgba(96, 165, 250, 0.14);
     --success: #38c273;
     --success-deep: #279a58;
 
@@ -1086,7 +1092,7 @@ html[data-theme="dark"] .status-meta {
     border-radius: var(--radius-sm);
 }
 .ban-card.type-server { border-left: 4px solid var(--danger); }
-.ban-card.type-role { border-left: 4px solid var(--accent); }
+.ban-card.type-role { border-left: 4px solid var(--ban-job); }
 .ban-card-header {
     display: flex;
     justify-content: space-between;
@@ -1097,7 +1103,7 @@ html[data-theme="dark"] .status-meta {
 }
 .ban-card-title { margin: 0; font-size: 0.95rem; font-weight: 700; }
 .ban-card.type-server .ban-card-title { color: var(--danger); }
-.ban-card.type-role .ban-card-title { color: var(--accent); }
+.ban-card.type-role .ban-card-title { color: var(--ban-job); }
 .ban-card-time { color: var(--dim); font-size: 0.78rem; white-space: nowrap; }
 .ban-card-meta { font-size: 0.875rem; color: var(--muted); line-height: 1.6; }
 .ban-card-meta b { color: var(--ink); font-weight: 600; }
@@ -1112,6 +1118,277 @@ html[data-theme="dark"] .status-meta {
 }
 .ban-card-reason b { color: var(--muted); }
 .bans-load-more { margin-top: 14px; text-align: center; }
+
+.ban-status {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+.ban-status-active { background: rgba(217, 69, 58, 0.14); color: var(--danger); }
+.ban-status-unbanned { background: rgba(31, 154, 85, 0.14); color: var(--success); }
+.ban-status-expired { background: var(--panel-3); color: var(--muted); }
+.ban-type-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: var(--radius-sm);
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+.ban-type-badge--server { background: rgba(217, 69, 58, 0.14); color: var(--danger); }
+.ban-type-badge--job { background: var(--ban-job-soft); color: var(--ban-job); }
+
+/* === SS14 game admin panel === */
+.ss14-panel { display: grid; gap: 16px; }
+.ss14-panel-columns {
+    display: grid;
+    grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
+    gap: 16px;
+    align-items: start;
+}
+.ss14-block {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+}
+.ss14-block-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+}
+.ss14-block-head h3 {
+    margin: 0;
+    font-size: 0.82rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+.ss14-block-head-split { align-items: flex-start; }
+.ss14-search-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+.ss14-search-row input { flex: 1; margin-bottom: 0; min-width: 0; }
+.ss14-player-results { display: grid; gap: 6px; max-height: 220px; overflow: auto; }
+.ss14-player-hit {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    width: 100%;
+    text-align: left;
+    padding: 10px 12px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: border-color var(--transition), background var(--transition);
+}
+.ss14-player-hit:hover,
+.ss14-player-hit.is-selected {
+    border-color: var(--border-strong);
+    background: var(--panel-3);
+}
+.ss14-player-hit-name { font-weight: 700; font-size: 0.88rem; color: var(--ink); }
+.ss14-player-hit-meta { font-size: 0.72rem; color: var(--muted); word-break: break-all; }
+.ss14-player-card {
+    margin-top: 12px;
+    padding: 12px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--panel);
+}
+.ss14-player-card-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    align-items: flex-start;
+    margin-bottom: 10px;
+}
+.ss14-player-card-name { font-weight: 800; font-size: 1rem; }
+.ss14-player-card-uuid { font-size: 0.72rem; color: var(--muted); word-break: break-all; }
+.ss14-player-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 10px;
+}
+.ss14-player-stat {
+    padding: 8px 10px;
+    background: var(--panel-2);
+    border-radius: var(--radius-sm);
+    font-size: 0.78rem;
+}
+.ss14-player-stat b { display: block; font-size: 0.95rem; margin-bottom: 2px; }
+.ss14-player-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.ss14-punish-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+.ss14-punish-tab {
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--panel);
+    color: var(--muted);
+    font-size: 0.68rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.ss14-punish-tab--server.active {
+    background: var(--danger);
+    border-color: var(--danger-deep);
+    color: #fff;
+    box-shadow: var(--shadow-btn-color);
+}
+.ss14-punish-tab--job.active {
+    background: var(--ban-job);
+    border-color: var(--ban-job-deep);
+    color: #fff;
+    box-shadow: var(--shadow-btn-color);
+}
+.ss14-punish-form { display: grid; gap: 12px; }
+.ss14-punish-form--server { border-top: 3px solid var(--danger); padding-top: 14px; }
+.ss14-punish-form--job { border-top: 3px solid var(--ban-job); padding-top: 14px; }
+.ss14-field { display: grid; gap: 6px; }
+.ss14-field > span {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.ss14-field input,
+.ss14-field textarea,
+.ss14-field select { margin-bottom: 0; }
+.ss14-field select[size] {
+    min-height: 140px;
+    padding: 6px;
+}
+.ss14-field-hint { font-size: 0.72rem; color: var(--dim); white-space: nowrap; }
+.ss14-duration-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ss14-duration-row input { width: 110px; }
+.ss14-duration-presets { display: flex; gap: 6px; flex-wrap: wrap; }
+.ss14-duration-presets button {
+    padding: 5px 10px;
+    font-size: 0.62rem;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--muted);
+}
+.ss14-duration-presets button:hover {
+    border-color: var(--border-strong);
+    color: var(--ink);
+}
+.ss14-check {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.82rem;
+    color: var(--muted);
+}
+.ss14-check input { width: auto; margin: 0; }
+.ss14-submit {
+    justify-self: start;
+    padding: 10px 16px;
+    border-radius: var(--radius-sm);
+    border: none;
+    color: #fff;
+    font-size: 0.68rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: var(--shadow-btn-color);
+}
+.ss14-submit--server { background: var(--danger); }
+.ss14-submit--server:hover { background: var(--danger-deep); color: #fff; }
+.ss14-submit--job { background: var(--ban-job); }
+.ss14-submit--job:hover { background: var(--ban-job-deep); color: #fff; }
+
+.ss14-ban-filters {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+.ss14-ban-filters select,
+.ss14-ban-filters input { margin-bottom: 0; min-width: 120px; }
+.ss14-ban-filters input { flex: 1; min-width: 160px; }
+.ss14-ban-list { display: grid; gap: 8px; }
+.ss14-ban-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px 14px;
+    padding: 12px 14px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    border-left-width: 4px;
+}
+.ss14-ban-row.type-server { border-left-color: var(--danger); }
+.ss14-ban-row.type-job { border-left-color: var(--ban-job); }
+.ss14-ban-row-main { display: grid; gap: 6px; min-width: 0; }
+.ss14-ban-row-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.ss14-ban-row-id { font-weight: 800; font-size: 0.82rem; }
+.ss14-ban-row-player { font-weight: 700; }
+.ss14-ban-row-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    font-size: 0.78rem;
+    color: var(--muted);
+}
+.ss14-ban-row-meta b { color: var(--ink); }
+.ss14-ban-row-reason {
+    font-size: 0.82rem;
+    line-height: 1.45;
+    color: var(--ink);
+    padding: 8px 10px;
+    background: var(--panel-2);
+    border-radius: var(--radius-sm);
+}
+.ss14-ban-row-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-end;
+    justify-content: center;
+}
+.ss14-unban-btn {
+    padding: 7px 12px;
+    font-size: 0.62rem;
+    background: var(--success);
+    border: 1px solid var(--success-deep);
+    color: #fff;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    white-space: nowrap;
+}
+.ss14-unban-btn:hover { background: var(--success-deep); color: #fff; }
+
+@media (max-width: 900px) {
+    .ss14-panel-columns { grid-template-columns: 1fr; }
+    .ss14-ban-row { grid-template-columns: 1fr; }
+    .ss14-ban-row-actions { flex-direction: row; justify-content: flex-start; }
+}
 
 /* === Economy tabs === */
 .economy-tabs, .tabs, .chart-controls {

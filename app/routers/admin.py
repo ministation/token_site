@@ -226,6 +226,8 @@ async def admin_create_role_ban(req: CreateRoleBanRequest, request: Request):
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Не удалось выдать джоббан: {e}")
     return {"success": True, **result}
 
 

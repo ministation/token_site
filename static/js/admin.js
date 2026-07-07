@@ -1,9 +1,10 @@
-let adminBansOffset = 0;
 let adminUsersOffset = 0;
 let adminPostsOffset = 0;
 let adminUserSearchTimeout = null;
 let gameBanSearchTimeout = null;
 let gameJobsLoaded = false;
+let gameJobsList = [];
+let gameBansOffset = 0;
 let gameSelectedPlayer = null;
 
 function showAdminTab(tab, btn) {
@@ -315,22 +316,314 @@ async function adminDeletePost(postId) {
     }
 }
 
-async function loadAdminBans(append) {
-    const container = document.getElementById('adminBansContent');
-    if (!container) return;
-    if (!append) { adminBansOffset = 0; container.innerHTML = '<p class="empty-state">Загрузка...</p>'; }
+function initGameModerationTab() {
+    if (!gameJobsLoaded) loadGameJobs();
+    bindGameDurationPresets();
+    loadGameBans(false);
+}
+
+function bindGameDurationPresets() {
+    document.querySelectorAll('.ss14-duration-presets').forEach(group => {
+        if (group.dataset.bound) return;
+        group.dataset.bound = '1';
+        const targetId = group.dataset.target;
+        group.addEventListener('click', (e) => {
+            const btn = e.target.closest('button[data-mins]');
+            if (!btn || !targetId) return;
+            const input = document.getElementById(targetId);
+            if (input) input.value = btn.dataset.mins;
+            group.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        });
+    });
+}
+
+function switchGameBanForm(mode, btn) {
+    const serverForm = document.getElementById('gameBanFormServer');
+    const roleForm = document.getElementById('gameBanFormRole');
+    const serverTab = document.getElementById('gameBanTabServer');
+    const roleTab = document.getElementById('gameBanTabRole');
+    const isServer = mode === 'server';
+    if (serverForm) serverForm.hidden = !isServer;
+    if (roleForm) roleForm.hidden = isServer;
+    if (serverTab) serverTab.classList.toggle('active', isServer);
+    if (roleTab) roleTab.classList.toggle('active', !isServer);
+    document.querySelectorAll('.ss14-punish-tab').forEach(t => t.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+}
+
+async function loadGameJobs() {
+    const select = document.getElementById('roleBanJob');
+    if (!select) return;
     try {
-        const bans = await apiCall('GET', `/api/admin/bans?limit=20&offset=${adminBansOffset}`);
-        if (!append && !bans.length) {
-            container.innerHTML = '<p class="empty-state">Банов нет</p>';
+        gameJobsList = await apiCall('GET', '/api/admin/game/jobs');
+        gameJobsLoaded = true;
+        renderRoleBanJobOptions();
+    } catch (e) {
+        select.innerHTML = `<option value="">Ошибка: ${escapeHtml(e.message)}</option>`;
+    }
+}
+
+function renderRoleBanJobOptions(filter = '') {
+    const select = document.getElementById('roleBanJob');
+    if (!select) return;
+    const q = filter.trim().toLowerCase();
+    const jobs = q
+        ? gameJobsList.filter(j => j.label.toLowerCase().includes(q) || j.id.toLowerCase().includes(q))
+        : gameJobsList;
+    if (!jobs.length) {
+        select.innerHTML = '<option value="">Ничего не найдено</option>';
+        return;
+    }
+    const current = select.value;
+    select.innerHTML = jobs.map(j =>
+        `<option value="${escapeHtml(j.id)}">${escapeHtml(j.label)}</option>`
+    ).join('');
+    if (current && jobs.some(j => j.id === current)) select.value = current;
+    else if (jobs.length) select.selectedIndex = 0;
+}
+
+function filterRoleBanJobs() {
+    const filter = document.getElementById('roleBanJobFilter')?.value || '';
+    renderRoleBanJobOptions(filter);
+}
+
+function setGameSelectedPlayer(player) {
+    gameSelectedPlayer = player;
+    const profile = document.getElementById('gamePlayerProfile');
+    const results = document.getElementById('gamePlayerResults');
+    if (!player) {
+        if (profile) profile.hidden = true;
+        return;
+    }
+    const label = player.name || player.user_uuid;
+    const serverInput = document.getElementById('serverBanPlayer');
+    const roleInput = document.getElementById('roleBanPlayer');
+    if (serverInput) serverInput.value = label;
+    if (roleInput) roleInput.value = label;
+
+    if (results) {
+        results.querySelectorAll('.ss14-player-hit').forEach(el => {
+            el.classList.toggle('is-selected', el.dataset.uuid === player.user_uuid);
+        });
+    }
+    if (profile) {
+        profile.hidden = false;
+        const lastSeen = player.last_seen ? new Date(player.last_seen).toLocaleString('ru-RU') : '—';
+        const activeBans = (player.bans || []).filter(b => b.is_active).length;
+        profile.innerHTML = `
+            <div class="ss14-player-card-head">
+                <div>
+                    <div class="ss14-player-card-name">${escapeHtml(player.name || 'Без ника')}</div>
+                    <div class="ss14-player-card-uuid">${escapeHtml(player.user_uuid)}</div>
+                </div>
+            </div>
+            <div class="ss14-player-stats">
+                <div class="ss14-player-stat"><b>${lastSeen}</b>Последний визит</div>
+                <div class="ss14-player-stat"><b>${escapeHtml(player.last_ip || '—')}</b>Последний IP</div>
+                <div class="ss14-player-stat"><b>${activeBans}</b>Активных банов</div>
+                <div class="ss14-player-stat"><b>${(player.bans || []).length}</b>Всего в истории</div>
+            </div>
+            <div class="ss14-player-actions">
+                <button type="button" class="btn-sm" onclick="filterGameBansByPlayer('${player.user_uuid}')">
+                    <i class="fa-solid fa-filter"></i> Баны игрока
+                </button>
+            </div>`;
+    }
+}
+
+async function searchGamePlayers() {
+    const input = document.getElementById('gamePlayerSearch');
+    const container = document.getElementById('gamePlayerResults');
+    const q = input?.value.trim() || '';
+    if (!container) return;
+    if (q.length < 2) {
+        container.innerHTML = '<p class="empty-state">Введите минимум 2 символа</p>';
+        return;
+    }
+    container.innerHTML = '<p class="empty-state">Поиск...</p>';
+    try {
+        const players = await apiCall('GET', `/api/admin/game/players/search?q=${encodeURIComponent(q)}`);
+        if (!players.length) {
+            container.innerHTML = '<p class="empty-state">Игроки не найдены</p>';
             return;
         }
-        const html = bans.map(b => typeof renderBanCard === 'function' ? renderBanCard(b) : JSON.stringify(b)).join('');
-        if (append) container.innerHTML += html;
-        else container.innerHTML = html;
-        adminBansOffset += bans.length;
+        container.innerHTML = players.map(p => `
+            <button type="button" class="ss14-player-hit" data-uuid="${escapeHtml(p.user_uuid)}"
+                onclick="selectGamePlayer('${p.user_uuid}')">
+                <span class="ss14-player-hit-name">${escapeHtml(p.name || 'Без ника')}</span>
+                <span class="ss14-player-hit-meta">${escapeHtml(p.user_uuid)}</span>
+            </button>
+        `).join('');
     } catch (e) {
         container.innerHTML = `<p class="error">${escapeHtml(e.message)}</p>`;
+    }
+}
+
+async function selectGamePlayer(userUuid) {
+    try {
+        const profile = await apiCall('GET', `/api/admin/game/players/${encodeURIComponent(userUuid)}`);
+        setGameSelectedPlayer(profile);
+    } catch (e) {
+        alert(e.message);
+    }
+}
+
+function filterGameBansByPlayer(userUuid) {
+    const hidden = document.getElementById('gameBanPlayerFilter');
+    const clearBtn = document.getElementById('gameBanPlayerClear');
+    const label = gameSelectedPlayer?.name || userUuid.slice(0, 8) + '…';
+    if (hidden) hidden.value = userUuid;
+    if (clearBtn) {
+        clearBtn.style.display = '';
+        clearBtn.innerHTML = `<i class="fa-solid fa-xmark"></i> ${escapeHtml(label)}`;
+    }
+    loadGameBans(false);
+}
+
+function clearGamePlayerBanFilter() {
+    const hidden = document.getElementById('gameBanPlayerFilter');
+    const clearBtn = document.getElementById('gameBanPlayerClear');
+    if (hidden) hidden.value = '';
+    if (clearBtn) clearBtn.style.display = 'none';
+    loadGameBans(false);
+}
+
+function debounceGameBanSearch() {
+    clearTimeout(gameBanSearchTimeout);
+    gameBanSearchTimeout = setTimeout(() => loadGameBans(false), 300);
+}
+
+function renderAdminBanRow(b) {
+    const isServer = b.type === 0;
+    const rowClass = isServer ? 'type-server' : 'type-job';
+    const badgeClass = isServer ? 'ban-type-badge--server' : 'ban-type-badge--job';
+    const typeLabel = isServer ? 'Серверный' : 'Джоббан';
+    const exp = b.expiration_time ? new Date(b.expiration_time).toLocaleString('ru-RU') : 'Навсегда';
+    const time = b.ban_time ? new Date(b.ban_time).toLocaleString('ru-RU') : '—';
+    const players = (b.player_names || []).join(', ') || '—';
+    const roles = (b.roles || []).join(', ');
+    let status = '';
+    if (b.is_unbanned) status = '<span class="ban-status ban-status-unbanned">Снят</span>';
+    else if (b.is_active) status = '<span class="ban-status ban-status-active">Активен</span>';
+    else status = '<span class="ban-status ban-status-expired">Истёк</span>';
+    const unbanBtn = b.is_active
+        ? `<button type="button" class="ss14-unban-btn" onclick="unbanGameBan(${b.ban_id})">
+            <i class="fa-solid fa-unlock"></i> Разбанить
+           </button>`
+        : '';
+    return `
+        <article class="ss14-ban-row ${rowClass}">
+            <div class="ss14-ban-row-main">
+                <div class="ss14-ban-row-top">
+                    <span class="ban-type-badge ${badgeClass}">${typeLabel}</span>
+                    <span class="ss14-ban-row-id">#${b.ban_id}</span>
+                    ${status}
+                </div>
+                <div class="ss14-ban-row-player">${escapeHtml(players)}</div>
+                <div class="ss14-ban-row-meta">
+                    <span><b>Выдан:</b> ${time}</span>
+                    <span><b>Срок:</b> ${exp}</span>
+                    <span><b>Админ:</b> ${escapeHtml(b.admin_name || '—')}</span>
+                    ${roles ? `<span><b>Должности:</b> ${escapeHtml(roles)}</span>` : ''}
+                    ${b.is_unbanned ? `<span><b>Снят:</b> ${b.unban_time ? new Date(b.unban_time).toLocaleString('ru-RU') : '—'}</span>` : ''}
+                </div>
+                <div class="ss14-ban-row-reason">${escapeHtml(b.reason || '—')}</div>
+            </div>
+            <div class="ss14-ban-row-actions">${unbanBtn}</div>
+        </article>`;
+}
+
+async function loadGameBans(append) {
+    const container = document.getElementById('gameBansContent');
+    if (!container) return;
+    if (!append) {
+        gameBansOffset = 0;
+        container.innerHTML = '<p class="empty-state">Загрузка...</p>';
+    }
+    const type = document.getElementById('gameBanTypeFilter')?.value || '';
+    const status = document.getElementById('gameBanStatusFilter')?.value || 'active';
+    const q = document.getElementById('gameBanSearch')?.value.trim() || '';
+    const player = document.getElementById('gameBanPlayerFilter')?.value.trim() || '';
+    const params = new URLSearchParams({ limit: '25', offset: String(gameBansOffset), status });
+    if (type !== '') params.set('ban_type', type);
+    if (q) params.set('q', q);
+    if (player) params.set('player', player);
+    try {
+        const bans = await apiCall('GET', `/api/admin/bans?${params}`);
+        if (!append && !bans.length) {
+            container.innerHTML = '<p class="empty-state">Банов не найдено</p>';
+            return;
+        }
+        const html = bans.map(b => renderAdminBanRow(b)).join('');
+        if (append) container.innerHTML += html;
+        else container.innerHTML = html;
+        gameBansOffset += bans.length;
+    } catch (e) {
+        container.innerHTML = `<p class="error">${escapeHtml(e.message)}</p>`;
+    }
+}
+
+async function submitServerBan() {
+    const player = document.getElementById('serverBanPlayer')?.value.trim();
+    const reason = document.getElementById('serverBanReason')?.value.trim();
+    const length_minutes = parseInt(document.getElementById('serverBanMinutes')?.value || '0', 10);
+    const use_last_ip = !!document.getElementById('serverBanUseIp')?.checked;
+    const result = document.getElementById('serverBanResult');
+    if (!player || !reason) {
+        if (result) result.innerHTML = '<p class="error">Укажите игрока и причину</p>';
+        return;
+    }
+    if (result) result.innerHTML = '<p class="empty-state">Выдаём бан...</p>';
+    try {
+        const data = await apiCall('POST', '/api/admin/bans/server', {
+            player, reason, length_minutes: Number.isFinite(length_minutes) ? length_minutes : 0, use_last_ip,
+        });
+        if (result) result.innerHTML = `<p class="success">Серверный бан #${data.ban_id} выдан</p>`;
+        document.getElementById('serverBanReason').value = '';
+        loadGameBans(false);
+        if (gameSelectedPlayer) selectGamePlayer(gameSelectedPlayer.user_uuid);
+    } catch (e) {
+        if (result) result.innerHTML = `<p class="error">${escapeHtml(e.message)}</p>`;
+    }
+}
+
+async function submitRoleBan() {
+    const player = document.getElementById('roleBanPlayer')?.value.trim();
+    const role_id = document.getElementById('roleBanJob')?.value;
+    const reason = document.getElementById('roleBanReason')?.value.trim();
+    const length_minutes = parseInt(document.getElementById('roleBanMinutes')?.value || '0', 10);
+    const result = document.getElementById('roleBanResult');
+    if (!player || !reason) {
+        if (result) result.innerHTML = '<p class="error">Укажите игрока и причину</p>';
+        return;
+    }
+    if (!role_id) {
+        if (result) result.innerHTML = '<p class="error">Выберите должность из списка</p>';
+        return;
+    }
+    if (result) result.innerHTML = '<p class="empty-state">Выдаём джоббан...</p>';
+    try {
+        const data = await apiCall('POST', '/api/admin/bans/role', {
+            player, role_id, reason, length_minutes: Number.isFinite(length_minutes) ? length_minutes : 0,
+        });
+        if (result) result.innerHTML = `<p class="success">Джоббан #${data.ban_id} выдан (${escapeHtml(data.role_label || role_id)})</p>`;
+        document.getElementById('roleBanReason').value = '';
+        loadGameBans(false);
+        if (gameSelectedPlayer) selectGamePlayer(gameSelectedPlayer.user_uuid);
+    } catch (e) {
+        if (result) result.innerHTML = `<p class="error">${escapeHtml(e.message)}</p>`;
+    }
+}
+
+async function unbanGameBan(banId) {
+    if (!confirm(`Снять бан #${banId}?`)) return;
+    try {
+        await apiCall('POST', `/api/admin/bans/${banId}/unban`);
+        loadGameBans(false);
+        if (gameSelectedPlayer) selectGamePlayer(gameSelectedPlayer.user_uuid);
+    } catch (e) {
+        alert(e.message);
     }
 }
 
