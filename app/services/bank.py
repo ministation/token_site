@@ -146,11 +146,12 @@ async def retire_deposits_and_loans():
             "SELECT deposit_id, user_uuid, amount FROM deposits WHERE status = 'active'"
         )
         for d in deposits:
+            user_uuid = str(d['user_uuid'])
             async with conn.transaction():
                 existing = await conn.fetchrow(
                     "SELECT player_antag_token_id, amount FROM player_antag_token "
                     "WHERE player_id::text = $1 AND token_id = 'balance'",
-                    d['user_uuid'],
+                    user_uuid,
                 )
                 if existing:
                     await conn.execute(
@@ -160,7 +161,7 @@ async def retire_deposits_and_loans():
                 else:
                     await conn.execute(
                         "INSERT INTO player_antag_token (player_id, token_id, amount) VALUES ($1::uuid, 'balance', $2)",
-                        d['user_uuid'], d['amount'],
+                        user_uuid, d['amount'],
                     )
                 await conn.execute(
                     "UPDATE deposits SET status = 'cancelled' WHERE deposit_id = $1",
