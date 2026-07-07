@@ -3623,7 +3623,9 @@ label.chat-tool-btn input[type="file"] {
     .nav-toggle {
         display: inline-flex;
         order: -1;
-        margin-right: auto;
+        flex-shrink: 0;
+        margin-right: 0;
+        padding: 8px 10px;
     }
     .topbar-inner {
         flex-wrap: nowrap;
@@ -3632,12 +3634,20 @@ label.chat-tool-btn input[type="file"] {
         width: 100%;
         box-sizing: border-box;
     }
-    .logo { flex: 1; min-width: 0; }
-    .logo h1 { font-size: 0.68rem; }
+    .logo {
+        flex: 0 0 auto;
+        min-width: auto;
+    }
+    .logo img { width: 36px; height: 36px; }
+    .logo h1 {
+        font-size: 0.72rem;
+        overflow: visible;
+        text-overflow: clip;
+    }
     #userInfo {
         width: auto;
-        flex-shrink: 1;
-        min-width: 0;
+        flex-shrink: 0;
+        min-width: auto;
         justify-content: flex-end;
         margin-left: auto;
         gap: 6px;
@@ -3645,17 +3655,10 @@ label.chat-tool-btn input[type="file"] {
     #userPanel {
         padding: 4px 6px;
         gap: 6px;
-        min-width: 0;
-        max-width: 100%;
+        flex-shrink: 0;
     }
     #userPanel img { width: 24px; height: 24px; flex-shrink: 0; }
-    #userPanel span {
-        max-width: 5.5rem;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        font-size: 0.62rem;
-    }
+    #userPanel #userName { display: none; }
     #userPanel button[title="Мой профиль"] { display: none; }
     #userPanel button:not([title="Мой профиль"]) {
         padding: 5px 8px;
