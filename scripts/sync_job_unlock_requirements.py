@@ -133,12 +133,21 @@ def main() -> None:
     if not TREE_CACHE.is_file():
         raise SystemExit(f"Missing {TREE_CACHE}")
     tree = json.loads(TREE_CACHE.read_text(encoding="utf-8"))
+    job_prefixes = (
+        "Resources/Prototypes/Roles/Jobs/",
+        "Resources/Prototypes/_Mini/Roles/Jobs/",
+    )
+    skip_paths = {
+        "Resources/Prototypes/Roles/Jobs/departments.yml",
+        "Resources/Prototypes/_Mini/Roles/Jobs/departments.yml",
+    }
     job_files = [
         node["path"]
         for node in tree["tree"]
-        if node["path"].startswith("Resources/Prototypes/Roles/Jobs/")
+        if any(node["path"].startswith(prefix) for prefix in job_prefixes)
         and node["path"].endswith(".yml")
-        and node["path"] != "Resources/Prototypes/Roles/Jobs/departments.yml"
+        and node["path"] not in skip_paths
+        and "/CentComm/" not in node["path"]
     ]
     role_to_dept = parse_departments(DEPT_CACHE.read_text(encoding="utf-8"))
 

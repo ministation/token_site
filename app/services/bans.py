@@ -28,7 +28,7 @@ ROLE_TRANSLATIONS = {
     'Librarian': 'Библиотекарь', 'Visitor': 'Посетитель', 'ServiceWorker': 'Работник сервиса',
     'Zookeeper': 'Смотритель зоопарка', 'Musician': 'Музыкант', 'Chaplain': 'Священник',
     'Mime': 'Мим', 'Passenger': 'Пассажир', 'CargoTechnician': 'Карго-техник',
-    'Reporter': 'Репортер', 'SalvageSpecialist': 'Спасатель',
+    'Reporter': 'Репортер', 'SalvageSpecialist': 'Утилизатор',
     'Boxer': 'Боксер', 'RadioHost': 'Радиоведущий', 'Diplomat': 'Дипломат',
     'GovernmentMan': 'Правительственный агент', 'SpecialOperationsOfficer': 'Офицер спецопераций',
     'NavyOfficerUndercover': 'Офицер флота под прикрытием', 'NavyCaptain': 'Капитан флота',
@@ -37,6 +37,20 @@ ROLE_TRANSLATIONS = {
     'Borg': 'Борг', 'StationAi': 'ИИ станции',
     'ShaftMiner': 'Шахтёр', 'Bitrunner': 'Битраннер', 'WardenHelper': 'Помощник смотрителя',
     'Assistant': 'Ассистент',
+    'SeniorEngineer': 'Старший инженер', 'SeniorOfficer': 'Старший офицер',
+    'SeniorPhysician': 'Старший врач', 'SeniorResearcher': 'Старший учёный',
+    'Geneticist': 'Генетик',
+    'TypanCommander': 'Офицер телекоммуникаций',
+    'TypanResearchDirector': 'Директор исследований Синдиката',
+    'TypanPatrol': 'Патрульный Синдиката',
+    'TypanAtmosTech': 'Атмостех Синдиката',
+    'TypanBotanist': 'Ботаник Синдиката',
+    'TypanCargotech': 'Карготехник Синдиката',
+    'TypanChef': 'Повар Синдиката',
+    'TypanMedic': 'Медик Синдиката',
+    'TypanScience': 'Учёный Синдиката',
+    'TypanBorg': 'Киборг Синдиката',
+    'TypanTechnicalOperationsSupervisor': 'Технический супервизор Синдиката',
 }
 
 
@@ -56,18 +70,20 @@ def list_job_roles() -> list[dict]:
     from app.services.job_unlock import enrich_and_sort_roles
 
     role_ids = set(ROLE_TRANSLATIONS)
+    unlock_jobs: dict = {}
     unlock_path = Path(__file__).resolve().parents[2] / "data" / "mini_station_job_unlock.json"
     if unlock_path.is_file():
         try:
             data = json.loads(unlock_path.read_text(encoding="utf-8"))
-            role_ids.update(data.get("jobs", {}))
+            unlock_jobs = data.get("jobs", {})
+            role_ids.update(unlock_jobs)
             role_ids.update(data.get("role_to_department", {}))
         except (json.JSONDecodeError, OSError):
             pass
 
     roles = [
         {
-            "id": tracker_from_role_id(role_id),
+            "id": unlock_jobs.get(role_id, {}).get("tracker") or tracker_from_role_id(role_id),
             "role_id": role_id,
             "label": ROLE_TRANSLATIONS.get(role_id, translate_role(role_id)),
             "icon": job_icon_url(role_id),

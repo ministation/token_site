@@ -129,3 +129,22 @@
   - Reporter
   - Zookeeper
   - Psychologist
+
+- type: department
+  id: Typan
+  roles:
+  - TypanCommander
+  - TypanResearchDirector
+  - TypanPatrol
+  - TypanAtmosTech
+  - TypanBotanist
+  - TypanCargotech
+  - TypanChef
+  - TypanMedic
+  - TypanScience
+  - TypanTechnicalOperationsSupervisor
+
+- type: department
+  id: Typan2
+  roles:
+  - TypanBorg

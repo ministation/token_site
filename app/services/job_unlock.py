@@ -20,6 +20,8 @@ DEPARTMENT_LABELS = {
     "Science": "Наука",
     "Silicon": "Силикон",
     "Specific": "Особые",
+    "Typan": "НИКК Тайпан",
+    "Typan2": "Синтетики НИКК Тайпан",
     "_other": "Прочие",
 }
 

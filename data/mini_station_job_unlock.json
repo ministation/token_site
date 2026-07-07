@@ -70,7 +70,18 @@
     "Roboticist": "Science",
     "Borg": "Silicon",
     "StationAi": "Silicon",
-    "RadioHost": "Specific"
+    "RadioHost": "Specific",
+    "TypanCommander": "Typan",
+    "TypanResearchDirector": "Typan",
+    "TypanPatrol": "Typan",
+    "TypanAtmosTech": "Typan",
+    "TypanBotanist": "Typan",
+    "TypanCargotech": "Typan",
+    "TypanChef": "Typan",
+    "TypanMedic": "Typan",
+    "TypanScience": "Typan",
+    "TypanTechnicalOperationsSupervisor": "Typan",
+    "TypanBorg": "Typan2"
   },
   "jobs": {
     "CargoTechnician": {
@@ -112,30 +123,6 @@
         }
       ],
       "department": "Cargo"
-    },
-    "CBURN": {
-      "role_id": "CBURN",
-      "tracker": "JobCBURN",
-      "requirements": [],
-      "department": "Command"
-    },
-    "DeathSquad": {
-      "role_id": "DeathSquad",
-      "tracker": "JobDeathSquad",
-      "requirements": [],
-      "department": "Command"
-    },
-    "ERTLeader": {
-      "role_id": "ERTLeader",
-      "tracker": "JobERTLeader",
-      "requirements": [],
-      "department": "Command"
-    },
-    "CentralCommandOfficial": {
-      "role_id": "CentralCommandOfficial",
-      "tracker": "JobCentralCommandOfficial",
-      "requirements": [],
-      "department": "Command"
     },
     "Passenger": {
       "role_id": "Passenger",
@@ -565,6 +552,131 @@
       "tracker": "JobZookeeper",
       "requirements": [],
       "department": "Specific"
+    },
+    "TypanAtmosTech": {
+      "role_id": "TypanAtmosTech",
+      "tracker": "JobTypanAtmosTech",
+      "requirements": [
+        {
+          "type": "DepartmentTimeRequirement",
+          "department": "Engineering",
+          "time_seconds": 18000
+        }
+      ],
+      "department": "Typan"
+    },
+    "TypanBorg": {
+      "role_id": "TypanBorg",
+      "tracker": "JobBorgTypan",
+      "requirements": [
+        {
+          "type": "OverallPlaytimeRequirement",
+          "time_seconds": 36000
+        }
+      ],
+      "department": "Typan2"
+    },
+    "TypanBotanist": {
+      "role_id": "TypanBotanist",
+      "tracker": "JobTypanBotanist",
+      "requirements": [
+        {
+          "type": "DepartmentTimeRequirement",
+          "department": "Civilian",
+          "time_seconds": 7200
+        }
+      ],
+      "department": "Typan"
+    },
+    "TypanCargotech": {
+      "role_id": "TypanCargotech",
+      "tracker": "JobTypanCargotech",
+      "requirements": [
+        {
+          "type": "DepartmentTimeRequirement",
+          "department": "Cargo",
+          "time_seconds": 18000
+        }
+      ],
+      "department": "Typan"
+    },
+    "TypanChef": {
+      "role_id": "TypanChef",
+      "tracker": "JobTypanChef",
+      "requirements": [
+        {
+          "type": "DepartmentTimeRequirement",
+          "department": "Civilian",
+          "time_seconds": 7200
+        }
+      ],
+      "department": "Typan"
+    },
+    "TypanCommander": {
+      "role_id": "TypanCommander",
+      "tracker": "JobTypanCommander",
+      "requirements": [
+        {
+          "type": "DepartmentTimeRequirement",
+          "department": "Typan",
+          "time_seconds": 72000
+        }
+      ],
+      "department": "Typan"
+    },
+    "TypanMedic": {
+      "role_id": "TypanMedic",
+      "tracker": "JobTypanMedic",
+      "requirements": [
+        {
+          "type": "DepartmentTimeRequirement",
+          "department": "Medical",
+          "time_seconds": 18000
+        }
+      ],
+      "department": "Typan"
+    },
+    "TypanResearchDirector": {
+      "role_id": "TypanResearchDirector",
+      "tracker": "JobTypanResearchDirector",
+      "requirements": [
+        {
+          "type": "DepartmentTimeRequirement",
+          "department": "Typan",
+          "time_seconds": 36000
+        }
+      ],
+      "department": "Typan"
+    },
+    "TypanScience": {
+      "role_id": "TypanScience",
+      "tracker": "JobTypanScience",
+      "requirements": [
+        {
+          "type": "DepartmentTimeRequirement",
+          "department": "Science",
+          "time_seconds": 18000
+        }
+      ],
+      "department": "Typan"
+    },
+    "TypanTechnicalOperationsSupervisor": {
+      "role_id": "TypanTechnicalOperationsSupervisor",
+      "tracker": "JobTypanTechnicalOperationsSupervisor",
+      "requirements": [],
+      "department": "Typan"
+    },
+    "TypanPatrol": {
+      "role_id": "TypanPatrol",
+      "tracker": "JobTypanPatrol",
+      "requirements": [
+        {
+          "type": "DepartmentTimeRequirement",
+          "department": "Typan",
+          "time_seconds": 18000
+        }
+      ],
+      "department": "Typan"
     }
   }
 }
