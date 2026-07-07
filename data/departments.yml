@@ -1,0 +1,131 @@
+- type: department
+  id: Cargo
+  roles:
+  - CargoTechnician
+  - Quartermaster
+  - SalvageSpecialist
+
+- type: department
+  id: Civilian
+  roles:
+  - Bartender
+  - Botanist
+  - Boxer
+  - Chaplain
+  - Chef
+  - Clown
+  - HeadOfPersonnel
+  - Janitor
+  - Librarian
+  - Mime
+  - Musician
+  - Passenger
+  - Reporter
+  - Visitor
+  - Zookeeper
+  - ServiceWorker
+  - PartyMaker
+
+- type: department
+  id: CentralCommand
+  roles:
+  - CentralCommandOfficial
+  - CBURN
+  - ERTLeader
+  - ERTChaplain
+  - ERTJanitor
+  - ERTMedical
+  - ERTSecurity
+  - ERTEngineer
+  - DeathSquad
+  - HecuOperative
+  - BlueshieldOfficer
+  - NanotrasenRepresentative
+  - NanotrasenCareerTrainer
+  - NavyOfficer
+  - NavyCaptain
+  - NavyOfficerUndercover
+  - SpecialOperationsOfficer
+  - Diplomat
+  - GovernmentMan
+
+- type: department
+  id: Command
+  roles:
+  - Captain
+  - ChiefEngineer
+  - ChiefMedicalOfficer
+  - HeadOfPersonnel
+  - HeadOfSecurity
+  - ResearchDirector
+  - Quartermaster
+  - BlueshieldOfficer
+  - NanotrasenRepresentative
+  - NanotrasenCareerTrainer
+  - CentralCommandOfficial
+  - CBURN
+  - ERTLeader
+  - ERTChaplain
+  - ERTJanitor
+  - ERTMedical
+  - ERTSecurity
+  - ERTEngineer
+  - DeathSquad
+  - HecuOperative
+  - CommandMaid
+
+- type: department
+  id: Engineering
+  roles:
+  - AtmosphericTechnician
+  - ChiefEngineer
+  - StationEngineer
+  - TechnicalAssistant
+
+- type: department
+  id: Medical
+  roles:
+  - Chemist
+  - ChiefMedicalOfficer
+  - MedicalDoctor
+  - MedicalIntern
+  - Psychologist
+  - Paramedic
+  - Surgeon
+  - Virologist
+
+- type: department
+  id: Security
+  roles:
+  - HeadOfSecurity
+  - SecurityCadet
+  - SecurityOfficer
+  - Detective
+  - Warden
+  - Brigmedic
+  - Pilot
+  - WardenHelper
+  - SecurityClown
+
+- type: department
+  id: Science
+  roles:
+  - ResearchDirector
+  - Scientist
+  - ResearchAssistant
+  - Roboticist
+
+- type: department
+  id: Silicon
+  roles:
+  - Borg
+  - StationAi
+
+- type: department
+  id: Specific
+  roles:
+  - RadioHost
+  - Boxer
+  - Reporter
+  - Zookeeper
+  - Psychologist

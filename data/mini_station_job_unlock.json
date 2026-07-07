@@ -1,0 +1,570 @@
+{
+  "source": "https://github.com/ministation/mini-station-goob",
+  "branch": "master",
+  "role_to_department": {
+    "CargoTechnician": "Cargo",
+    "Quartermaster": "Command",
+    "SalvageSpecialist": "Cargo",
+    "Bartender": "Civilian",
+    "Botanist": "Civilian",
+    "Boxer": "Specific",
+    "Chaplain": "Civilian",
+    "Chef": "Civilian",
+    "Clown": "Civilian",
+    "HeadOfPersonnel": "Command",
+    "Janitor": "Civilian",
+    "Librarian": "Civilian",
+    "Mime": "Civilian",
+    "Musician": "Civilian",
+    "Passenger": "Civilian",
+    "Reporter": "Specific",
+    "Visitor": "Civilian",
+    "Zookeeper": "Specific",
+    "ServiceWorker": "Civilian",
+    "PartyMaker": "Civilian",
+    "CentralCommandOfficial": "Command",
+    "CBURN": "Command",
+    "ERTLeader": "Command",
+    "ERTChaplain": "Command",
+    "ERTJanitor": "Command",
+    "ERTMedical": "Command",
+    "ERTSecurity": "Command",
+    "ERTEngineer": "Command",
+    "DeathSquad": "Command",
+    "HecuOperative": "Command",
+    "BlueshieldOfficer": "Command",
+    "NanotrasenRepresentative": "Command",
+    "NanotrasenCareerTrainer": "Command",
+    "NavyOfficer": "CentralCommand",
+    "NavyCaptain": "CentralCommand",
+    "NavyOfficerUndercover": "CentralCommand",
+    "SpecialOperationsOfficer": "CentralCommand",
+    "Diplomat": "CentralCommand",
+    "GovernmentMan": "CentralCommand",
+    "Captain": "Command",
+    "ChiefEngineer": "Engineering",
+    "ChiefMedicalOfficer": "Medical",
+    "HeadOfSecurity": "Security",
+    "ResearchDirector": "Science",
+    "CommandMaid": "Command",
+    "AtmosphericTechnician": "Engineering",
+    "StationEngineer": "Engineering",
+    "TechnicalAssistant": "Engineering",
+    "Chemist": "Medical",
+    "MedicalDoctor": "Medical",
+    "MedicalIntern": "Medical",
+    "Psychologist": "Specific",
+    "Paramedic": "Medical",
+    "Surgeon": "Medical",
+    "Virologist": "Medical",
+    "SecurityCadet": "Security",
+    "SecurityOfficer": "Security",
+    "Detective": "Security",
+    "Warden": "Security",
+    "Brigmedic": "Security",
+    "Pilot": "Security",
+    "WardenHelper": "Security",
+    "SecurityClown": "Security",
+    "Scientist": "Science",
+    "ResearchAssistant": "Science",
+    "Roboticist": "Science",
+    "Borg": "Silicon",
+    "StationAi": "Silicon",
+    "RadioHost": "Specific"
+  },
+  "jobs": {
+    "CargoTechnician": {
+      "role_id": "CargoTechnician",
+      "tracker": "JobCargoTechnician",
+      "requirements": [],
+      "department": "Cargo"
+    },
+    "Quartermaster": {
+      "role_id": "Quartermaster",
+      "tracker": "JobQuartermaster",
+      "requirements": [
+        {
+          "type": "RoleTimeRequirement",
+          "role": "JobCargoTechnician",
+          "time_seconds": 18000
+        },
+        {
+          "type": "RoleTimeRequirement",
+          "role": "JobSalvageSpecialist",
+          "time_seconds": 9000
+        },
+        {
+          "type": "DepartmentTimeRequirement",
+          "department": "Cargo",
+          "time_seconds": 36000
+        }
+      ],
+      "department": "Command"
+    },
+    "SalvageSpecialist": {
+      "role_id": "SalvageSpecialist",
+      "tracker": "JobSalvageSpecialist",
+      "requirements": [
+        {
+          "type": "DepartmentTimeRequirement",
+          "department": "Cargo",
+          "time_seconds": 9000
+        }
+      ],
+      "department": "Cargo"
+    },
+    "CBURN": {
+      "role_id": "CBURN",
+      "tracker": "JobCBURN",
+      "requirements": [],
+      "department": "Command"
+    },
+    "DeathSquad": {
+      "role_id": "DeathSquad",
+      "tracker": "JobDeathSquad",
+      "requirements": [],
+      "department": "Command"
+    },
+    "ERTLeader": {
+      "role_id": "ERTLeader",
+      "tracker": "JobERTLeader",
+      "requirements": [],
+      "department": "Command"
+    },
+    "CentralCommandOfficial": {
+      "role_id": "CentralCommandOfficial",
+      "tracker": "JobCentralCommandOfficial",
+      "requirements": [],
+      "department": "Command"
+    },
+    "Passenger": {
+      "role_id": "Passenger",
+      "tracker": "JobPassenger",
+      "requirements": [],
+      "department": "Civilian"
+    },
+    "Bartender": {
+      "role_id": "Bartender",
+      "tracker": "JobBartender",
+      "requirements": [
+        {
+          "type": "OverallPlaytimeRequirement",
+          "time_seconds": 1800
+        }
+      ],
+      "department": "Civilian"
+    },
+    "Botanist": {
+      "role_id": "Botanist",
+      "tracker": "JobBotanist",
+      "requirements": [],
+      "department": "Civilian"
+    },
+    "Chaplain": {
+      "role_id": "Chaplain",
+      "tracker": "JobChaplain",
+      "requirements": [
+        {
+          "type": "OverallPlaytimeRequirement",
+          "time_seconds": 72000
+        }
+      ],
+      "department": "Civilian"
+    },
+    "Chef": {
+      "role_id": "Chef",
+      "tracker": "JobChef",
+      "requirements": [
+        {
+          "type": "OverallPlaytimeRequirement",
+          "time_seconds": 1800
+        }
+      ],
+      "department": "Civilian"
+    },
+    "Clown": {
+      "role_id": "Clown",
+      "tracker": "JobClown",
+      "requirements": [],
+      "department": "Civilian"
+    },
+    "Janitor": {
+      "role_id": "Janitor",
+      "tracker": "JobJanitor",
+      "requirements": [],
+      "department": "Civilian"
+    },
+    "Lawyer": {
+      "role_id": "Lawyer",
+      "tracker": "JobLawyer",
+      "requirements": [
+        {
+          "type": "OverallPlaytimeRequirement",
+          "time_seconds": 9000
+        }
+      ],
+      "department": null
+    },
+    "Librarian": {
+      "role_id": "Librarian",
+      "tracker": "JobLibrarian",
+      "requirements": [],
+      "department": "Civilian"
+    },
+    "Mime": {
+      "role_id": "Mime",
+      "tracker": "JobMime",
+      "requirements": [],
+      "department": "Civilian"
+    },
+    "Musician": {
+      "role_id": "Musician",
+      "tracker": "JobMusician",
+      "requirements": [],
+      "department": "Civilian"
+    },
+    "ServiceWorker": {
+      "role_id": "ServiceWorker",
+      "tracker": "JobServiceWorker",
+      "requirements": [],
+      "department": "Civilian"
+    },
+    "Visitor": {
+      "role_id": "Visitor",
+      "tracker": "JobVisitor",
+      "requirements": [],
+      "department": "Civilian"
+    },
+    "Captain": {
+      "role_id": "Captain",
+      "tracker": "JobCaptain",
+      "requirements": [
+        {
+          "type": "DepartmentTimeRequirement",
+          "department": "Engineering",
+          "time_seconds": 14400
+        },
+        {
+          "type": "DepartmentTimeRequirement",
+          "department": "Medical",
+          "time_seconds": 14400
+        },
+        {
+          "type": "DepartmentTimeRequirement",
+          "department": "Science",
+          "time_seconds": 14400
+        },
+        {
+          "type": "DepartmentTimeRequirement",
+          "department": "Security",
+          "time_seconds": 21600
+        },
+        {
+          "type": "DepartmentTimeRequirement",
+          "department": "Command",
+          "time_seconds": 50400
+        }
+      ],
+      "department": "Command"
+    },
+    "HeadOfPersonnel": {
+      "role_id": "HeadOfPersonnel",
+      "tracker": "JobHeadOfPersonnel",
+      "requirements": [
+        {
+          "type": "DepartmentTimeRequirement",
+          "department": "Engineering",
+          "time_seconds": 14400
+        },
+        {
+          "type": "DepartmentTimeRequirement",
+          "department": "Medical",
+          "time_seconds": 14400
+        },
+        {
+          "type": "DepartmentTimeRequirement",
+          "department": "Science",
+          "time_seconds": 14400
+        },
+        {
+          "type": "DepartmentTimeRequirement",
+          "department": "Security",
+          "time_seconds": 14400
+        },
+        {
+          "type": "DepartmentTimeRequirement",
+          "department": "Command",
+          "time_seconds": 14400
+        }
+      ],
+      "department": "Command"
+    },
+    "AtmosphericTechnician": {
+      "role_id": "AtmosphericTechnician",
+      "tracker": "JobAtmosphericTechnician",
+      "requirements": [],
+      "department": "Engineering"
+    },
+    "ChiefEngineer": {
+      "role_id": "ChiefEngineer",
+      "tracker": "JobChiefEngineer",
+      "requirements": [
+        {
+          "type": "RoleTimeRequirement",
+          "role": "JobAtmosphericTechnician",
+          "time_seconds": 18000
+        },
+        {
+          "type": "RoleTimeRequirement",
+          "role": "JobStationEngineer",
+          "time_seconds": 21600
+        },
+        {
+          "type": "DepartmentTimeRequirement",
+          "department": "Engineering",
+          "time_seconds": 36000
+        }
+      ],
+      "department": "Engineering"
+    },
+    "StationEngineer": {
+      "role_id": "StationEngineer",
+      "tracker": "JobStationEngineer",
+      "requirements": [
+        {
+          "type": "DepartmentTimeRequirement",
+          "department": "Engineering",
+          "time_seconds": 9000
+        }
+      ],
+      "department": "Engineering"
+    },
+    "TechnicalAssistant": {
+      "role_id": "TechnicalAssistant",
+      "tracker": "JobTechnicalAssistant",
+      "requirements": [
+        {
+          "type": "OverallPlaytimeRequirement",
+          "time_seconds": 7200
+        },
+        {
+          "type": "DepartmentTimeRequirement",
+          "department": "Engineering",
+          "time_seconds": 36000,
+          "inverted": true
+        }
+      ],
+      "department": "Engineering"
+    },
+    "Chemist": {
+      "role_id": "Chemist",
+      "tracker": "JobChemist",
+      "requirements": [
+        {
+          "type": "DepartmentTimeRequirement",
+          "department": "Medical",
+          "time_seconds": 18000
+        }
+      ],
+      "department": "Medical"
+    },
+    "ChiefMedicalOfficer": {
+      "role_id": "ChiefMedicalOfficer",
+      "tracker": "JobChiefMedicalOfficer",
+      "requirements": [
+        {
+          "type": "RoleTimeRequirement",
+          "role": "JobChemist",
+          "time_seconds": 18000
+        },
+        {
+          "type": "RoleTimeRequirement",
+          "role": "JobMedicalDoctor",
+          "time_seconds": 28000
+        },
+        {
+          "type": "DepartmentTimeRequirement",
+          "department": "Medical",
+          "time_seconds": 36000
+        }
+      ],
+      "department": "Medical"
+    },
+    "MedicalDoctor": {
+      "role_id": "MedicalDoctor",
+      "tracker": "JobMedicalDoctor",
+      "requirements": [
+        {
+          "type": "DepartmentTimeRequirement",
+          "department": "Medical",
+          "time_seconds": 9000
+        }
+      ],
+      "department": "Medical"
+    },
+    "MedicalIntern": {
+      "role_id": "MedicalIntern",
+      "tracker": "JobMedicalIntern",
+      "requirements": [
+        {
+          "type": "DepartmentTimeRequirement",
+          "department": "Medical",
+          "time_seconds": 36000,
+          "inverted": true
+        }
+      ],
+      "department": "Medical"
+    },
+    "Paramedic": {
+      "role_id": "Paramedic",
+      "tracker": "JobParamedic",
+      "requirements": [],
+      "department": "Medical"
+    },
+    "StationAi": {
+      "role_id": "StationAi",
+      "tracker": "JobStationAi",
+      "requirements": [],
+      "department": "Silicon"
+    },
+    "ResearchAssistant": {
+      "role_id": "ResearchAssistant",
+      "tracker": "JobResearchAssistant",
+      "requirements": [
+        {
+          "type": "DepartmentTimeRequirement",
+          "department": "Science",
+          "time_seconds": 36000,
+          "inverted": true
+        }
+      ],
+      "department": "Science"
+    },
+    "ResearchDirector": {
+      "role_id": "ResearchDirector",
+      "tracker": "JobResearchDirector",
+      "requirements": [],
+      "department": "Science"
+    },
+    "Scientist": {
+      "role_id": "Scientist",
+      "tracker": "JobScientist",
+      "requirements": [
+        {
+          "type": "DepartmentTimeRequirement",
+          "department": "Science",
+          "time_seconds": 9000
+        }
+      ],
+      "department": "Science"
+    },
+    "Detective": {
+      "role_id": "Detective",
+      "tracker": "JobDetective",
+      "requirements": [],
+      "department": "Security"
+    },
+    "HeadOfSecurity": {
+      "role_id": "HeadOfSecurity",
+      "tracker": "JobHeadOfSecurity",
+      "requirements": [
+        {
+          "type": "RoleTimeRequirement",
+          "role": "JobWarden",
+          "time_seconds": 21600
+        },
+        {
+          "type": "RoleTimeRequirement",
+          "role": "JobSecurityOfficer",
+          "time_seconds": 36000
+        },
+        {
+          "type": "RoleTimeRequirement",
+          "role": "JobDetective",
+          "time_seconds": 7200
+        },
+        {
+          "type": "DepartmentTimeRequirement",
+          "department": "Security",
+          "time_seconds": 72000
+        }
+      ],
+      "department": "Security"
+    },
+    "SecurityCadet": {
+      "role_id": "SecurityCadet",
+      "tracker": "JobSecurityCadet",
+      "requirements": [
+        {
+          "type": "OverallPlaytimeRequirement",
+          "time_seconds": 36000
+        },
+        {
+          "type": "DepartmentTimeRequirement",
+          "department": "Security",
+          "time_seconds": 36000,
+          "inverted": true
+        }
+      ],
+      "department": "Security"
+    },
+    "SecurityOfficer": {
+      "role_id": "SecurityOfficer",
+      "tracker": "JobSecurityOfficer",
+      "requirements": [
+        {
+          "type": "DepartmentTimeRequirement",
+          "department": "Security",
+          "time_seconds": 9000
+        }
+      ],
+      "department": "Security"
+    },
+    "Warden": {
+      "role_id": "Warden",
+      "tracker": "JobWarden",
+      "requirements": [
+        {
+          "type": "RoleTimeRequirement",
+          "role": "JobSecurityOfficer",
+          "time_seconds": 18000
+        },
+        {
+          "type": "RoleTimeRequirement",
+          "role": "JobBrigmedic",
+          "time_seconds": 18000
+        },
+        {
+          "type": "DepartmentTimeRequirement",
+          "department": "Security",
+          "time_seconds": 36000
+        }
+      ],
+      "department": "Security"
+    },
+    "Boxer": {
+      "role_id": "Boxer",
+      "tracker": "JobBoxer",
+      "requirements": [],
+      "department": "Specific"
+    },
+    "Psychologist": {
+      "role_id": "Psychologist",
+      "tracker": "JobPsychologist",
+      "requirements": [],
+      "department": "Specific"
+    },
+    "Reporter": {
+      "role_id": "Reporter",
+      "tracker": "JobReporter",
+      "requirements": [],
+      "department": "Specific"
+    },
+    "Zookeeper": {
+      "role_id": "Zookeeper",
+      "tracker": "JobZookeeper",
+      "requirements": [],
+      "department": "Specific"
+    }
+  }
+}

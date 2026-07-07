@@ -25,3 +25,8 @@ env/
 
 # Логи
 *.log
+
+# Кэш синхронизации требований ролей
+data/goob-tree.json
+data/goob_jobs/
+data/test_job.yml

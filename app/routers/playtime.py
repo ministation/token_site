@@ -2,7 +2,13 @@ from pydantic import BaseModel, Field
 from fastapi import APIRouter, Request, HTTPException, Query
 
 from app.dependencies import get_current_user
-from app.services.playtime_transfer import get_job_playtimes, transfer_job_playtime
+from app.services.playtime_transfer import (
+    get_playtime_overview,
+    transfer_job_playtime,
+    bulk_transfer_job_playtime,
+    build_unlock_all_plan,
+    fetch_player_minutes_map,
+)
 from app.services.bans import list_job_roles
 from app.services.bank import find_player_by_nick
 
@@ -10,56 +16,129 @@ router = APIRouter(prefix="/api/playtime", tags=["playtime"])
 
 
 class PlaytimeTransferRequest(BaseModel):
-    player_nick: str = ""
+    player_nick: str
     from_tracker: str
     to_tracker: str
     minutes: float = Field(gt=0)
 
 
-def _can_manage_other_playtime(user: dict) -> bool:
+class PlaytimeBulkItem(BaseModel):
+    to_tracker: str
+    minutes: float = Field(gt=0)
+
+
+class PlaytimeBulkTransferRequest(BaseModel):
+    player_nick: str
+    from_tracker: str
+    transfers: list[PlaytimeBulkItem] = Field(min_length=1)
+
+
+class PlaytimeUnlockAllRequest(BaseModel):
+    player_nick: str
+    from_tracker: str
+
+
+def _can_manage_playtime(user: dict) -> bool:
     return bool(user.get("is_admin") or user.get("is_time_keeper"))
 
 
-async def _resolve_target_uuid(user: dict, player_nick: str) -> tuple[str, str]:
-    if player_nick.strip():
-        if not _can_manage_other_playtime(user):
-            raise HTTPException(status_code=403, detail="Перенос другим игрокам доступен хранителям времени")
-        target = await find_player_by_nick(player_nick.strip())
-        if not target:
-            raise HTTPException(status_code=404, detail="Игрок не найден")
-        return target["user_uuid"], target.get("last_seen_user_name") or player_nick.strip()
-    if "player" not in user:
-        raise HTTPException(status_code=403, detail="Discord не привязан к игровому аккаунту")
-    player = user["player"]
-    return player["user_uuid"], player.get("last_seen_user_name") or "Вы"
+def _require_manager(user: dict) -> None:
+    if not _can_manage_playtime(user):
+        raise HTTPException(
+            status_code=403,
+            detail="Перенос времени доступен хранителям времени и администраторам",
+        )
+
+
+async def _resolve_target_uuid(player_nick: str) -> tuple[str, str]:
+    nick = player_nick.strip()
+    if not nick:
+        raise HTTPException(status_code=400, detail="Укажите ник игрока")
+    target = await find_player_by_nick(nick)
+    if not target:
+        raise HTTPException(status_code=404, detail="Игрок не найден")
+    return target["user_uuid"], target.get("last_seen_user_name") or nick
 
 
 @router.get("/roles")
 async def job_role_catalog(request: Request):
-    await get_current_user(request)
+    user = await get_current_user(request)
+    _require_manager(user)
     return list_job_roles()
 
 
-@router.get("/jobs")
-async def player_job_playtimes(request: Request, player_nick: str = Query("")):
+@router.get("/overview")
+async def player_playtime_overview(request: Request, player_nick: str = Query(..., min_length=1)):
     user = await get_current_user(request)
-    user_uuid, name = await _resolve_target_uuid(user, player_nick)
-    jobs = await get_job_playtimes(user_uuid)
+    _require_manager(user)
+    user_uuid, name = await _resolve_target_uuid(player_nick)
+    overview = await get_playtime_overview(user_uuid)
     return {
         "player_name": name,
         "player_uuid": user_uuid,
-        "jobs": jobs,
-        "can_manage_others": _can_manage_other_playtime(user),
+        **overview,
     }
+
+
+@router.get("/jobs")
+async def player_job_playtimes(request: Request, player_nick: str = Query(..., min_length=1)):
+    return await player_playtime_overview(request, player_nick)
 
 
 @router.post("/transfer")
 async def transfer_playtime(req: PlaytimeTransferRequest, request: Request):
     user = await get_current_user(request)
-    user_uuid, name = await _resolve_target_uuid(user, req.player_nick)
+    _require_manager(user)
+    user_uuid, name = await _resolve_target_uuid(req.player_nick)
     try:
-        result = await transfer_job_playtime(user_uuid, req.from_tracker, req.to_tracker, req.minutes)
+        result = await transfer_job_playtime(
+            user_uuid, req.from_tracker, req.to_tracker, req.minutes,
+        )
         result["player_name"] = name
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/transfer/bulk")
+async def transfer_playtime_bulk(req: PlaytimeBulkTransferRequest, request: Request):
+    user = await get_current_user(request)
+    _require_manager(user)
+    user_uuid, name = await _resolve_target_uuid(req.player_nick)
+    try:
+        items = [(item.to_tracker, item.minutes) for item in req.transfers]
+        result = await bulk_transfer_job_playtime(user_uuid, req.from_tracker, items)
+        result["player_name"] = name
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/unlock-all")
+async def unlock_all_roles(req: PlaytimeUnlockAllRequest, request: Request):
+    user = await get_current_user(request)
+    _require_manager(user)
+    user_uuid, name = await _resolve_target_uuid(req.player_nick)
+    try:
+        minutes_map = await fetch_player_minutes_map(user_uuid)
+        plan = build_unlock_all_plan(minutes_map, req.from_tracker)
+        if not plan["transfers"]:
+            return {
+                "success": True,
+                "player_name": name,
+                "message": "Все роли уже разблокированы",
+                "total_minutes": 0,
+                "transfers": [],
+            }
+        if plan["total_minutes"] > plan["available_minutes"]:
+            raise ValueError(
+                f"Недостаточно времени на «{plan['from_label']}»: "
+                f"нужно {plan['total_minutes']} мин, доступно {plan['available_minutes']} мин"
+            )
+        items = [(t["to_tracker"], t["minutes"]) for t in plan["transfers"]]
+        result = await bulk_transfer_job_playtime(user_uuid, req.from_tracker, items)
+        result["player_name"] = name
+        result["message"] = f"Разблокировано ролей: {len(plan['transfers'])}"
         return result
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

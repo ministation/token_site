@@ -7,6 +7,7 @@ from datetime import timedelta
 from app.db.database import get_pg_pool
 from app.services.bans import translate_role, list_job_roles
 from app.services.job_icons import role_id_from_tracker, tracker_from_role_id, job_icon_url
+from app.services.job_unlock import evaluate_role_unlock, plan_unlock_all_transfers, get_unlock_metadata
 
 
 def _parse_user_uuid(value: str) -> uuid.UUID | None:
@@ -36,6 +37,8 @@ def normalize_job_tracker(value: str) -> str:
     raw = (value or "").strip()
     if not raw:
         raise ValueError("Укажите должность")
+    if raw == "Overall":
+        return "Overall"
     if raw.startswith("Job") and not raw.startswith("Job:"):
         return raw
     if raw.startswith("Job:"):
@@ -50,39 +53,85 @@ def normalize_job_tracker(value: str) -> str:
 
 
 def _job_row(tracker: str, minutes: float) -> dict:
-    role_id = role_id_from_tracker(tracker)
+    if tracker == "Overall":
+        role_id = "Overall"
+        label = "Общее время"
+        icon = job_icon_url("Passenger")
+    else:
+        role_id = role_id_from_tracker(tracker)
+        label = translate_role(tracker)
+        icon = job_icon_url(role_id)
     return {
         "tracker": tracker,
         "role_id": role_id,
-        "label": translate_role(tracker),
-        "icon": job_icon_url(role_id),
+        "label": label,
+        "icon": icon,
         "minutes": round(minutes, 1),
         "hours": round(minutes / 60.0, 2),
         "time_text": _format_hours(minutes),
     }
 
 
-async def get_job_playtimes(user_uuid: str) -> list[dict]:
+async def fetch_player_minutes_map(user_uuid: str) -> dict[str, float]:
     uid = _parse_user_uuid(user_uuid)
     if not uid:
-        return []
+        return {}
     pg = await get_pg_pool()
     async with pg.acquire() as conn:
         rows = await conn.fetch("""
             SELECT tracker, time_spent
             FROM play_time
             WHERE player_id = $1
-              AND tracker LIKE 'Job%'
-              AND tracker <> 'Overall'
-            ORDER BY time_spent DESC
+              AND (tracker LIKE 'Job%' OR tracker = 'Overall')
         """, uid)
+    return {row["tracker"]: _interval_to_minutes(row["time_spent"]) for row in rows}
+
+
+async def _fetch_job_minutes_map(user_uuid: str) -> dict[str, float]:
+    return await fetch_player_minutes_map(user_uuid)
+
+
+async def get_job_playtimes(user_uuid: str) -> list[dict]:
+    minutes_map = await _fetch_job_minutes_map(user_uuid)
     result = []
-    for row in rows:
-        minutes = _interval_to_minutes(row["time_spent"])
+    for tracker, minutes in minutes_map.items():
         if minutes <= 0:
             continue
-        result.append(_job_row(row["tracker"], minutes))
+        result.append(_job_row(tracker, minutes))
+    result.sort(key=lambda item: -item["minutes"])
     return result
+
+
+async def get_playtime_overview(user_uuid: str) -> dict:
+    minutes_map = await _fetch_job_minutes_map(user_uuid)
+    roles = []
+    for catalog in list_job_roles():
+        tracker = catalog["id"]
+        role_id = catalog["role_id"]
+        current = minutes_map.get(tracker, 0.0)
+        unlock_info = evaluate_role_unlock(role_id, minutes_map)
+        roles.append({
+            **_job_row(tracker, current),
+            "deficit_minutes": unlock_info["deficit_minutes"],
+            "unlocked": unlock_info["unlocked"],
+            "unlock_hint": unlock_info["unlock_hint"],
+            "unlock_labels": unlock_info["unlock_labels"],
+        })
+    sources = [
+        _job_row(tracker, minutes)
+        for tracker, minutes in minutes_map.items()
+        if minutes > 0
+    ]
+    sources.sort(key=lambda item: -item["minutes"])
+    return {
+        "roles": roles,
+        "sources": sources,
+        "unlock_source": get_unlock_metadata(),
+    }
+
+
+def build_unlock_all_plan(minutes_map: dict[str, float], from_tracker: str) -> dict:
+    return plan_unlock_all_transfers(minutes_map, normalize_job_tracker(from_tracker))
 
 
 async def transfer_job_playtime(
@@ -91,19 +140,49 @@ async def transfer_job_playtime(
     to_tracker: str,
     minutes: float,
 ) -> dict:
+    result = await bulk_transfer_job_playtime(
+        target_user_uuid,
+        from_tracker,
+        [(to_tracker, minutes)],
+    )
+    transfer = result["transfers"][0]
+    return {
+        "success": True,
+        "from_tracker": result["from_tracker"],
+        "to_tracker": transfer["to_tracker"],
+        "minutes": transfer["minutes"],
+        "from_label": result["from_label"],
+        "to_label": transfer["to_label"],
+    }
+
+
+async def bulk_transfer_job_playtime(
+    target_user_uuid: str,
+    from_tracker: str,
+    transfers: list[tuple[str, float]],
+) -> dict:
     uid = _parse_user_uuid(target_user_uuid)
     if not uid:
         raise ValueError("Некорректный игрок")
     from_tracker = normalize_job_tracker(from_tracker)
-    to_tracker = normalize_job_tracker(to_tracker)
-    if from_tracker == to_tracker:
-        raise ValueError("Выберите разные должности")
-    if minutes <= 0:
-        raise ValueError("Укажите положительное время")
-    if minutes > 24 * 60 * 30:
+
+    normalized: list[tuple[str, float]] = []
+    for to_tracker, minutes in transfers:
+        if minutes <= 0:
+            continue
+        to_tracker = normalize_job_tracker(to_tracker)
+        if to_tracker == from_tracker:
+            raise ValueError("Нельзя переносить на ту же должность")
+        normalized.append((to_tracker, round(minutes, 1)))
+
+    if not normalized:
+        raise ValueError("Укажите хотя бы один перенос")
+
+    total = round(sum(minutes for _, minutes in normalized), 1)
+    if total > 24 * 60 * 30:
         raise ValueError("Слишком большой перенос за один раз")
 
-    delta = timedelta(minutes=minutes)
+    delta_total = timedelta(minutes=total)
     pg = await get_pg_pool()
     async with pg.acquire() as conn:
         async with conn.transaction():
@@ -112,32 +191,42 @@ async def transfer_job_playtime(
                 uid, from_tracker,
             )
             available = source["time_spent"] if source else timedelta(0)
-            if _interval_to_minutes(available) < minutes:
-                raise ValueError("Недостаточно времени на исходной должности")
+            if _interval_to_minutes(available) < total:
+                raise ValueError(
+                    f"Недостаточно времени на исходной должности (нужно {total} мин)"
+                )
 
             await conn.execute(
                 "UPDATE play_time SET time_spent = time_spent - $3 WHERE player_id = $1 AND tracker = $2",
-                uid, from_tracker, delta,
+                uid, from_tracker, delta_total,
             )
-            updated = await conn.execute(
-                """
-                UPDATE play_time
-                SET time_spent = time_spent + $3
-                WHERE player_id = $1 AND tracker = $2
-                """,
-                uid, to_tracker, delta,
-            )
-            if updated.split()[-1] == "0":
-                await conn.execute(
-                    "INSERT INTO play_time (player_id, tracker, time_spent) VALUES ($1, $2, $3)",
+
+            applied = []
+            for to_tracker, minutes in normalized:
+                delta = timedelta(minutes=minutes)
+                updated = await conn.execute(
+                    """
+                    UPDATE play_time
+                    SET time_spent = time_spent + $3
+                    WHERE player_id = $1 AND tracker = $2
+                    """,
                     uid, to_tracker, delta,
                 )
+                if updated.split()[-1] == "0":
+                    await conn.execute(
+                        "INSERT INTO play_time (player_id, tracker, time_spent) VALUES ($1, $2, $3)",
+                        uid, to_tracker, delta,
+                    )
+                applied.append({
+                    "to_tracker": to_tracker,
+                    "to_label": translate_role(to_tracker),
+                    "minutes": minutes,
+                })
 
     return {
         "success": True,
         "from_tracker": from_tracker,
-        "to_tracker": to_tracker,
-        "minutes": round(minutes, 1),
         "from_label": translate_role(from_tracker),
-        "to_label": translate_role(to_tracker),
+        "total_minutes": total,
+        "transfers": applied,
     }

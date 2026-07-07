@@ -26,47 +26,40 @@
 
         <div class="inventory-section playtime-transfer-section" id="playtimeTransferSection" hidden>
             <h3><i class="fa-solid fa-clock"></i> Перенос времени на роли</h3>
-            <p class="inventory-hint">Выберите должность с наигранным временем и перенесите часы на другую роль.</p>
+            <p class="inventory-hint">Только для хранителей времени и администраторов. Укажите игрока, выберите роль-источник и отметьте роли для переноса.</p>
 
-            <div id="playtimeKeeperFields" class="playtime-keeper-fields" hidden>
-                <label class="playtime-label" for="playtimePlayerNick">Игрок (ник в игре)</label>
-                <div class="playtime-keeper-row">
-                    <input type="text" id="playtimePlayerNick" placeholder="ckey / ник">
-                    <button type="button" onclick="loadPlaytimeJobs()"><i class="fa-solid fa-magnifying-glass"></i> Найти</button>
-                </div>
+            <label class="playtime-label" for="playtimePlayerNick">Игрок (ник в игре)</label>
+            <div class="playtime-keeper-row">
+                <input type="text" id="playtimePlayerNick" placeholder="ckey / ник" required>
+                <button type="button" onclick="loadPlaytimeOverview()"><i class="fa-solid fa-magnifying-glass"></i> Найти</button>
             </div>
 
             <p class="playtime-player-title" id="playtimePlayerTitle" hidden></p>
 
-            <div class="playtime-transfer-layout">
-                <div class="playtime-col">
-                    <h4 class="playtime-col-title"><i class="fa-solid fa-circle-minus"></i> Откуда</h4>
-                    <p class="playtime-col-hint">Роли с наигранным временем</p>
-                    <div id="playtimeFromJobs" class="playtime-jobs-pick"></div>
-                </div>
-                <div class="playtime-transfer-arrow" aria-hidden="true">
-                    <i class="fa-solid fa-arrow-right"></i>
-                </div>
-                <div class="playtime-col">
-                    <h4 class="playtime-col-title"><i class="fa-solid fa-circle-plus"></i> Куда</h4>
-                    <input type="text" id="playtimeToSearch" class="playtime-search" placeholder="Поиск роли..." oninput="filterPlaytimeToRoles()">
-                    <div id="playtimeToJobs" class="playtime-jobs-pick playtime-jobs-pick-scroll"></div>
-                </div>
+            <div class="playtime-source-row" id="playtimeSourceRow" hidden>
+                <label class="playtime-label" for="playtimeFromTracker">Откуда переносить</label>
+                <select id="playtimeFromTracker"></select>
             </div>
 
-            <div class="playtime-amount-row">
-                <label class="playtime-label" for="playtimeMinutes">Сколько перенести (минут)</label>
-                <div class="playtime-amount-controls">
-                    <input type="number" id="playtimeMinutes" min="1" step="1" placeholder="60">
-                    <button type="button" class="playtime-quick-btn" onclick="setPlaytimeMinutes(30)">30м</button>
-                    <button type="button" class="playtime-quick-btn" onclick="setPlaytimeMinutes(60)">1ч</button>
-                    <button type="button" class="playtime-quick-btn" onclick="setPlaytimeMinutes(180)">3ч</button>
-                    <button type="button" class="playtime-quick-btn" onclick="setPlaytimeMinutes(600)">10ч</button>
-                    <button type="button" class="playtime-submit-btn" onclick="submitPlaytimeTransfer()">
-                        <i class="fa-solid fa-right-left"></i> Перенести
-                    </button>
+            <div class="playtime-toolbar" id="playtimeToolbar" hidden>
+                <input type="text" id="playtimeRoleSearch" class="playtime-search" placeholder="Поиск роли..." oninput="filterPlaytimeRoles()">
+                <label class="playtime-select-all">
+                    <input type="checkbox" id="playtimeSelectAll" onchange="togglePlaytimeSelectAll()">
+                    Выбрать все
+                </label>
+                <div class="playtime-bulk-minutes">
+                    <input type="number" id="playtimeBulkMinutes" min="1" step="1" placeholder="Минут">
+                    <button type="button" class="playtime-quick-btn" onclick="applyPlaytimeBulkMinutes()">На выбранные</button>
                 </div>
+                <button type="button" class="playtime-unlock-btn" onclick="unlockAllPlaytimeRoles()">
+                    <i class="fa-solid fa-unlock"></i> Разблокировать все роли
+                </button>
+                <button type="button" class="playtime-submit-btn" onclick="submitPlaytimeBulkTransfer()">
+                    <i class="fa-solid fa-right-left"></i> Перенести выбранные
+                </button>
             </div>
+
+            <div id="playtimeRolesTable" class="playtime-roles-table-wrap"></div>
             <div id="playtimeTransferResult" class="result"></div>
         </div>
     </div>
