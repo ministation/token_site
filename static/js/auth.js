@@ -14,11 +14,15 @@ async function checkAuth() {
             document.getElementById('loginBtn').style.display = 'none';
             const panel = document.getElementById('userPanel');
             panel.style.display = 'flex';
+            const avatarInner = data.avatar
+                ? `<img src="${data.avatar}" alt="" onerror="this.outerHTML='<i class=\\'fa-solid fa-user\\'></i>'">`
+                : '<i class="fa-solid fa-user"></i>';
             panel.innerHTML = `
-                ${data.avatar ? `<img src="${data.avatar}" alt="" onerror="this.style.display='none'">` : ''}
+                <button type="button" class="user-avatar-btn" onclick="openMyProfile()" title="Мой профиль">${avatarInner}</button>
                 <span id="userName">${data.display_name || data.username}${staffBadgeHtml(data)}</span>
-                <button type="button" onclick="openMyProfile()" title="Мой профиль"><i class="fa-solid fa-user"></i></button>
-                <button onclick="logout()">Выйти</button>
+                <button type="button" class="user-logout-btn" onclick="logout()" title="Выйти">
+                    <i class="fa-solid fa-right-from-bracket"></i><span class="user-logout-text">Выйти</span>
+                </button>
             `;
             if (data.player) {
                 currentPlayerId = data.player.player_id;

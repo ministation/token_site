@@ -141,30 +141,49 @@ async function loadGlobalChat(fullReload) {
     }
 }
 
+function formatChatTime(iso) {
+    const d = new Date(iso);
+    const now = new Date();
+    if (d.toDateString() === now.toDateString()) {
+        return d.toLocaleString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    }
+    return d.toLocaleString('ru-RU', {
+        day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+    });
+}
+
 function renderGlobalChatMessage(m) {
+    const isOwn = !!(currentUser?.social_id && m.author_id === currentUser.social_id);
     const avatar = m.author_avatar
         ? `<img src="${m.author_avatar}" class="chat-avatar" alt="" onerror="this.style.display='none'">`
         : '<div class="chat-avatar chat-avatar-placeholder"><i class="fa-solid fa-user"></i></div>';
-    const time = new Date(m.created_at).toLocaleString('ru-RU', {
-        day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
-    });
+    const time = formatChatTime(m.created_at);
     const roleBadge = typeof renderRoleBadge === 'function' ? renderRoleBadge(m.author_role) : '';
     const authorBtn = typeof profileLink === 'function'
         ? profileLink(m.author_id, m.author_nickname, 'global-chat-author')
         : `<span class="global-chat-author">${escapeHtml(m.author_nickname)}</span>`;
-    const textHtml = m.content ? `<div class="global-chat-text">${formatMessageContent(m.content)}</div>` : '';
-    const imageHtml = renderChatImage(m.image_url);
+    const textHtml = m.content ? `<span class="global-chat-text">${formatMessageContent(m.content)}</span>` : '';
+    const imageHtml = m.image_url ? renderChatImage(m.image_url) : '';
+    const statusHtml = isOwn
+        ? '<span class="pm-status pm-status-sent" title="Отправлено"><i class="fa-solid fa-check"></i></span>'
+        : '';
+    const meta = `<span class="global-chat-bubble-meta">${statusHtml}<span class="global-chat-time">${time}</span></span>`;
+    const bodyParts = [];
+    if (imageHtml) bodyParts.push(`<div class="global-chat-media">${imageHtml}</div>`);
+    if (textHtml) {
+        bodyParts.push(`<div class="global-chat-bubble-row">${textHtml}${meta}</div>`);
+    } else if (imageHtml) {
+        bodyParts.push(`<div class="global-chat-bubble-row global-chat-bubble-row-tail">${meta}</div>`);
+    }
     return `
-        <div class="global-chat-message chat-bubble-row" data-id="${m.id}">
+        <div class="global-chat-message ${isOwn ? 'own' : ''}" data-id="${m.id}">
             ${avatar}
             <div class="global-chat-content">
                 <div class="global-chat-meta">
                     ${authorBtn}${roleBadge}
-                    <span class="global-chat-time">${time}</span>
                 </div>
-                <div class="chat-bubble-body">
-                    ${textHtml}
-                    ${imageHtml}
+                <div class="global-chat-bubble">
+                    ${bodyParts.join('')}
                 </div>
             </div>
         </div>

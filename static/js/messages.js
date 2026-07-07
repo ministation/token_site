@@ -91,6 +91,57 @@ async function openConversation(partnerId, nickname) {
     if (typeof pollNotifications === 'function') pollNotifications();
 }
 
+function formatPmTime(iso) {
+    const d = new Date(iso);
+    const now = new Date();
+    if (d.toDateString() === now.toDateString()) {
+        return d.toLocaleString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    }
+    return d.toLocaleString('ru-RU', {
+        day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+    });
+}
+
+function pmIsRead(value) {
+    return value === 1 || value === true || value === '1';
+}
+
+function pmStatusHtml(own, read) {
+    if (!own) return '';
+    const isRead = pmIsRead(read);
+    const cls = isRead ? 'pm-status pm-status-read' : 'pm-status pm-status-sent';
+    const icon = isRead ? 'fa-check-double' : 'fa-check';
+    const title = isRead ? 'Прочитано' : 'Отправлено';
+    return `<span class="${cls}" title="${title}"><i class="fa-solid ${icon}"></i></span>`;
+}
+
+function renderPmMessage(m, myId) {
+    const own = m.is_own === true || (myId && m.sender_id === myId);
+    const text = m.content ?? m.message ?? m.text ?? '';
+    const time = formatPmTime(m.created_at);
+    const imageHtml = m.image_url ? renderChatImage(m.image_url, 'pm-msg-image') : '';
+    const textHtml = text ? `<span class="pm-bubble-text">${formatMessageContent(text)}</span>` : '';
+    const meta = `<span class="pm-bubble-meta">${pmStatusHtml(own, m.read)}<span class="pm-time-inline">${time}</span></span>`;
+
+    if (!textHtml && !imageHtml) return '';
+
+    if (imageHtml && !textHtml) {
+        return `<div class="pm-message ${own ? 'own' : ''}">
+            <div class="pm-bubble">
+                <div class="pm-bubble-media">${imageHtml}</div>
+                <div class="pm-bubble-row pm-bubble-row-tail">${meta}</div>
+            </div>
+        </div>`;
+    }
+
+    return `<div class="pm-message ${own ? 'own' : ''}">
+        <div class="pm-bubble">
+            ${imageHtml ? `<div class="pm-bubble-media">${imageHtml}</div>` : ''}
+            <div class="pm-bubble-row">${textHtml}${meta}</div>
+        </div>
+    </div>`;
+}
+
 async function loadConversation(partnerId) {
     const container = document.getElementById('currentConversation');
     if (!container) return;
@@ -101,20 +152,9 @@ async function loadConversation(partnerId) {
             return;
         }
         const myId = currentUser.social_id;
-        container.innerHTML = messages.reverse().map(m => {
-            const own = m.is_own === true || (myId && m.sender_id === myId);
-            const text = m.content ?? m.message ?? m.text ?? '';
-            const time = new Date(m.created_at).toLocaleString('ru-RU', {
-                day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
-            });
-            const textHtml = text ? `<div class="pm-bubble">${formatMessageContent(text)}</div>` : '';
-            const imageHtml = renderChatImage(m.image_url, 'pm-msg-image');
-            return `<div class="pm-message ${own ? 'own' : ''}">
-                ${textHtml || imageHtml ? `<div class="pm-bubble-wrap">${textHtml}${imageHtml}</div>` : ''}
-                <div class="pm-time">${time}</div>
-            </div>`;
-        }).join('');
-        container.scrollTop = container.scrollHeight;
+        const wasAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 48;
+        container.innerHTML = messages.reverse().map(m => renderPmMessage(m, myId)).join('');
+        if (wasAtBottom) container.scrollTop = container.scrollHeight;
     } catch (e) {
         container.innerHTML = '<p class="error">Ошибка загрузки</p>';
     }

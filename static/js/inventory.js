@@ -104,7 +104,7 @@ async function uploadAvatar() {
         if (currentUser) currentUser.avatar = data.avatar;
         const preview = document.getElementById('profileAvatarPreview');
         if (preview) preview.src = data.avatar + '?t=' + Date.now();
-        const panelImg = document.querySelector('#userPanel img');
+        const panelImg = document.querySelector('#userPanel .user-avatar-btn img');
         if (panelImg) panelImg.src = data.avatar + '?t=' + Date.now();
         if (result) result.innerHTML = '<p class="success">Аватар обновлён</p>';
         input.value = '';
