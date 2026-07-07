@@ -109,9 +109,9 @@ async function loadAdminRatingDetails(userUuid) {
                         <div class="admin-rating-manage-main">
                             <div class="admin-rating-manage-player">${escapeHtml(r.player_name)}</div>
                             <div class="admin-rating-manage-meta">
-                                ${'★'.repeat(r.stars)}${'☆'.repeat(5 - r.stars)}
-                                · ${r.created_at ? new Date(r.created_at).toLocaleString('ru-RU') : '—'}
-                                ${r.round_id != null ? ` · раунд #${r.round_id}` : ''}
+                                ${renderStarIcons(r.stars)}
+                                <span class="admin-rating-manage-date">${r.created_at ? new Date(r.created_at).toLocaleString('ru-RU') : '—'}</span>
+                                ${r.round_id != null ? `<span class="admin-rating-manage-round">#${r.round_id}</span>` : ''}
                             </div>
                         </div>
                         <button type="button" class="btn-danger-sm" title="Удалить оценку"
@@ -133,10 +133,7 @@ async function refreshAdminRatingSelect() {
     const current = adminRatingSelectedUuid;
     select.innerHTML = '<option value="">— Выберите администратора —</option>' +
         leaders.map(a => {
-            const count = a.rating_count || 0;
-            const label = count > 0
-                ? `${a.name} (${count} оц., ${a.rating != null ? a.rating.toFixed(2) : '?'})`
-                : a.name;
+            const label = formatAdminRatingOptionLabel(a.name, a.rating, a.rating_count);
             return `<option value="${a.user_uuid}">${escapeHtml(label)}</option>`;
         }).join('');
     if (current) select.value = current;

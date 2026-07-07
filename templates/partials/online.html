@@ -12,7 +12,9 @@
     <div class="admin-rating-section collapsible-section collapsed" id="adminRatingSection">
         <button type="button" class="collapsible-header stats-subtitle" onclick="toggleAdminRatingPanel(this)" aria-expanded="false">
             <span><i class="fa-solid fa-star"></i> Рейтинг администрации AHelp</span>
-            <i class="fa-solid fa-chevron-down collapsible-chevron"></i>
+            <span class="collapsible-chevron-wrap" aria-hidden="true">
+                <i class="fa-solid fa-chevron-down collapsible-chevron"></i>
+            </span>
         </button>
         <div class="collapsible-body" id="adminRatingBody">
             <p class="admin-rating-hint">Сортировка: сначала с оценками (по убыванию), затем без оценок по нику</p>

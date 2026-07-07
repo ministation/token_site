@@ -1646,26 +1646,51 @@ html[data-theme="dark"] .status-meta {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 12px;
     width: 100%;
     margin: 16px 0 0;
-    padding: 0;
-    background: none;
-    border: none;
+    padding: 14px 16px;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    min-height: 48px;
     cursor: pointer;
     text-align: left;
     font-family: var(--font-pixel);
-    font-size: 0.62rem;
+    font-size: 0.68rem;
     color: var(--ink);
+    transition: background var(--transition), border-color var(--transition);
 }
-.collapsible-header span i { color: var(--accent); margin-right: 6px; }
+.collapsible-header:hover {
+    background: var(--panel);
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+}
+.collapsible-header span:first-child {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+.collapsible-header span i { color: var(--accent); }
+.collapsible-chevron-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius-sm);
+    background: var(--panel);
+    border: 1px solid var(--border);
+}
 .collapsible-chevron {
-    font-size: 0.75rem;
-    color: var(--muted);
+    font-size: 0.85rem;
+    color: var(--accent);
     transition: transform var(--transition);
 }
 .collapsible-section.collapsed .collapsible-chevron { transform: rotate(-90deg); }
 .collapsible-section.collapsed .collapsible-body { display: none; }
-.collapsible-body { margin-top: 8px; }
+.collapsible-body { margin-top: 10px; }
 .admin-rating-hint {
     color: var(--muted);
     font-size: 0.82rem;
@@ -1723,14 +1748,22 @@ html[data-theme="dark"] .status-meta {
 .admin-rating-score {
     display: flex;
     align-items: center;
-    gap: 4px;
+    flex-shrink: 0;
+}
+.admin-rating-score-inner {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    flex-wrap: nowrap;
     white-space: nowrap;
 }
 .admin-rating-actions {
     display: flex;
-    flex-direction: column;
-    align-items: flex-end;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
     gap: 6px;
+    flex-shrink: 0;
 }
 .admin-rating-msg-btn {
     padding: 6px 10px !important;
@@ -1746,12 +1779,39 @@ html[data-theme="dark"] .status-meta {
 .admin-rating-star {
     width: 18px;
     height: 18px;
+    flex-shrink: 0;
     image-rendering: pixelated;
     object-fit: contain;
 }
-.admin-rating-count {
+.admin-rating-star-sm {
+    width: 14px;
+    height: 14px;
+}
+.rating-count-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: var(--panel);
+    border: 1px solid var(--border);
     font-size: 0.75rem;
     color: var(--muted);
+    line-height: 1;
+}
+.star-icons {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    line-height: 1;
+}
+.star-icons .star-filled {
+    color: var(--gold);
+    font-size: 0.82rem;
+}
+.star-icons .star-empty {
+    color: color-mix(in srgb, var(--muted) 55%, transparent);
+    font-size: 0.82rem;
 }
 .admin-rating-updated {
     margin-top: 10px;
@@ -1768,6 +1828,12 @@ html[data-theme="dark"] .status-meta {
     border-radius: var(--radius-sm);
     font-size: 0.9rem;
     color: var(--muted);
+}
+.admin-rating-summary-line {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
 }
 
 .admin-rating-manage-list {
@@ -1789,10 +1855,22 @@ html[data-theme="dark"] .status-meta {
 .admin-rating-manage-main { flex: 1; min-width: 0; }
 .admin-rating-manage-player { font-weight: 700; color: var(--ink); font-size: 0.92rem; }
 .admin-rating-manage-meta {
-    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 6px;
     font-size: 0.8rem;
     color: var(--muted);
-    letter-spacing: 0.04em;
+}
+.admin-rating-manage-date,
+.admin-rating-manage-round {
+    white-space: nowrap;
+}
+.admin-rating-manage-round::before {
+    content: '·';
+    margin-right: 8px;
+    color: var(--border);
 }
 
 #adminRatingSelect {
@@ -1802,12 +1880,30 @@ html[data-theme="dark"] .status-meta {
 
 @media (max-width: 520px) {
     .admin-rating-row {
-        grid-template-columns: 1.5rem 1fr;
+        grid-template-columns: 2rem 1fr;
         grid-template-rows: auto auto;
+        gap: 6px 10px;
+        padding: 10px 12px;
     }
-    .admin-rating-score {
+    .admin-rating-place {
+        grid-row: span 2;
+        align-self: start;
+        padding-top: 2px;
+    }
+    .admin-rating-info {
+        min-width: 0;
+    }
+    .admin-rating-actions {
         grid-column: 2;
         justify-content: flex-start;
+        flex-wrap: wrap;
+    }
+    .admin-rating-score-inner {
+        max-width: 100%;
+    }
+    .collapsible-header {
+        padding: 12px 14px;
+        min-height: 52px;
     }
 }
 
