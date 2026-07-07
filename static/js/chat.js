@@ -70,11 +70,11 @@ async function loadChatUsers(query) {
         }
         container.innerHTML = users.map(u => `
             <div class="chat-user-row">
-                <button type="button" class="chat-user-main" onclick="openProfile(${JSON.stringify(u.player_id)})">
+                <button type="button" class="chat-user-main" onclick="event.stopPropagation(); openProfile(${JSON.stringify(u.player_id)})">
                     <img src="${u.avatar || '/static/default_avatar.png'}" class="chat-user-avatar" alt=""
                          onerror="this.src='/static/default_avatar.png'">
                     <div class="chat-user-info">
-                        <div class="chat-user-name">${escapeHtml(u.game_nickname || u.discord_username)}</div>
+                        <div class="chat-user-name">${typeof profileLink === 'function' ? profileLink(u.player_id, u.game_nickname || u.discord_username, 'chat-user-name-link') : escapeHtml(u.game_nickname || u.discord_username)}</div>
                         <div class="chat-user-sub">@${escapeHtml(u.discord_username || '')}</div>
                     </div>
                 </button>
@@ -92,11 +92,8 @@ async function loadChatUsers(query) {
 function messageUserFromChat(playerId, nickname) {
     if (typeof startConversationWith === 'function') {
         startConversationWith(playerId, nickname);
-    } else {
-        showSection('messages');
-        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-        const btn = document.querySelector('.nav-btn[data-section="messages"]');
-        if (btn) btn.classList.add('active');
+    } else if (typeof navigateTo === 'function') {
+        navigateTo('messages');
         if (typeof openConversation === 'function') openConversation(playerId, nickname);
     }
 }

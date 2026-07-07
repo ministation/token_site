@@ -22,10 +22,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             sessionStorage.removeItem('openPm');
             try {
                 const { playerId, nickname } = JSON.parse(openPm);
-                showSection('messages');
-                document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-                const btn = document.querySelector('.nav-btn[data-section="messages"]');
-                if (btn) btn.classList.add('active');
+                if (typeof navigateTo === 'function') navigateTo('messages');
                 if (typeof setupPmUserSearch === 'function') setupPmUserSearch();
                 if (typeof startPmPolling === 'function') startPmPolling();
                 if (typeof openConversation === 'function') openConversation(playerId, nickname);

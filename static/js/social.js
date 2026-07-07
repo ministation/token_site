@@ -234,7 +234,9 @@ function renderPost(post) {
                 </button>
                 <div class="post-author-info">
                     <div class="post-author-name">${authorName}</div>
-                    <div class="post-author-nick">@${escapeHtml(post.author_nickname || 'unknown')}</div>
+                    <div class="post-author-nick">${typeof profileLink === 'function' && post.author_player_id
+                        ? profileLink(post.author_player_id, '@' + (post.author_nickname || 'unknown'), 'post-author-nick-link')
+                        : '@' + escapeHtml(post.author_nickname || 'unknown')}</div>
                     <div class="post-time">${new Date(post.created_at).toLocaleString()}</div>
                 </div>
             </div>
@@ -315,8 +317,11 @@ async function toggleComments(postId) {
             const comments = await apiCall('GET', '/api/social/posts/' + postId + '/comments');
             let html = '<h4>Комментарии</h4>';
             comments.forEach(c => {
+                const author = typeof profileLink === 'function' && c.author_player_id
+                    ? profileLink(c.author_player_id, c.game_nickname || c.author_nickname || 'Игрок', 'comment-author-link')
+                    : escapeHtml(c.game_nickname || c.author_nickname || 'Игрок');
                 html += '<div class="comment"><img src="' + (c.author_avatar || '/static/default_avatar.png') + '" class="comment-avatar" alt="">' +
-                    '<div class="comment-content"><div class="comment-author">' + escapeHtml(c.author_nickname) + '</div>' +
+                    '<div class="comment-content"><div class="comment-author">' + author + '</div>' +
                     '<div class="comment-text">' + escapeHtml(c.content) + '</div></div></div>';
             });
             html += '<textarea id="comment-input-' + postId + '" placeholder="Комментарий..."></textarea>' +

@@ -12,21 +12,29 @@ function renderRoleBadge(role) {
     return '';
 }
 
+function profileHref(playerId) {
+    if (!playerId) return '#/home';
+    return `#/player/${encodeURIComponent(playerId)}`;
+}
+
 function profileLink(playerId, label, className = '') {
     if (!playerId) return escapeHtml(label || '');
-    const cls = className ? ` class="${className}"` : '';
-    return `<button type="button"${cls} onclick="openProfile(${JSON.stringify(playerId)})">${escapeHtml(label || 'Игрок')}</button>`;
+    const cls = ['player-link', className].filter(Boolean).join(' ');
+    return `<a href="${profileHref(playerId)}" class="${escapeHtml(cls)}">${escapeHtml(label || 'Игрок')}</a>`;
 }
 
 function openProfile(playerId) {
     if (!playerId) return;
-    showSection('profile');
-    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-    const btn = document.querySelector('.nav-btn[data-section="profile"]');
-    if (btn) btn.classList.add('active');
     if (typeof closeMobileNav === 'function') closeMobileNav();
-    if (typeof loadProfile === 'function') loadProfile(playerId);
+    if (typeof navigateTo === 'function') {
+        navigateTo(`player/${encodeURIComponent(playerId)}`);
+    }
 }
+
+document.addEventListener('click', (e) => {
+    const link = e.target.closest('a.player-link');
+    if (link) e.stopPropagation();
+});
 
 function openMyProfile() {
     const id = currentUser?.social_id || currentPlayerId;

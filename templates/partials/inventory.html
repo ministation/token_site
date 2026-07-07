@@ -1,21 +1,27 @@
-<div class="card inventory-card">
-    <h2><i class="fa-solid fa-box-open"></i> Инвентарь</h2>
-    <p class="inventory-hint">Подписка, билеты на антагов, custom ghost и профиль</p>
+<div id="profileContent" class="card profile-page-card">
+    <p class="empty-state">Загрузка профиля...</p>
+</div>
 
-    <div class="profile-avatar-section" id="avatarSection" style="display:none;">
-        <h3><i class="fa-solid fa-user-circle"></i> Аватар</h3>
-        <div class="avatar-upload-row">
-            <img id="profileAvatarPreview" src="/static/default_avatar.png" alt="" class="profile-avatar-preview">
-            <div>
-                <input type="file" id="avatarUpload" accept="image/png,image/jpeg,image/webp,image/gif">
-                <button type="button" onclick="uploadAvatar()"><i class="fa-solid fa-upload"></i> Сменить аватар</button>
-                <p class="avatar-hint">Сохраняется на сервере, Discord больше не подгружается автоматически</p>
+<div id="inventoryPanels">
+    <div class="card inventory-card">
+        <h2><i class="fa-solid fa-box-open"></i> Инвентарь</h2>
+        <p class="inventory-hint">Подписка, билеты на антагов и custom ghost</p>
+
+        <div class="profile-avatar-section" id="avatarSection" style="display:none;">
+            <h3><i class="fa-solid fa-user-circle"></i> Аватар</h3>
+            <div class="avatar-upload-row">
+                <img id="profileAvatarPreview" src="/static/default_avatar.png" alt="" class="profile-avatar-preview">
+                <div>
+                    <input type="file" id="avatarUpload" accept="image/png,image/jpeg,image/webp,image/gif">
+                    <button type="button" onclick="uploadAvatar()"><i class="fa-solid fa-upload"></i> Сменить аватар</button>
+                    <p class="avatar-hint">Сохраняется на сервере</p>
+                </div>
             </div>
+            <div id="avatarUploadResult" class="result"></div>
         </div>
-        <div id="avatarUploadResult" class="result"></div>
-    </div>
 
-    <div id="inventoryContent">
-        <p class="empty-state">Загрузка...</p>
+        <div id="inventoryContent">
+            <p class="empty-state">Загрузка...</p>
+        </div>
     </div>
 </div>

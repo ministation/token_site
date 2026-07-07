@@ -22,7 +22,7 @@ async function loadDialogs() {
                     <div class="dialog-avatar-placeholder"><i class="fa-solid fa-user"></i></div>
                 </div>
                 <div class="dialog-body">
-                    <div class="dialog-name">${escapeHtml(d.nickname || 'Игрок')}</div>
+                    <div class="dialog-name">${typeof profileLink === 'function' ? profileLink(d.other_id, d.nickname || 'Игрок', 'dialog-name-link') : escapeHtml(d.nickname || 'Игрок')}</div>
                     <div class="dialog-preview">${escapeHtml(d.last_msg || '')}</div>
                 </div>
                 ${d.unread ? `<span class="dialog-unread pixel-notify">${d.unread}</span>` : ''}
@@ -62,7 +62,7 @@ async function searchPmUsers(query) {
         container.innerHTML = users.map(u => `
             <button type="button" class="pm-user-item"
                 onclick='startConversationWith(${JSON.stringify(u.player_id)}, ${JSON.stringify(u.game_nickname || u.discord_username || 'Игрок')})'>
-                <span class="pm-user-name">${escapeHtml(u.game_nickname || u.discord_username)}</span>
+                <span class="pm-user-name">${typeof profileLink === 'function' ? profileLink(u.player_id, u.game_nickname || u.discord_username, 'pm-user-name-link') : escapeHtml(u.game_nickname || u.discord_username)}</span>
                 <span class="pm-user-sub">@${escapeHtml(u.discord_username || '')}</span>
             </button>
         `).join('');
@@ -153,7 +153,8 @@ async function sendPrivateMessage() {
 }
 
 function startConversationWith(playerId, nickname) {
-    showSection('messages');
+    if (typeof navigateTo === 'function') navigateTo('messages');
+    else showSection('messages');
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
     const btn = document.querySelector('.nav-btn[data-section="messages"]');
     if (btn) btn.classList.add('active');

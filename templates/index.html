@@ -52,8 +52,7 @@
                 <button class="nav-btn active" data-section="home"><i class="fa-solid fa-house"></i> Главная<span class="nav-notify" id="navNotifyHome" hidden></span></button>
                 <button class="nav-btn" data-section="chat"><i class="fa-solid fa-comments"></i> Чат</button>
                 <button class="nav-btn" data-section="messages"><i class="fa-solid fa-envelope"></i> Сообщения<span class="nav-notify" id="navNotifyMessages" hidden></span></button>
-                <button class="nav-btn" data-section="profile" id="profileNavBtn" style="display:none;"><i class="fa-solid fa-user"></i> Профиль</button>
-                <button class="nav-btn" data-section="inventory"><i class="fa-solid fa-box-open"></i> Инвентарь</button>
+                <button class="nav-btn" data-section="inventory" id="profileNavBtn" style="display:none;"><i class="fa-solid fa-user"></i> Профиль</button>
                 <button class="nav-btn" data-section="economy"><i class="fa-solid fa-coins"></i> Монетки</button>
                 <button class="nav-btn" data-section="bans"><i class="fa-solid fa-gavel"></i> Наказания</button>
                 <button class="nav-btn" data-section="online"><i class="fa-solid fa-chart-line"></i> Статистика</button>
@@ -78,9 +77,6 @@
             </div>
             <div id="messagesSection" class="section">
                 {% include 'partials/messages.html' %}
-            </div>
-            <div id="profileSection" class="section">
-                {% include 'partials/profile.html' %}
             </div>
             <div id="inventorySection" class="section">
                 {% include 'partials/inventory.html' %}

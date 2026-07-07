@@ -2895,7 +2895,8 @@ html[data-theme="dark"] .status-meta {
 .post-author-link,
 .pm-title-link,
 .profile-user-list-item,
-.chat-user-main {
+.chat-user-main,
+.player-link {
     background: none;
     border: none;
     padding: 0;
@@ -2904,11 +2905,21 @@ html[data-theme="dark"] .status-meta {
     cursor: pointer;
     text-align: left;
     box-shadow: none;
+    text-decoration: none;
 }
-.global-chat-author { font-weight: 700; font-size: 0.88rem; }
+.player-link:hover,
 .global-chat-author:hover,
 .post-author-link:hover,
-.pm-title-link:hover { color: var(--link); transform: none; }
+.pm-title-link:hover {
+    color: var(--link);
+    text-decoration: underline;
+    transform: none;
+}
+.dialog-name-link,
+.pm-user-name-link,
+.chat-user-name-link,
+.post-author-nick-link,
+.global-chat-author { font-weight: 700; font-size: 0.88rem; }
 .chat-msg-image,
 .pm-msg-image {
     display: block;
@@ -2949,7 +2960,7 @@ html[data-theme="dark"] .status-meta {
     bottom: calc(100% + 6px);
     left: 0;
     z-index: 30;
-    display: grid;
+    display: none !important;
     grid-template-columns: repeat(8, 1fr);
     gap: 4px;
     padding: 8px;
@@ -2958,6 +2969,9 @@ html[data-theme="dark"] .status-meta {
     border-radius: var(--radius-sm);
     box-shadow: var(--shadow-hard);
     max-width: 280px;
+}
+.emoji-picker.is-open {
+    display: grid !important;
 }
 .emoji-pick-btn {
     width: 30px;
@@ -3082,6 +3096,9 @@ html[data-theme="dark"] .status-meta {
     border-radius: 50%;
     object-fit: cover;
 }
+#inventoryPanels { margin-top: 12px; }
+#inventoryPanels[hidden] { display: none !important; }
+
 #userPanel button[title="Мой профиль"] {
     width: 34px;
     height: 34px;

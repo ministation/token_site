@@ -5,15 +5,30 @@ from app.services.roles import get_staff_role
 VETERAN_DAYS = 30
 
 
+def _to_utc_aware(dt: datetime) -> datetime:
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+
 def _parse_created_at(value) -> datetime | None:
     if not value:
         return None
     if isinstance(value, datetime):
-        return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
-    try:
-        return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
-    except ValueError:
+        return _to_utc_aware(value)
+    text = str(value).strip()
+    if not text:
         return None
+    try:
+        return _to_utc_aware(datetime.fromisoformat(text.replace("Z", "+00:00")))
+    except ValueError:
+        pass
+    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M:%S.%f"):
+        try:
+            return _to_utc_aware(datetime.strptime(text, fmt))
+        except ValueError:
+            continue
+    return None
 
 
 def get_member_badges(

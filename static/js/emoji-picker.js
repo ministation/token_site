@@ -5,6 +5,12 @@ const EMOJI_SET = [
     '⚡', '✅', '❌', '❓', '‼️', '🫡', '🤝', '👋', '🐱', '🐶',
 ];
 
+function setEmojiPickerOpen(picker, open) {
+    if (!picker) return;
+    picker.classList.toggle('is-open', open);
+    picker.hidden = !open;
+}
+
 function setupEmojiPicker(inputId, btnId, pickerId) {
     const input = document.getElementById(inputId);
     const btn = document.getElementById(btnId);
@@ -12,13 +18,14 @@ function setupEmojiPicker(inputId, btnId, pickerId) {
     if (!input || !btn || !picker || picker.dataset.bound) return;
     picker.dataset.bound = '1';
 
+    setEmojiPickerOpen(picker, false);
     picker.innerHTML = EMOJI_SET.map(e =>
         `<button type="button" class="emoji-pick-btn" data-emoji="${e}">${e}</button>`
     ).join('');
 
     btn.addEventListener('click', (ev) => {
         ev.stopPropagation();
-        picker.hidden = !picker.hidden;
+        setEmojiPickerOpen(picker, !picker.classList.contains('is-open'));
     });
 
     picker.addEventListener('click', (ev) => {
@@ -30,12 +37,13 @@ function setupEmojiPicker(inputId, btnId, pickerId) {
         input.value = input.value.slice(0, start) + emoji + input.value.slice(end);
         input.focus();
         input.selectionStart = input.selectionEnd = start + emoji.length;
-        picker.hidden = true;
+        setEmojiPickerOpen(picker, false);
     });
 
     document.addEventListener('click', (ev) => {
-        if (!picker.hidden && !ev.target.closest(`#${pickerId}`) && ev.target !== btn) {
-            picker.hidden = true;
+        if (!picker.classList.contains('is-open')) return;
+        if (!ev.target.closest(`#${pickerId}`) && !ev.target.closest(`#${btnId}`)) {
+            setEmojiPickerOpen(picker, false);
         }
     });
 }

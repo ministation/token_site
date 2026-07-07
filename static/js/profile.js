@@ -24,6 +24,15 @@ async function loadProfile(playerId) {
         const p = await apiCall('GET', `/api/social/profile/${encodeURIComponent(playerId)}`);
         const avatarUrl = p.discord_avatar || '/static/default_avatar.png';
         const isOwn = !!p.is_own;
+        const myId = currentUser?.social_id || currentPlayerId;
+        const showInventory = isOwn || myId === p.player_id;
+
+        const panels = document.getElementById('inventoryPanels');
+        const avatarSection = document.getElementById('avatarSection');
+        if (panels) panels.hidden = !showInventory;
+        if (avatarSection) avatarSection.style.display = showInventory ? '' : 'none';
+        if (showInventory && typeof loadInventory === 'function') loadInventory();
+
         const badgesHtml = typeof renderBadgesHtml === 'function'
             ? renderBadgesHtml(p.badges, 'profile-page-badge')
             : '';
