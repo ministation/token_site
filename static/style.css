@@ -49,6 +49,12 @@
     --accent-glow: rgba(240, 120, 10, 0.22);
     --accent-soft: color-mix(in srgb, var(--accent) 22%, var(--panel));
 
+    --pm-own: #3d6ea8;
+    --pm-own-deep: #2f5688;
+    --pm-header-bg: var(--panel);
+    --pm-own-bubble: color-mix(in srgb, var(--link) 16%, var(--panel));
+    --pm-own-border: color-mix(in srgb, var(--link) 38%, var(--border));
+
     --shadow-hard: 0 4px 0 rgba(23, 34, 47, 0.10), 0 10px 24px rgba(23, 34, 47, 0.08);
     --shadow-btn: 0 3px 0 rgba(23, 34, 47, 0.14);
     --shadow-btn-color: 0 3px 0 rgba(0, 0, 0, 0.25);
@@ -90,6 +96,12 @@ html[data-theme="dark"] {
     --grad-warm: linear-gradient(90deg, #ffd54f 0%, #ff9800 50%, #ff6d00 100%);
     --accent-glow: rgba(255, 176, 32, 0.28);
     --accent-soft: color-mix(in srgb, var(--accent) 24%, var(--panel));
+
+    --pm-own: #5b9fd4;
+    --pm-own-deep: #3d7eb5;
+    --pm-header-bg: var(--panel-2);
+    --pm-own-bubble: color-mix(in srgb, var(--link) 22%, var(--panel-2));
+    --pm-own-border: color-mix(in srgb, var(--link) 45%, var(--border));
 
     --shadow-hard: 0 4px 0 rgba(0, 0, 0, 0.35), 0 12px 28px rgba(0, 0, 0, 0.35);
     --shadow-btn: 0 3px 0 rgba(0, 0, 0, 0.4);
@@ -2050,7 +2062,7 @@ html[data-theme="dark"] .status-meta {
     position: relative;
 }
 .dialog-item:hover { background: var(--panel-3); }
-.dialog-item.active { background: var(--panel-3); box-shadow: inset 3px 0 0 var(--accent); }
+.dialog-item.active { background: var(--panel-3); box-shadow: inset 3px 0 0 var(--link); }
 .dialog-name { font-weight: 700; color: var(--ink); font-size: 0.9rem; }
 .dialog-preview {
     font-size: 0.8rem;
@@ -2076,8 +2088,8 @@ html[data-theme="dark"] .status-meta {
 }
 .conversation-header {
     padding: 12px 14px;
-    background: var(--accent-soft);
-    border-bottom: 2px solid color-mix(in srgb, var(--accent) 35%, var(--border));
+    background: var(--pm-header-bg);
+    border-bottom: 1px solid var(--border);
     font-size: 0.6rem;
     color: var(--ink);
     display: flex;
@@ -2091,14 +2103,14 @@ html[data-theme="dark"] .status-meta {
     width: 36px;
     height: 36px;
     padding: 0;
-    background: rgba(255,255,255,0.15);
-    border: 1px solid rgba(255,255,255,0.3);
+    background: var(--panel-2);
+    border: 1px solid var(--border);
     border-radius: var(--radius-sm);
-    color: #fff;
+    color: var(--ink);
     flex-shrink: 0;
     box-shadow: none;
 }
-.pm-back-btn:hover { background: rgba(255,255,255,0.25); color: #fff; transform: none; }
+.pm-back-btn:hover { background: var(--panel-3); color: var(--ink); transform: none; }
 .conversation-title-text { flex: 1; min-width: 0; }
 .pm-messages {
     flex: 1;
@@ -2121,8 +2133,20 @@ html[data-theme="dark"] .status-meta {
     text-align: left;
 }
 .pm-message.own .pm-bubble {
-    background: var(--accent);
-    border-color: var(--accent-deep);
+    background: var(--pm-own-bubble);
+    border-color: var(--pm-own-border);
+    color: var(--ink);
+}
+#messagesSection .pm-input-area button,
+#messagesSection .chat-send-btn {
+    background: var(--pm-own);
+    border-color: var(--pm-own-deep);
+    color: #fff;
+    box-shadow: var(--shadow-btn-color);
+}
+#messagesSection .pm-input-area button:hover,
+#messagesSection .chat-send-btn:hover {
+    background: var(--pm-own-deep);
     color: #fff;
 }
 .pm-time { font-size: 0.7rem; color: var(--dim); margin-top: 3px; }
