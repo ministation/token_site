@@ -86,6 +86,7 @@ async function openConversation(partnerId, nickname) {
     if (search) search.value = '';
     await loadConversation(partnerId);
     await loadDialogs();
+    if (typeof pollNotifications === 'function') pollNotifications();
 }
 
 async function loadConversation(partnerId) {
@@ -135,6 +136,7 @@ async function sendPrivateMessage() {
         input.value = '';
         await loadConversation(currentPmPartnerId);
         await loadDialogs();
+        if (typeof pollNotifications === 'function') pollNotifications();
     } catch (e) {
         alert(e.message);
     }
@@ -156,6 +158,7 @@ function startPmPolling() {
     pmPollInterval = setInterval(() => {
         if (currentPmPartnerId) loadConversation(currentPmPartnerId);
         loadDialogs();
+        if (typeof pollNotifications === 'function') pollNotifications();
     }, 5000);
 }
 
@@ -175,6 +178,7 @@ function closePmConversation() {
     const container = document.getElementById('currentConversation');
     if (container) container.innerHTML = '<p class="empty-state">Выберите диалог или найдите игрока</p>';
     loadDialogs();
+    if (typeof pollNotifications === 'function') pollNotifications();
 }
 
 document.addEventListener('DOMContentLoaded', setupPmUserSearch);

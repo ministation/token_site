@@ -30,3 +30,7 @@ def search_pm_users(query: str, exclude_player_id: str, limit=30):
 
 def mark_pm_read(user_id: str, other_id: str):
     return social_db.mark_conversation_read(user_id, other_id)
+
+
+def get_pm_unread_total(user_id: str) -> int:
+    return social_db.get_pm_unread_total(user_id)

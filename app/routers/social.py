@@ -19,6 +19,11 @@ from app.services.bank import get_balance_by_player_id
 router = APIRouter(prefix="/api/social", tags=["social"])
 
 
+@router.get("/feed-updates")
+async def feed_updates():
+    return social_db.get_feed_latest_by_category()
+
+
 def profile_avatar(row: dict) -> str:
     return resolve_avatar_url(row)
 

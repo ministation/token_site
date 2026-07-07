@@ -4,8 +4,9 @@ from app.dependencies import get_current_admin, get_current_staff
 from app.services.admin import get_site_statistics, list_admins, grant_admin, grant_moderator, revoke_admin, find_user_for_admin
 from app.services.bans import (
     get_all_bans, lift_ban, unban_ban, create_server_ban, create_role_ban,
-    search_players, get_player_profile, list_job_roles,
+    search_players, list_job_roles,
 )
+from app.services.player_admin import get_full_player_dossier
 from app.services.appeals import list_appeals, review_appeal
 from app.services.avatars import resolve_avatar_url
 from app.services.social import get_feed_posts
@@ -249,7 +250,7 @@ async def admin_search_players(request: Request, q: str = Query("", min_length=2
 @router.get("/game/players/{user_uuid}")
 async def admin_player_profile(request: Request, user_uuid: str):
     await get_current_admin(request)
-    profile = await get_player_profile(user_uuid)
+    profile = await get_full_player_dossier(user_uuid)
     if not profile:
         raise HTTPException(status_code=404, detail="Игрок не найден")
     return profile

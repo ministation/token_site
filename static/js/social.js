@@ -75,7 +75,9 @@ function switchForumSection(category, btn) {
     if (hint) hint.textContent = FORUM_HINTS[category] || '';
     syncPostFormWithForum();
     if (typeof updateAuthUI === 'function') updateAuthUI();
-    loadFeed();
+    loadFeed().then(() => {
+        if (typeof markFeedCategorySeen === 'function') markFeedCategorySeen(category);
+    });
 }
 
 function switchForumTopic(topic, btn) {

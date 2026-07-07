@@ -44,6 +44,7 @@ function setupNavigation() {
             if (section === 'home') {
                 if (typeof loadFeed === 'function') loadFeed();
                 if (typeof loadServerStatus === 'function') loadServerStatus();
+                if (typeof markAllFeedSeen === 'function') markAllFeedSeen();
             } else if (section === 'chat') {
                 if (typeof initGlobalChat === 'function') initGlobalChat();
                 if (typeof loadChatUsers === 'function') loadChatUsers('');
@@ -51,6 +52,7 @@ function setupNavigation() {
                 if (typeof setupPmUserSearch === 'function') setupPmUserSearch();
                 if (typeof loadDialogs === 'function') loadDialogs();
                 if (typeof startPmPolling === 'function') startPmPolling();
+                if (typeof pollNotifications === 'function') pollNotifications();
             } else if (section === 'inventory') {
                 if (typeof loadInventory === 'function') loadInventory();
             } else if (section === 'economy') {
@@ -75,6 +77,10 @@ function setupNavigation() {
                     return;
                 }
                 if (typeof loadModeratorAppeals === 'function') loadModeratorAppeals();
+            }
+
+            if (section !== 'messages' && typeof pollNotifications === 'function') {
+                pollNotifications();
             }
         });
     });

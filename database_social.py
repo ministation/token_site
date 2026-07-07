@@ -48,7 +48,7 @@ def get_pm_table_info() -> tuple[str, list[str], str | None]:
         if not text_cols:
             continue
 
-        read_col = "read" if "read" in cols else None
+        read_col = "read" if "read" in cols else ("is_read" if "is_read" in cols else None)
 
         conn.close()
         _pm_schema_cache = (table, text_cols, read_col)
@@ -57,6 +57,49 @@ def get_pm_table_info() -> tuple[str, list[str], str | None]:
     conn.close()
     _pm_schema_cache = ("private_messages", ["content"], "read")
     return _pm_schema_cache
+
+def get_social_user_by_user_uuid(user_uuid: str) -> Optional[Dict]:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT * FROM social_users WHERE user_uuid = ? OR player_id = ? LIMIT 1",
+        (user_uuid, user_uuid),
+    )
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def get_pm_unread_total(user_id: str) -> int:
+    table, _, read_col = get_pm_table_info()
+    if not read_col:
+        return 0
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        f"SELECT COUNT(*) FROM {table} WHERE receiver_id = ? AND COALESCE({read_col}, 0) = 0",
+        (user_id,),
+    )
+    count = cursor.fetchone()[0]
+    conn.close()
+    return int(count or 0)
+
+
+def get_feed_latest_by_category() -> Dict[str, Dict]:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT category,
+               MAX(id) AS latest_id,
+               MAX(created_at) AS latest_at
+        FROM posts
+        GROUP BY category
+    """)
+    rows = {row["category"] or "forum": dict(row) for row in cursor.fetchall()}
+    cursor.execute("SELECT MAX(id) AS latest_id, MAX(created_at) AS latest_at FROM posts")
+    overall = dict(cursor.fetchone() or {})
+    conn.close()
+    return {"by_category": rows, "overall": overall}
 
 def init_social_db():
     """Создает таблицы для соцсети, если их нет"""
@@ -989,6 +1032,7 @@ def get_user_dialogs(user_id: str) -> List[Dict]:
         d["nickname"] = (
             other["game_nickname"] or other["discord_username"] if other else "Игрок"
         )
+        d["unread"] = int(d.get("unread") or 0)
         dialogs.append(d)
     conn.close()
     return dialogs

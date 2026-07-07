@@ -49,9 +49,9 @@
         <aside class="sidebar" id="mainNav" aria-label="Основная навигация">
             <div class="side-group">
                 <div class="side-group-title"><i class="fa-solid fa-compass"></i> Навигация</div>
-                <button class="nav-btn active" data-section="home"><i class="fa-solid fa-house"></i> Главная</button>
+                <button class="nav-btn active" data-section="home"><i class="fa-solid fa-house"></i> Главная<span class="nav-notify" id="navNotifyHome" hidden></span></button>
                 <button class="nav-btn" data-section="chat"><i class="fa-solid fa-comments"></i> Чат</button>
-                <button class="nav-btn" data-section="messages"><i class="fa-solid fa-envelope"></i> Сообщения</button>
+                <button class="nav-btn" data-section="messages"><i class="fa-solid fa-envelope"></i> Сообщения<span class="nav-notify" id="navNotifyMessages" hidden></span></button>
                 <button class="nav-btn" data-section="inventory"><i class="fa-solid fa-box-open"></i> Инвентарь</button>
                 <button class="nav-btn" data-section="economy"><i class="fa-solid fa-coins"></i> Монетки</button>
                 <button class="nav-btn" data-section="bans"><i class="fa-solid fa-gavel"></i> Наказания</button>
@@ -110,6 +110,7 @@
     <script src="/static/js/online.js"></script>
     <script src="/static/js/stats.js"></script>
     <script src="/static/js/messages.js"></script>
+    <script src="/static/js/notifications.js"></script>
     <script src="/static/js/chat.js"></script>
     <script src="/static/js/inventory.js"></script>
     <script src="/static/js/moderator.js"></script>

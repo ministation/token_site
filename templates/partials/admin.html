@@ -88,19 +88,15 @@
                     </button>
                 </div>
                 <div id="gamePlayerResults" class="ss14-player-results"></div>
-                <div id="gamePlayerProfile" class="ss14-player-card" hidden></div>
-                <div class="ss14-quick-actions" id="gameQuickActions" hidden>
-                    <button type="button" class="ss14-quick-btn ss14-quick-btn--server" onclick="showGamePage('server-ban')">
-                        <i class="fa-solid fa-ban"></i> Серверный бан
-                    </button>
-                    <button type="button" class="ss14-quick-btn ss14-quick-btn--job" onclick="showGamePage('job-ban')">
-                        <i class="fa-solid fa-user-slash"></i> Джоббан
-                    </button>
-                    <button type="button" class="ss14-quick-btn" onclick="showGamePage('bans')">
-                        <i class="fa-solid fa-list"></i> Журнал банов
-                    </button>
-                </div>
+                <p class="ss14-search-hint">Нажмите на сикей, чтобы открыть досье игрока</p>
             </section>
+        </div>
+
+        <div id="gamePagePlayer" class="ss14-page" hidden>
+            <button type="button" class="ss14-back-btn" onclick="showGamePage('hub')">
+                <i class="fa-solid fa-arrow-left"></i> К поиску
+            </button>
+            <div id="gamePlayerDossier" class="ss14-dossier"></div>
         </div>
 
         <div id="gamePageServerBan" class="ss14-page" hidden>

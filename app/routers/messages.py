@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Request, HTTPException, Query
 from app.dependencies import get_current_social_user
-from app.services.messages import send_pm, get_pm_conversation, get_pm_dialogs, mark_pm_read
+from app.services.messages import send_pm, get_pm_conversation, get_pm_dialogs, mark_pm_read, get_pm_unread_total
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/api/messages", tags=["messages"])
@@ -15,6 +15,12 @@ class SendMessageRequest(BaseModel):
 async def dialogs(request: Request):
     user = await get_current_social_user(request)
     return get_pm_dialogs(user['social_id'])
+
+
+@router.get("/unread-count")
+async def unread_count(request: Request):
+    user = await get_current_social_user(request)
+    return {"unread": get_pm_unread_total(user['social_id'])}
 
 
 @router.get("/users")
