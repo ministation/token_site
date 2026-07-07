@@ -8,7 +8,7 @@
         <button type="button" class="tab" onclick="showAdminTab('users', this)">Игроки</button>
         <button type="button" class="tab" onclick="showAdminTab('posts', this)">Форум</button>
         <button type="button" class="tab" onclick="showAdminTab('appeals', this)">Обжалования</button>
-        <button type="button" class="tab" onclick="showAdminTab('bans', this)">Все баны</button>
+        <button type="button" class="tab" onclick="showAdminTab('game', this)">Модерация игры</button>
         <button type="button" class="tab" onclick="showAdminTab('admins', this)">Staff</button>
     </div>
 
@@ -55,10 +55,74 @@
         <div id="adminAppealsContent"><p class="empty-state">Загрузка...</p></div>
     </div>
 
-    <div id="adminBansTab" class="admin-tab-content" style="display:none;">
-        <div id="adminBansContent"><p class="empty-state">Загрузка...</p></div>
-        <div class="bans-load-more">
-            <button type="button" onclick="loadAdminBans(true)"><i class="fa-solid fa-angles-down"></i> Загрузить ещё</button>
+    <div id="adminGameTab" class="admin-tab-content" style="display:none;">
+        <div class="game-mod-layout">
+            <section class="game-mod-panel card-nested">
+                <h3><i class="fa-solid fa-magnifying-glass"></i> Поиск игрока</h3>
+                <div class="admin-inline-form">
+                    <input type="text" id="gamePlayerSearch" placeholder="Ник или UUID..." onkeydown="if(event.key==='Enter')searchGamePlayers()">
+                    <button type="button" onclick="searchGamePlayers()"><i class="fa-solid fa-search"></i> Найти</button>
+                </div>
+                <div id="gamePlayerResults" class="game-player-results"></div>
+                <div id="gamePlayerProfile" class="game-player-profile" hidden></div>
+            </section>
+
+            <section class="game-mod-panel card-nested">
+                <h3><i class="fa-solid fa-gavel"></i> Выдать наказание</h3>
+                <div class="game-ban-form-tabs chart-controls">
+                    <button type="button" class="chart-tab active" id="gameBanTabServer" onclick="switchGameBanForm('server', this)">Серверный бан</button>
+                    <button type="button" class="chart-tab" id="gameBanTabRole" onclick="switchGameBanForm('role', this)">Джоббан</button>
+                </div>
+                <div id="gameBanFormServer" class="game-ban-form">
+                    <input type="text" id="serverBanPlayer" placeholder="Ник или UUID игрока">
+                    <textarea id="serverBanReason" rows="3" placeholder="Причина бана"></textarea>
+                    <div class="game-ban-form-row">
+                        <label class="game-ban-label">Срок (минуты, 0 = навсегда)</label>
+                        <input type="number" id="serverBanMinutes" min="0" value="1440">
+                    </div>
+                    <label class="game-ban-check">
+                        <input type="checkbox" id="serverBanUseIp"> Также забанить последний IP
+                    </label>
+                    <button type="button" class="btn-primary" onclick="submitServerBan()">
+                        <i class="fa-solid fa-ban"></i> Выдать серверный бан
+                    </button>
+                    <div id="serverBanResult" class="result"></div>
+                </div>
+                <div id="gameBanFormRole" class="game-ban-form" style="display:none;">
+                    <input type="text" id="roleBanPlayer" placeholder="Ник или UUID игрока">
+                    <select id="roleBanJob"><option value="">Загрузка должностей...</option></select>
+                    <textarea id="roleBanReason" rows="3" placeholder="Причина джоббана"></textarea>
+                    <div class="game-ban-form-row">
+                        <label class="game-ban-label">Срок (минуты, 0 = навсегда)</label>
+                        <input type="number" id="roleBanMinutes" min="0" value="10080">
+                    </div>
+                    <button type="button" class="btn-primary" onclick="submitRoleBan()">
+                        <i class="fa-solid fa-user-slash"></i> Выдать джоббан
+                    </button>
+                    <div id="roleBanResult" class="result"></div>
+                </div>
+            </section>
+
+            <section class="game-mod-panel card-nested game-mod-panel-wide">
+                <h3><i class="fa-solid fa-list"></i> Список банов</h3>
+                <div class="admin-inline-form game-ban-filters">
+                    <select id="gameBanTypeFilter" onchange="loadGameBans(false)">
+                        <option value="">Все типы</option>
+                        <option value="0">Серверные</option>
+                        <option value="1">Джоббаны</option>
+                    </select>
+                    <select id="gameBanStatusFilter" onchange="loadGameBans(false)">
+                        <option value="active">Активные</option>
+                        <option value="all">Все</option>
+                        <option value="expired">Истёкшие / снятые</option>
+                    </select>
+                    <input type="text" id="gameBanSearch" placeholder="Поиск..." oninput="debounceGameBanSearch()">
+                </div>
+                <div id="gameBansContent"><p class="empty-state">Загрузка...</p></div>
+                <div class="bans-load-more">
+                    <button type="button" onclick="loadGameBans(true)"><i class="fa-solid fa-angles-down"></i> Загрузить ещё</button>
+                </div>
+            </section>
         </div>
     </div>
 

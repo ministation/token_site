@@ -2,7 +2,10 @@ from fastapi import APIRouter, Request, HTTPException, Query
 from pydantic import BaseModel
 from app.dependencies import get_current_admin, get_current_staff
 from app.services.admin import get_site_statistics, list_admins, grant_admin, grant_moderator, revoke_admin, find_user_for_admin
-from app.services.bans import get_all_bans, lift_ban
+from app.services.bans import (
+    get_all_bans, lift_ban, unban_ban, create_server_ban, create_role_ban,
+    search_players, get_player_profile, list_job_roles,
+)
 from app.services.appeals import list_appeals, review_appeal
 from app.services.avatars import resolve_avatar_url
 from app.services.social import get_feed_posts
@@ -20,6 +23,25 @@ class GrantAdminRequest(BaseModel):
 class ReviewAppealRequest(BaseModel):
     status: str
     admin_response: str = ""
+
+
+class CreateServerBanRequest(BaseModel):
+    player: str
+    reason: str
+    length_minutes: int = 0
+    use_last_ip: bool = False
+
+
+class CreateRoleBanRequest(BaseModel):
+    player: str
+    role_id: str
+    reason: str
+    length_minutes: int = 0
+
+
+def _admin_game_uuid(admin: dict) -> str | None:
+    player = admin.get("player") or {}
+    return player.get("user_uuid")
 
 
 @router.get("/admin-ratings/leaders")
@@ -150,9 +172,91 @@ async def admin_delete_post(post_id: int, request: Request):
 
 
 @router.get("/bans")
-async def admin_all_bans(request: Request, limit: int = 50, offset: int = 0):
+async def admin_all_bans(
+    request: Request,
+    limit: int = 50,
+    offset: int = 0,
+    ban_type: int | None = None,
+    status: str = "all",
+    player: str = Query(""),
+    q: str = Query(""),
+):
     await get_current_admin(request)
-    return await get_all_bans(limit, offset)
+    if ban_type is not None and ban_type not in (0, 1):
+        raise HTTPException(status_code=400, detail="Некорректный тип бана")
+    if status not in ("all", "active", "expired"):
+        raise HTTPException(status_code=400, detail="Некорректный фильтр статуса")
+    player_uuid = player.strip() or None
+    return await get_all_bans(
+        limit=limit,
+        offset=offset,
+        ban_type=ban_type,
+        status=status,
+        player_uuid=player_uuid,
+        search=q.strip() or None,
+    )
+
+
+@router.post("/bans/server")
+async def admin_create_server_ban(req: CreateServerBanRequest, request: Request):
+    admin = await get_current_admin(request)
+    try:
+        result = await create_server_ban(
+            _admin_game_uuid(admin),
+            req.player,
+            req.reason,
+            req.length_minutes,
+            req.use_last_ip,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"success": True, **result}
+
+
+@router.post("/bans/role")
+async def admin_create_role_ban(req: CreateRoleBanRequest, request: Request):
+    admin = await get_current_admin(request)
+    try:
+        result = await create_role_ban(
+            _admin_game_uuid(admin),
+            req.player,
+            req.role_id,
+            req.reason,
+            req.length_minutes,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"success": True, **result}
+
+
+@router.post("/bans/{ban_id}/unban")
+async def admin_unban(ban_id: int, request: Request):
+    admin = await get_current_admin(request)
+    ok = await unban_ban(ban_id, _admin_game_uuid(admin))
+    if not ok:
+        raise HTTPException(status_code=404, detail="Бан не найден")
+    return {"success": True, "ban_id": ban_id}
+
+
+@router.get("/game/players/search")
+async def admin_search_players(request: Request, q: str = Query("", min_length=2)):
+    await get_current_admin(request)
+    return await search_players(q)
+
+
+@router.get("/game/players/{user_uuid}")
+async def admin_player_profile(request: Request, user_uuid: str):
+    await get_current_admin(request)
+    profile = await get_player_profile(user_uuid)
+    if not profile:
+        raise HTTPException(status_code=404, detail="Игрок не найден")
+    return profile
+
+
+@router.get("/game/jobs")
+async def admin_job_list(request: Request):
+    await get_current_admin(request)
+    return list_job_roles()
 
 
 @router.get("/appeals")
@@ -172,7 +276,7 @@ async def admin_review_appeal(appeal_id: int, req: ReviewAppealRequest, request:
         raise HTTPException(status_code=400, detail="Обжалование уже рассмотрено")
     try:
         if req.status == "approved":
-            lifted = await lift_ban(appeal["ban_id"])
+            lifted = await lift_ban(appeal["ban_id"], _admin_game_uuid(staff))
             if not lifted:
                 raise HTTPException(status_code=404, detail="Бан не найден в игровой БД (возможно, уже снят)")
         ok = review_appeal(appeal_id, req.status, req.admin_response, staff.get("username", ""))

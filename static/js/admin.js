@@ -2,12 +2,15 @@ let adminBansOffset = 0;
 let adminUsersOffset = 0;
 let adminPostsOffset = 0;
 let adminUserSearchTimeout = null;
+let gameBanSearchTimeout = null;
+let gameJobsLoaded = false;
+let gameSelectedPlayer = null;
 
 function showAdminTab(tab, btn) {
     document.querySelectorAll('.admin-tab-content').forEach(el => el.style.display = 'none');
     const map = {
         stats: 'adminStatsTab', ratings: 'adminRatingsTab', users: 'adminUsersTab', posts: 'adminPostsTab',
-        appeals: 'adminAppealsTab', bans: 'adminBansTab', admins: 'adminAdminsTab'
+        appeals: 'adminAppealsTab', game: 'adminGameTab', admins: 'adminAdminsTab'
     };
     const target = document.getElementById(map[tab]);
     if (target) target.style.display = 'block';
@@ -18,7 +21,7 @@ function showAdminTab(tab, btn) {
     if (tab === 'users') loadAdminUsers(false);
     if (tab === 'posts') loadAdminPostsList(false);
     if (tab === 'appeals') loadAdminAppeals(false);
-    if (tab === 'bans') loadAdminBans(false);
+    if (tab === 'game') initGameModerationTab();
     if (tab === 'admins') loadAdminList();
 }
 
