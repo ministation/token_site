@@ -1750,13 +1750,6 @@ html[data-theme="dark"] .status-meta {
     align-items: center;
     flex-shrink: 0;
 }
-.admin-rating-score-inner {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    flex-wrap: nowrap;
-    white-space: nowrap;
-}
 .admin-rating-actions {
     display: flex;
     flex-direction: row;
@@ -1770,48 +1763,101 @@ html[data-theme="dark"] .status-meta {
     font-size: 0.55rem !important;
     min-width: auto;
 }
-.admin-rating-value {
-    font-family: var(--font-pixel);
-    font-size: 0.72rem;
-    color: var(--gold);
-}
-.admin-rating-value.unknown { color: var(--muted); }
-.admin-rating-star {
-    width: 18px;
-    height: 18px;
-    flex-shrink: 0;
-    image-rendering: pixelated;
-    object-fit: contain;
-}
-.admin-rating-star-sm {
-    width: 14px;
-    height: 14px;
-}
-.rating-count-chip {
+
+.rating-display {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    padding: 2px 7px;
-    border-radius: 999px;
+    gap: 10px;
+    padding: 6px 10px;
     background: var(--panel);
     border: 1px solid var(--border);
-    font-size: 0.75rem;
+    border-radius: var(--radius-sm);
+    line-height: 1;
+    white-space: nowrap;
+}
+.rating-display--summary {
+    padding: 10px 14px;
+    gap: 12px;
+}
+.rating-display--compact {
+    padding: 5px 8px;
+    gap: 8px;
+}
+.rating-display--empty {
+    display: inline-block;
+    padding: 5px 10px;
+    color: var(--muted);
+    font-weight: 600;
+}
+.rating-display-score {
+    font-size: 1rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--gold);
+    min-width: 2.6em;
+    text-align: right;
+}
+.rating-display--compact .rating-display-score {
+    font-size: 0.92rem;
+    min-width: 2.4em;
+}
+.rating-display--summary .rating-display-score {
+    font-size: 1.15rem;
+}
+.rating-display .star-icons {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+}
+.rating-display .star-icons i {
+    font-size: 0.78rem;
+    line-height: 1;
+}
+.rating-display--summary .star-icons i {
+    font-size: 0.88rem;
+}
+.rating-display .star-icons .fa-solid {
+    color: var(--gold);
+}
+.rating-display .star-icons .fa-regular {
+    color: color-mix(in srgb, var(--muted) 50%, transparent);
+}
+.rating-display-count {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding-left: 10px;
+    margin-left: 2px;
+    border-left: 1px solid var(--border);
+    font-size: 0.82rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
     color: var(--muted);
     line-height: 1;
 }
+.rating-display-count i {
+    font-size: 0.78rem;
+    color: var(--accent);
+}
+.rating-display--compact .rating-display-count {
+    padding-left: 8px;
+    font-size: 0.78rem;
+    gap: 4px;
+}
+
 .star-icons {
     display: inline-flex;
     align-items: center;
-    gap: 2px;
+    gap: 3px;
     line-height: 1;
 }
-.star-icons .star-filled {
+.star-icons .fa-solid {
     color: var(--gold);
-    font-size: 0.82rem;
+    font-size: 0.78rem;
 }
-.star-icons .star-empty {
-    color: color-mix(in srgb, var(--muted) 55%, transparent);
-    font-size: 0.82rem;
+.star-icons .fa-regular {
+    color: color-mix(in srgb, var(--muted) 50%, transparent);
+    font-size: 0.78rem;
 }
 .admin-rating-updated {
     margin-top: 10px;
@@ -1822,18 +1868,12 @@ html[data-theme="dark"] .status-meta {
 
 .admin-rating-summary {
     margin-bottom: 12px;
-    padding: 10px 12px;
-    background: var(--panel-2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
+    padding: 0;
+    background: none;
+    border: none;
+    border-radius: 0;
     font-size: 0.9rem;
     color: var(--muted);
-}
-.admin-rating-summary-line {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
 }
 
 .admin-rating-manage-list {
@@ -1898,7 +1938,7 @@ html[data-theme="dark"] .status-meta {
         justify-content: flex-start;
         flex-wrap: wrap;
     }
-    .admin-rating-score-inner {
+    .rating-display--compact {
         max-width: 100%;
     }
     .collapsible-header {

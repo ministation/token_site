@@ -16,34 +16,56 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-const STAR_ICON = '/static/icons/star.png';
-
 function renderStarIcons(filled, max = 5) {
     const n = Math.max(0, Math.min(max, Number(filled) || 0));
-    let html = `<span class="star-icons" aria-label="${n} из ${max}">`;
+    let html = `<span class="star-icons" aria-hidden="true">`;
     for (let i = 0; i < max; i++) {
         html += i < n
-            ? '<i class="fa-solid fa-star star-filled"></i>'
-            : '<i class="fa-regular fa-star star-empty"></i>';
+            ? '<i class="fa-solid fa-star"></i>'
+            : '<i class="fa-regular fa-star"></i>';
     }
     html += '</span>';
     return html;
 }
 
-function formatRatingCountChip(count) {
+function pluralizeRatings(n) {
+    const mod10 = n % 10;
+    const mod100 = n % 100;
+    if (mod10 === 1 && mod100 !== 11) return 'оценка';
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return 'оценки';
+    return 'оценок';
+}
+
+function renderRatingCountBadge(count) {
     const n = Number(count) || 0;
     if (n <= 0) return '';
-    return `<span class="rating-count-chip" title="Количество оценок">
-        <img src="${STAR_ICON}" alt="" class="admin-rating-star admin-rating-star-sm" aria-hidden="true">
+    const label = pluralizeRatings(n);
+    return `<span class="rating-display-count" title="${n} ${label}">
+        <i class="fa-solid fa-comment-dots"></i>
         <span>${n}</span>
     </span>`;
+}
+
+function renderRatingDisplay(rating, count, variant = 'compact') {
+    const n = Number(count) || 0;
+    if (n <= 0) {
+        return '<span class="rating-display rating-display--empty">—</span>';
+    }
+    const score = Number(rating).toFixed(2);
+    const filled = Math.round(Number(rating));
+    const label = pluralizeRatings(n);
+    return `<div class="rating-display rating-display--${variant}" aria-label="Рейтинг ${score}, ${n} ${label}">
+        <span class="rating-display-score">${score}</span>
+        ${renderStarIcons(filled)}
+        ${renderRatingCountBadge(n)}
+    </div>`;
 }
 
 function formatAdminRatingOptionLabel(name, rating, count) {
     const n = Number(count) || 0;
     if (n <= 0) return name;
     const score = rating != null ? Number(rating).toFixed(2) : '?';
-    return `${name} · ${score} · ${n}★`;
+    return `${name} — ${score} · ${n} ${pluralizeRatings(n)}`;
 }
 
 async function apiCall(method, url, body = null) {

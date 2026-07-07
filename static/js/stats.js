@@ -50,13 +50,7 @@ function renderAdminRatingRow(a) {
     const status = a.suspended
         ? '<span class="admin-rating-status suspended">suspended</span>'
         : (a.deadminned ? '<span class="admin-rating-status deadmin">deadmin</span>' : '');
-    const rating = a.rating_count > 0
-        ? `<div class="admin-rating-score-inner">
-               <span class="admin-rating-value">${a.rating.toFixed(2)}</span>
-               <img src="${STAR_ICON}" alt="" class="admin-rating-star" aria-hidden="true">
-               ${formatRatingCountChip(a.rating_count)}
-           </div>`
-        : `<span class="admin-rating-value unknown">—</span>`;
+    const rating = renderRatingDisplay(a.rating, a.rating_count, 'compact');
     const canMsg = a.can_message && a.player_id
         && currentUser?.authenticated
         && a.player_id !== currentUser.social_id;

@@ -88,12 +88,7 @@ async function loadAdminRatingDetails(userUuid) {
         const admin = data.admin || {};
         const ratings = data.ratings || [];
         const summary = admin.rating_count > 0
-            ? `<span class="admin-rating-summary-line">
-                   <span class="admin-rating-value">${admin.rating.toFixed(2)}</span>
-                   <img src="${STAR_ICON}" alt="" class="admin-rating-star" aria-hidden="true">
-                   ${renderStarIcons(Math.round(admin.rating))}
-                   ${formatRatingCountChip(admin.rating_count)}
-               </span>`
+            ? renderRatingDisplay(admin.rating, admin.rating_count, 'summary')
             : 'Оценок нет';
         if (!ratings.length) {
             container.innerHTML = `
