@@ -55,10 +55,7 @@ async function loadAdminRatingsPanel() {
         const leaders = await apiCall('GET', '/api/admin/admin-ratings/leaders');
         select.innerHTML = '<option value="">— Выберите администратора —</option>' +
             leaders.map(a => {
-                const count = a.rating_count || 0;
-                const label = count > 0
-                    ? `${a.name} (${count} оц., ${a.rating != null ? a.rating.toFixed(2) : '?'})`
-                    : a.name;
+                const label = formatAdminRatingOptionLabel(a.name, a.rating, a.rating_count);
                 return `<option value="${a.user_uuid}">${escapeHtml(label)}</option>`;
             }).join('');
         if (adminRatingSelectedUuid) {
@@ -91,7 +88,12 @@ async function loadAdminRatingDetails(userUuid) {
         const admin = data.admin || {};
         const ratings = data.ratings || [];
         const summary = admin.rating_count > 0
-            ? `Средний рейтинг: <b>${admin.rating.toFixed(2)}</b> · оценок: <b>${admin.rating_count}</b>`
+            ? `<span class="admin-rating-summary-line">
+                   <span class="admin-rating-value">${admin.rating.toFixed(2)}</span>
+                   <img src="${STAR_ICON}" alt="" class="admin-rating-star" aria-hidden="true">
+                   ${renderStarIcons(Math.round(admin.rating))}
+                   ${formatRatingCountChip(admin.rating_count)}
+               </span>`
             : 'Оценок нет';
         if (!ratings.length) {
             container.innerHTML = `

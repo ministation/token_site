@@ -2,8 +2,6 @@ let playtimeChart = null;
 let playtimeLoaded = false;
 let adminRatingLoaded = false;
 
-const STAR_ICON = '/static/icons/star.png';
-
 function toggleAdminRatingPanel(btn) {
     const section = btn.closest('.collapsible-section');
     if (!section) return;
@@ -53,11 +51,12 @@ function renderAdminRatingRow(a) {
         ? '<span class="admin-rating-status suspended">suspended</span>'
         : (a.deadminned ? '<span class="admin-rating-status deadmin">deadmin</span>' : '');
     const rating = a.rating_count > 0
-        ? `<span class="admin-rating-value">${a.rating.toFixed(2)}</span>
-           <img src="${STAR_ICON}" alt="" class="admin-rating-star">
-           <span class="admin-rating-count">(${a.rating_count})</span>`
-        : `<span class="admin-rating-value unknown">?</span>
-           <img src="${STAR_ICON}" alt="" class="admin-rating-star">`;
+        ? `<div class="admin-rating-score-inner">
+               <span class="admin-rating-value">${a.rating.toFixed(2)}</span>
+               <img src="${STAR_ICON}" alt="" class="admin-rating-star" aria-hidden="true">
+               ${formatRatingCountChip(a.rating_count)}
+           </div>`
+        : `<span class="admin-rating-value unknown">—</span>`;
     const canMsg = a.can_message && a.player_id
         && currentUser?.authenticated
         && a.player_id !== currentUser.social_id;
