@@ -73,6 +73,32 @@
     </div>
 </div>
 
+<div class="card forum-header-card">
+    <h2><i class="fa-solid fa-comments"></i> Сообщество</h2>
+    <p class="feed-hint" id="forumSectionHint">Новости проекта, форум и обсуждения по темам</p>
+    <div class="forum-tabs chart-controls">
+        <button type="button" class="chart-tab forum-tab active" data-forum="news" onclick="switchForumSection('news', this)">
+            <i class="fa-solid fa-bullhorn"></i> Новости
+        </button>
+        <button type="button" class="chart-tab forum-tab" data-forum="forum" onclick="switchForumSection('forum', this)">
+            <i class="fa-solid fa-layer-group"></i> Форум
+        </button>
+        <button type="button" class="chart-tab forum-tab" data-forum="discussion" onclick="switchForumSection('discussion', this)">
+            <i class="fa-solid fa-message"></i> Обсуждения
+        </button>
+    </div>
+    <div class="forum-topic-tabs" id="forumTopicTabs" hidden>
+        <button type="button" class="forum-topic-tab active" data-topic="" onclick="switchForumTopic('', this)">Все темы</button>
+        <button type="button" class="forum-topic-tab" data-topic="gameplay" onclick="switchForumTopic('gameplay', this)">Геймплей</button>
+        <button type="button" class="forum-topic-tab" data-topic="suggestions" onclick="switchForumTopic('suggestions', this)">Предложения</button>
+        <button type="button" class="forum-topic-tab" data-topic="bugs" onclick="switchForumTopic('bugs', this)">Баги</button>
+        <button type="button" class="forum-topic-tab" data-topic="guides" onclick="switchForumTopic('guides', this)">Гайды</button>
+        <button type="button" class="forum-topic-tab" data-topic="offtopic" onclick="switchForumTopic('offtopic', this)">Оффтоп</button>
+        <button type="button" class="forum-topic-tab" data-topic="other" onclick="switchForumTopic('other', this)">Прочее</button>
+    </div>
+</div>
+<div id="feedContainer"></div>
+
 <div class="card create-post-card" id="createPostCard" style="display:none;">
     <h2><i class="fa-solid fa-pen"></i> Новая запись</h2>
     <div class="post-form">
@@ -107,29 +133,3 @@
         <div id="imagePreview" class="image-preview"></div>
     </div>
 </div>
-
-<div class="card forum-header-card">
-    <h2><i class="fa-solid fa-comments"></i> Сообщество</h2>
-    <p class="feed-hint" id="forumSectionHint">Новости проекта, форум и обсуждения по темам</p>
-    <div class="forum-tabs chart-controls">
-        <button type="button" class="chart-tab forum-tab active" data-forum="news" onclick="switchForumSection('news', this)">
-            <i class="fa-solid fa-bullhorn"></i> Новости
-        </button>
-        <button type="button" class="chart-tab forum-tab" data-forum="forum" onclick="switchForumSection('forum', this)">
-            <i class="fa-solid fa-layer-group"></i> Форум
-        </button>
-        <button type="button" class="chart-tab forum-tab" data-forum="discussion" onclick="switchForumSection('discussion', this)">
-            <i class="fa-solid fa-message"></i> Обсуждения
-        </button>
-    </div>
-    <div class="forum-topic-tabs" id="forumTopicTabs" hidden>
-        <button type="button" class="forum-topic-tab active" data-topic="" onclick="switchForumTopic('', this)">Все темы</button>
-        <button type="button" class="forum-topic-tab" data-topic="gameplay" onclick="switchForumTopic('gameplay', this)">Геймплей</button>
-        <button type="button" class="forum-topic-tab" data-topic="suggestions" onclick="switchForumTopic('suggestions', this)">Предложения</button>
-        <button type="button" class="forum-topic-tab" data-topic="bugs" onclick="switchForumTopic('bugs', this)">Баги</button>
-        <button type="button" class="forum-topic-tab" data-topic="guides" onclick="switchForumTopic('guides', this)">Гайды</button>
-        <button type="button" class="forum-topic-tab" data-topic="offtopic" onclick="switchForumTopic('offtopic', this)">Оффтоп</button>
-        <button type="button" class="forum-topic-tab" data-topic="other" onclick="switchForumTopic('other', this)">Прочее</button>
-    </div>
-</div>
-<div id="feedContainer"></div>

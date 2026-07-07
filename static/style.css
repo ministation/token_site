@@ -1435,6 +1435,8 @@ html[data-theme="dark"] .status-meta {
 }
 
 #feedContainer .forum-post { margin-bottom: 12px; }
+#feedContainer { margin-bottom: 16px; }
+.create-post-card { margin-top: 4px; }
 
 .forum-post-news {
     border-left: 4px solid var(--gold);
