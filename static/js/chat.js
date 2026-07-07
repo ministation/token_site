@@ -8,9 +8,41 @@ function initGlobalChat() {
         globalChatInitialized = true;
         loadGlobalChat(true);
         setupChatUserSearch();
+        setupChatImagePreview('globalChatImage', 'globalChatImagePreview');
     }
     loadChatUsers('');
     startGlobalChatPolling();
+}
+
+function setupChatImagePreview(inputId, previewId) {
+    const input = document.getElementById(inputId);
+    const preview = document.getElementById(previewId);
+    if (!input || !preview || input.dataset.bound) return;
+    input.dataset.bound = '1';
+    input.addEventListener('change', () => {
+        const file = input.files[0];
+        if (!file) {
+            preview.hidden = true;
+            preview.innerHTML = '';
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            preview.hidden = false;
+            preview.innerHTML = `<img src="${ev.target.result}" alt=""><button type="button" class="chat-preview-clear" onclick="clearChatImagePreview('${inputId}','${previewId}')"><i class="fa-solid fa-xmark"></i></button>`;
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+function clearChatImagePreview(inputId, previewId) {
+    const input = document.getElementById(inputId);
+    const preview = document.getElementById(previewId);
+    if (input) input.value = '';
+    if (preview) {
+        preview.hidden = true;
+        preview.innerHTML = '';
+    }
 }
 
 function setupChatUserSearch() {
@@ -38,12 +70,14 @@ async function loadChatUsers(query) {
         }
         container.innerHTML = users.map(u => `
             <div class="chat-user-row">
-                <img src="${u.avatar || '/static/default_avatar.png'}" class="chat-user-avatar" alt=""
-                     onerror="this.src='/static/default_avatar.png'">
-                <div class="chat-user-info">
-                    <div class="chat-user-name">${escapeHtml(u.game_nickname || u.discord_username)}</div>
-                    <div class="chat-user-sub">@${escapeHtml(u.discord_username || '')}</div>
-                </div>
+                <button type="button" class="chat-user-main" onclick="openProfile(${JSON.stringify(u.player_id)})">
+                    <img src="${u.avatar || '/static/default_avatar.png'}" class="chat-user-avatar" alt=""
+                         onerror="this.src='/static/default_avatar.png'">
+                    <div class="chat-user-info">
+                        <div class="chat-user-name">${escapeHtml(u.game_nickname || u.discord_username)}</div>
+                        <div class="chat-user-sub">@${escapeHtml(u.discord_username || '')}</div>
+                    </div>
+                </button>
                 <button type="button" class="chat-msg-btn" title="Написать"
                     onclick='messageUserFromChat(${JSON.stringify(u.player_id)}, ${JSON.stringify(u.game_nickname || u.discord_username || 'Игрок')})'>
                     <i class="fa-solid fa-envelope"></i>
@@ -117,18 +151,24 @@ function renderGlobalChatMessage(m) {
     const time = new Date(m.created_at).toLocaleString('ru-RU', {
         day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
     });
-    const roleBadge = m.author_role === 'admin'
-        ? '<span class="admin-badge chat-role-badge">ADMIN</span>'
-        : (m.author_role === 'moderator' ? '<span class="mod-badge chat-role-badge">MOD</span>' : '');
+    const roleBadge = typeof renderRoleBadge === 'function' ? renderRoleBadge(m.author_role) : '';
+    const authorBtn = typeof profileLink === 'function'
+        ? profileLink(m.author_id, m.author_nickname, 'global-chat-author')
+        : `<span class="global-chat-author">${escapeHtml(m.author_nickname)}</span>`;
+    const textHtml = m.content ? `<div class="global-chat-text">${formatMessageContent(m.content)}</div>` : '';
+    const imageHtml = renderChatImage(m.image_url);
     return `
-        <div class="global-chat-message" data-id="${m.id}">
+        <div class="global-chat-message chat-bubble-row" data-id="${m.id}">
             ${avatar}
             <div class="global-chat-content">
                 <div class="global-chat-meta">
-                    <span class="global-chat-author">${escapeHtml(m.author_nickname)}</span>${roleBadge}
+                    ${authorBtn}${roleBadge}
                     <span class="global-chat-time">${time}</span>
                 </div>
-                <div class="global-chat-text">${escapeHtml(m.content)}</div>
+                <div class="chat-bubble-body">
+                    ${textHtml}
+                    ${imageHtml}
+                </div>
             </div>
         </div>
     `;
@@ -140,13 +180,25 @@ async function sendGlobalChatMessage() {
         return;
     }
     const input = document.getElementById('globalChatInput');
-    const message = input?.value.trim();
-    if (!message) return;
+    const imageInput = document.getElementById('globalChatImage');
+    const message = input?.value.trim() || '';
+    const file = imageInput?.files?.[0];
+    if (!message && !file) return;
+
+    const formData = new FormData();
+    formData.append('message', message);
+    if (file) formData.append('image', file);
+
     try {
-        await apiCall('POST', '/api/chat', { message });
-        input.value = '';
+        await apiCall('POST', '/api/chat', formData);
+        if (input) input.value = '';
+        clearChatImagePreview('globalChatImage', 'globalChatImagePreview');
         await loadGlobalChat(false);
     } catch (e) {
         alert(e.message);
     }
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    setupChatImagePreview('globalChatImage', 'globalChatImagePreview');
+});

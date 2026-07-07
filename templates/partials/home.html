@@ -125,9 +125,13 @@
         <input type="text" id="postTitle" placeholder="Заголовок (необязательно)" maxlength="120">
         <textarea id="postContent" placeholder="Текст сообщения..."></textarea>
         <input type="file" id="postImage" accept="image/*">
+        <input type="file" id="postVideo" accept="video/mp4,video/webm,video/quicktime">
         <div class="form-actions">
             <label for="postImage" class="image-upload-label">
-                <i class="fa-solid fa-paperclip"></i> Добавить фото
+                <i class="fa-solid fa-image"></i> Фото
+            </label>
+            <label for="postVideo" class="image-upload-label">
+                <i class="fa-solid fa-video"></i> Видео
             </label>
             <button onclick="createPost()"><i class="fa-solid fa-paper-plane"></i> Опубликовать</button>
         </div>

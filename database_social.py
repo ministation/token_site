@@ -246,6 +246,15 @@ def _migrate_schema():
         cursor.execute("ALTER TABLE posts ADD COLUMN topic TEXT")
     if "title" not in post_cols:
         cursor.execute("ALTER TABLE posts ADD COLUMN title TEXT")
+    if "video_url" not in post_cols:
+        cursor.execute("ALTER TABLE posts ADD COLUMN video_url TEXT")
+    chat_cols = _table_columns(cursor, "global_chat_messages")
+    if "image_url" not in chat_cols:
+        cursor.execute("ALTER TABLE global_chat_messages ADD COLUMN image_url TEXT")
+    pm_table, _, _ = get_pm_table_info()
+    pm_cols = _table_columns(cursor, pm_table)
+    if "image_url" not in pm_cols:
+        cursor.execute(f"ALTER TABLE {pm_table} ADD COLUMN image_url TEXT")
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS ban_appeals (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -666,6 +675,7 @@ def create_post(
     category: str = "forum",
     topic: str | None = None,
     title: str | None = None,
+    video_url: str | None = None,
 ) -> int:
     if category not in VALID_CATEGORIES:
         category = "forum"
@@ -676,9 +686,9 @@ def create_post(
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT INTO posts (author_player_id, content, image_url, category, topic, title)
-        VALUES (?, ?, ?, ?, ?, ?)
-    """, (author_player_id, content, image_url, category, topic, title))
+        INSERT INTO posts (author_player_id, content, image_url, video_url, category, topic, title)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (author_player_id, content, image_url, video_url, category, topic, title))
     conn.commit()
     post_id = cursor.lastrowid
     conn.close()
@@ -936,15 +946,19 @@ def get_following(player_id: str, limit: int = 20) -> List[Dict]:
     conn.close()
     return [dict(row) for row in rows]
 
-def send_private_message(sender_id: str, receiver_id: str, content: str) -> int:
+def send_private_message(sender_id: str, receiver_id: str, content: str, image_url: str | None = None) -> int:
     if sender_id == receiver_id:
         raise ValueError("Нельзя отправить сообщение самому себе")
     table, text_cols, _ = get_pm_table_info()
-    insert_cols = ["sender_id", "receiver_id"] + text_cols
-    placeholders = ", ".join(["?"] * len(insert_cols))
-    values = [sender_id, receiver_id] + [content] * len(text_cols)
     conn = get_db()
     cursor = conn.cursor()
+    pm_cols = _table_columns(cursor, table)
+    insert_cols = ["sender_id", "receiver_id"] + text_cols
+    values = [sender_id, receiver_id] + [content] * len(text_cols)
+    if "image_url" in pm_cols:
+        insert_cols.append("image_url")
+        values.append(image_url)
+    placeholders = ", ".join(["?"] * len(insert_cols))
     cursor.execute(
         f"INSERT INTO {table} ({', '.join(insert_cols)}) VALUES ({placeholders})",
         values
@@ -961,9 +975,11 @@ def get_conversation(user_id: str, other_id: str, limit: int = 50) -> List[Dict]
     read_expr = f"COALESCE({read_col}, 0) as read" if read_col else "0 as read"
     conn = get_db()
     cursor = conn.cursor()
+    pm_cols = _table_columns(cursor, table)
+    image_col = ", image_url" if "image_url" in pm_cols else ", NULL as image_url"
     cursor.execute(f"""
         SELECT id, sender_id, receiver_id, {body_expr} as content, created_at,
-               {read_expr}
+               {read_expr}{image_col}
         FROM {table}
         WHERE (sender_id = ? AND receiver_id = ?)
            OR (sender_id = ? AND receiver_id = ?)
@@ -1181,13 +1197,21 @@ def update_ban_appeal(appeal_id: int, status: str, admin_response: str, reviewed
 
 
 def add_global_chat_message(author_id: str, author_nickname: str,
-                            author_avatar: str | None, content: str) -> int:
+                            author_avatar: str | None, content: str,
+                            image_url: str | None = None) -> int:
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("""
-        INSERT INTO global_chat_messages (author_id, author_nickname, author_avatar, content)
-        VALUES (?, ?, ?, ?)
-    """, (author_id, author_nickname, author_avatar, content))
+    cols = _table_columns(cursor, "global_chat_messages")
+    if "image_url" in cols:
+        cursor.execute("""
+            INSERT INTO global_chat_messages (author_id, author_nickname, author_avatar, content, image_url)
+            VALUES (?, ?, ?, ?, ?)
+        """, (author_id, author_nickname, author_avatar, content, image_url))
+    else:
+        cursor.execute("""
+            INSERT INTO global_chat_messages (author_id, author_nickname, author_avatar, content)
+            VALUES (?, ?, ?, ?)
+        """, (author_id, author_nickname, author_avatar, content))
     conn.commit()
     msg_id = cursor.lastrowid
     conn.close()

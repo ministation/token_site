@@ -17,6 +17,7 @@ async function checkAuth() {
             panel.innerHTML = `
                 ${data.avatar ? `<img src="${data.avatar}" alt="" onerror="this.style.display='none'">` : ''}
                 <span id="userName">${data.display_name || data.username}${staffBadgeHtml(data)}</span>
+                <button type="button" onclick="openMyProfile()" title="Мой профиль"><i class="fa-solid fa-user"></i></button>
                 <button onclick="logout()">Выйти</button>
             `;
             if (data.player) {
@@ -57,6 +58,8 @@ function updateAuthUI() {
     const chatHint = document.getElementById('globalChatLoginHint');
     if (chatInput) chatInput.style.display = currentUser?.authenticated ? 'flex' : 'none';
     if (chatHint) chatHint.style.display = currentUser?.authenticated ? 'none' : 'block';
+    const profileNav = document.getElementById('profileNavBtn');
+    if (profileNav) profileNav.style.display = currentUser?.authenticated ? '' : 'none';
 }
 
 function login() { window.location.href = `${API_BASE}/login`; }

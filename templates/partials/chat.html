@@ -1,7 +1,7 @@
 <div class="card global-chat-card">
     <div class="global-chat-header">
         <h2><i class="fa-solid fa-comments"></i> Общий чат</h2>
-        <p class="chat-hint-inline">Чат и список игроков на платформе</p>
+        <p class="chat-hint-inline">Общение, эмодзи и картинки — список участников справа</p>
     </div>
 
     <div class="chat-with-users-layout" id="chatLayout">
@@ -16,12 +16,25 @@
         </aside>
 
         <div class="chat-main-area">
-            <div id="globalChatMessages" class="global-chat-messages"></div>
-            <div class="global-chat-input" id="globalChatInputArea" style="display:none;">
-                <input type="text" id="globalChatInput" placeholder="Сообщение в чат..."
-                    maxlength="500"
-                    onkeydown="if(event.key==='Enter'){event.preventDefault();sendGlobalChatMessage();}">
-                <button type="button" onclick="sendGlobalChatMessage()">
+            <div id="globalChatMessages" class="global-chat-messages chat-bubbles"></div>
+            <div class="global-chat-input chat-composer" id="globalChatInputArea" style="display:none;">
+                <div class="chat-composer-tools">
+                    <button type="button" class="chat-tool-btn" id="globalChatEmojiBtn" title="Эмодзи">
+                        <i class="fa-regular fa-face-smile"></i>
+                    </button>
+                    <label class="chat-tool-btn" title="Изображение">
+                        <i class="fa-solid fa-image"></i>
+                        <input type="file" id="globalChatImage" accept="image/*" hidden>
+                    </label>
+                </div>
+                <div class="chat-composer-main">
+                    <input type="text" id="globalChatInput" placeholder="Сообщение..."
+                        maxlength="500"
+                        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendGlobalChatMessage();}">
+                    <div id="globalChatImagePreview" class="chat-image-preview" hidden></div>
+                    <div id="globalChatEmojiPicker" class="emoji-picker" hidden></div>
+                </div>
+                <button type="button" class="chat-send-btn" onclick="sendGlobalChatMessage()" title="Отправить">
                     <i class="fa-solid fa-paper-plane"></i>
                 </button>
             </div>

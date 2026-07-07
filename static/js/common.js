@@ -16,6 +16,18 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+function formatMessageContent(text) {
+    if (!text) return '';
+    return escapeHtml(text).replace(/\n/g, '<br>');
+}
+
+function renderChatImage(url, className = 'chat-msg-image') {
+    if (!url) return '';
+    return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener" class="chat-msg-image-link">
+        <img src="${escapeHtml(url)}" class="${className}" alt="Изображение" loading="lazy">
+    </a>`;
+}
+
 function renderStarIcons(filled, max = 5) {
     const n = Math.max(0, Math.min(max, Number(filled) || 0));
     let html = `<span class="star-icons" aria-hidden="true">`;

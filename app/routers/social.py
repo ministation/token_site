@@ -15,6 +15,8 @@ from app.services.social import (
 from app.config import UPLOAD_DIR
 import database_social as social_db
 from app.services.bank import get_balance_by_player_id
+from app.services.media_upload import save_upload
+from app.services.badges import get_member_badges
 
 router = APIRouter(prefix="/api/social", tags=["social"])
 
@@ -36,6 +38,7 @@ def serialize_post(p: dict, *, anonymize: bool = False) -> dict:
         "title": p.get("title") or "",
         "content": p["content"],
         "image_url": p.get("image_url"),
+        "video_url": p.get("video_url"),
         "category": category,
         "category_label": social_db.POST_CATEGORIES.get(category, category),
         "topic": topic,
@@ -93,7 +96,12 @@ async def api_get_profile(request: Request, player_id: str):
         "followers_count": counts["followers"],
         "is_following": following,
         "is_own": my_player_id == profile["player_id"],
-        "created_at": profile["created_at"]
+        "created_at": profile["created_at"],
+        "badges": get_member_badges(
+            profile.get("discord_username", ""),
+            profile.get("discord_id"),
+            profile.get("created_at"),
+        ),
     }
 
 
@@ -121,7 +129,8 @@ async def api_create_post(
     category: str = Form("forum"),
     topic: str = Form(""),
     title: str = Form(""),
-    image: UploadFile | None = File(None)
+    image: UploadFile | None = File(None),
+    video: UploadFile | None = File(None),
 ):
     user = await get_current_social_user(request)
     category = (category or "forum").strip().lower()
@@ -136,17 +145,16 @@ async def api_create_post(
         topic_val = "other"
     title_val = (title or "").strip() or None
     image_url = None
+    video_url = None
     if image and image.filename:
-        file_ext = os.path.splitext(image.filename)[1]
-        filename = f"{user['social_id']}_{int(datetime.datetime.now().timestamp())}{file_ext}"
-        filepath = os.path.join(UPLOAD_DIR, filename)
-        with open(filepath, "wb") as buffer:
-            shutil.copyfileobj(image.file, buffer)
-        image_url = f"/static/uploads/{filename}"
+        image_url = save_upload(image, user['social_id'], kind="image", prefix="post")
+    if video and video.filename:
+        video_url = save_upload(video, user['social_id'], kind="video", prefix="post")
 
     post_id = create_post(
         user['social_id'], content, image_url,
         category=category, topic=topic_val, title=title_val,
+        video_url=video_url,
     )
     return {"success": True, "post_id": post_id}
 

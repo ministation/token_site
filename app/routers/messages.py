@@ -1,14 +1,9 @@
-from fastapi import APIRouter, Request, HTTPException, Query
+from fastapi import APIRouter, Request, HTTPException, Query, Form, File, UploadFile
 from app.dependencies import get_current_social_user
 from app.services.messages import send_pm, get_pm_conversation, get_pm_dialogs, mark_pm_read, get_pm_unread_total
-from pydantic import BaseModel
+from app.services.media_upload import save_upload
 
 router = APIRouter(prefix="/api/messages", tags=["messages"])
-
-
-class SendMessageRequest(BaseModel):
-    receiver_id: str
-    content: str
 
 
 @router.get("/dialogs")
@@ -52,12 +47,20 @@ async def mark_read(other_id: str, request: Request):
 
 
 @router.post("/send")
-async def send_message(req: SendMessageRequest, request: Request):
+async def send_message(
+    request: Request,
+    receiver_id: str = Form(...),
+    content: str = Form(""),
+    image: UploadFile | None = File(None),
+):
     user = await get_current_social_user(request)
-    if req.receiver_id == user['social_id']:
+    if receiver_id == user['social_id']:
         raise HTTPException(status_code=400, detail="Нельзя отправить сообщение самому себе")
+    image_url = None
+    if image and image.filename:
+        image_url = save_upload(image, user['social_id'], kind="image", prefix="pm")
     try:
-        msg_id = send_pm(user['social_id'], req.receiver_id, req.content)
+        msg_id = send_pm(user['social_id'], receiver_id, content, image_url)
         return {"success": True, "message_id": msg_id}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

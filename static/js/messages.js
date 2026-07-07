@@ -25,7 +25,7 @@ async function loadDialogs() {
                     <div class="dialog-name">${escapeHtml(d.nickname || 'Игрок')}</div>
                     <div class="dialog-preview">${escapeHtml(d.last_msg || '')}</div>
                 </div>
-                ${d.unread ? `<span class="dialog-unread">${d.unread}</span>` : ''}
+                ${d.unread ? `<span class="dialog-unread pixel-notify">${d.unread}</span>` : ''}
             </div>
         `).join('');
     } catch (e) {
@@ -76,7 +76,9 @@ async function openConversation(partnerId, nickname) {
     const title = document.getElementById('conversationTitle');
     const titleText = title?.querySelector('.conversation-title-text');
     if (titleText) {
-        titleText.innerHTML = `<i class="fa-solid fa-user"></i> ${escapeHtml(nickname || 'Диалог')}`;
+        titleText.innerHTML = typeof profileLink === 'function'
+            ? `<i class="fa-solid fa-user"></i> ${profileLink(partnerId, nickname || 'Диалог', 'pm-title-link')}`
+            : `<i class="fa-solid fa-user"></i> ${escapeHtml(nickname || 'Диалог')}`;
     }
     const layout = document.getElementById('messagesLayout');
     if (layout) layout.classList.add('chat-open');
@@ -105,8 +107,10 @@ async function loadConversation(partnerId) {
             const time = new Date(m.created_at).toLocaleString('ru-RU', {
                 day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
             });
+            const textHtml = text ? `<div class="pm-bubble">${formatMessageContent(text)}</div>` : '';
+            const imageHtml = renderChatImage(m.image_url, 'pm-msg-image');
             return `<div class="pm-message ${own ? 'own' : ''}">
-                <div class="pm-bubble">${escapeHtml(text)}</div>
+                ${textHtml || imageHtml ? `<div class="pm-bubble-wrap">${textHtml}${imageHtml}</div>` : ''}
                 <div class="pm-time">${time}</div>
             </div>`;
         }).join('');
@@ -126,14 +130,20 @@ async function sendPrivateMessage() {
         return;
     }
     const input = document.getElementById('pmInput');
-    const content = input?.value.trim();
-    if (!content) return;
+    const imageInput = document.getElementById('pmImage');
+    const content = input?.value.trim() || '';
+    const file = imageInput?.files?.[0];
+    if (!content && !file) return;
+
+    const formData = new FormData();
+    formData.append('receiver_id', currentPmPartnerId);
+    formData.append('content', content);
+    if (file) formData.append('image', file);
+
     try {
-        await apiCall('POST', '/api/messages/send', {
-            receiver_id: currentPmPartnerId,
-            content
-        });
-        input.value = '';
+        await apiCall('POST', '/api/messages/send', formData);
+        if (input) input.value = '';
+        clearChatImagePreview('pmImage', 'pmImagePreview');
         await loadConversation(currentPmPartnerId);
         await loadDialogs();
         if (typeof pollNotifications === 'function') pollNotifications();
@@ -149,6 +159,9 @@ function startConversationWith(playerId, nickname) {
     if (btn) btn.classList.add('active');
     if (typeof closeMobileNav === 'function') closeMobileNav();
     setupPmUserSearch();
+    if (typeof setupChatImagePreview === 'function') {
+        setupChatImagePreview('pmImage', 'pmImagePreview');
+    }
     startPmPolling();
     openConversation(playerId, nickname);
 }
@@ -181,4 +194,9 @@ function closePmConversation() {
     if (typeof pollNotifications === 'function') pollNotifications();
 }
 
-document.addEventListener('DOMContentLoaded', setupPmUserSearch);
+document.addEventListener('DOMContentLoaded', () => {
+    setupPmUserSearch();
+    if (typeof setupChatImagePreview === 'function') {
+        setupChatImagePreview('pmImage', 'pmImagePreview');
+    }
+});

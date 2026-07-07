@@ -8,17 +8,22 @@ const FORUM_HINTS = {
 };
 
 document.addEventListener('change', function(e) {
-    if (e.target.id === 'postImage') {
+    if (e.target.id === 'postImage' || e.target.id === 'postVideo') {
         const file = e.target.files[0];
         const preview = document.getElementById('imagePreview');
         if (!preview) return;
         if (file) {
-            const reader = new FileReader();
-            reader.onload = function(ev) {
-                preview.innerHTML = '<img src="' + ev.target.result + '" alt="Preview">';
-            };
-            reader.readAsDataURL(file);
-        } else {
+            if (file.type.startsWith('video/')) {
+                const url = URL.createObjectURL(file);
+                preview.innerHTML = `<video src="${url}" class="post-video-preview" controls playsinline></video>`;
+            } else {
+                const reader = new FileReader();
+                reader.onload = function(ev) {
+                    preview.innerHTML = '<img src="' + ev.target.result + '" alt="Preview">';
+                };
+                reader.readAsDataURL(file);
+            }
+        } else if (!document.getElementById('postImage')?.files?.[0] && !document.getElementById('postVideo')?.files?.[0]) {
             preview.innerHTML = '';
         }
     }
@@ -102,17 +107,20 @@ async function createPost() {
         : '';
     const title = document.getElementById('postTitle')?.value.trim() || '';
     const imageInput = document.getElementById('postImage');
+    const videoInput = document.getElementById('postVideo');
     const formData = new FormData();
     formData.append('content', content);
     formData.append('category', category);
     formData.append('topic', topic);
     formData.append('title', title);
     if (imageInput.files[0]) formData.append('image', imageInput.files[0]);
+    if (videoInput.files[0]) formData.append('video', videoInput.files[0]);
     try {
         await apiCall('POST', '/api/social/posts', formData);
         document.getElementById('postContent').value = '';
         document.getElementById('postTitle').value = '';
         imageInput.value = '';
+        videoInput.value = '';
         document.getElementById('imagePreview').innerHTML = '';
         if (category !== currentForumCategory) {
             const tab = document.querySelector(`.forum-tab[data-forum="${category}"]`);
@@ -176,16 +184,30 @@ function renderPostBadges(post) {
     return parts.length ? `<div class="forum-badges">${parts.join('')}</div>` : '';
 }
 
+function renderPostMedia(post) {
+    let html = '';
+    if (post.video_url) {
+        html += `<video src="${post.video_url}" class="post-video" controls playsinline preload="metadata"></video>`;
+    }
+    if (post.image_url) {
+        html += `<img src="${post.image_url}" class="post-image" alt="">`;
+    }
+    return html;
+}
+
 function renderPost(post) {
     if (post.category === 'news') return renderNewsPost(post);
 
     const likedClass = post.liked_by_me ? 'liked' : '';
-    const imageHtml = post.image_url ? `<img src="${post.image_url}" class="post-image" alt="">` : '';
+    const mediaHtml = renderPostMedia(post);
     const avatarUrl = post.author_avatar || '/static/default_avatar.png';
     const canInteract = currentUser?.authenticated;
     const titleHtml = post.title
         ? `<h3 class="forum-post-title">${escapeHtml(post.title)}</h3>`
         : '';
+    const authorName = typeof profileLink === 'function' && post.author_player_id
+        ? profileLink(post.author_player_id, post.author_discord_username || 'Участник', 'post-author-link')
+        : escapeHtml(post.author_discord_username || 'Неизвестный');
     const likeBtn = canInteract
         ? `<button onclick="toggleLike(${post.id})" class="post-action-btn ${likedClass}">
                 <i class="fa-solid fa-heart"></i> <span id="like-count-${post.id}">${post.like_count}</span>
@@ -207,15 +229,17 @@ function renderPost(post) {
             ${renderPostBadges(post)}
             ${titleHtml}
             <div class="post-header">
-                <img src="${avatarUrl}" class="post-avatar" alt="" onerror="this.src='/static/default_avatar.png'">
+                <button type="button" class="post-avatar-btn" onclick="openProfile(${JSON.stringify(post.author_player_id)})">
+                    <img src="${avatarUrl}" class="post-avatar" alt="" onerror="this.src='/static/default_avatar.png'">
+                </button>
                 <div class="post-author-info">
-                    <div class="post-author-name">${escapeHtml(post.author_discord_username || 'Неизвестный')}</div>
+                    <div class="post-author-name">${authorName}</div>
                     <div class="post-author-nick">@${escapeHtml(post.author_nickname || 'unknown')}</div>
                     <div class="post-time">${new Date(post.created_at).toLocaleString()}</div>
                 </div>
             </div>
-            <div class="post-content">${escapeHtml(post.content)}</div>
-            ${imageHtml}
+            <div class="post-content">${formatMessageContent(post.content)}</div>
+            ${mediaHtml}
             <div class="post-actions">
                 ${likeBtn}
                 ${commentBtn}
@@ -227,7 +251,7 @@ function renderPost(post) {
 }
 
 function renderNewsPost(post) {
-    const imageHtml = post.image_url ? `<img src="${post.image_url}" class="post-image" alt="">` : '';
+    const mediaHtml = renderPostMedia(post);
     const canInteract = currentUser?.authenticated;
     const titleHtml = post.title
         ? `<h3 class="forum-post-title news-post-title">${escapeHtml(post.title)}</h3>`
@@ -256,8 +280,8 @@ function renderNewsPost(post) {
                 <time class="news-post-date">${date}</time>
             </div>
             ${titleHtml}
-            <div class="post-content news-post-content">${escapeHtml(post.content)}</div>
-            ${imageHtml}
+            <div class="post-content news-post-content">${formatMessageContent(post.content)}</div>
+            ${mediaHtml}
             <div class="post-actions">
                 ${likeBtn}
                 ${commentBtn}

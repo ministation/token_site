@@ -35,6 +35,10 @@ function setupNavigation() {
                 alert('Войдите через Discord, чтобы видеть инвентарь');
                 return;
             }
+            if (section === 'profile' && !currentUser?.authenticated) {
+                alert('Войдите через Discord');
+                return;
+            }
 
             showSection(section);
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
@@ -53,6 +57,8 @@ function setupNavigation() {
                 if (typeof loadDialogs === 'function') loadDialogs();
                 if (typeof startPmPolling === 'function') startPmPolling();
                 if (typeof pollNotifications === 'function') pollNotifications();
+            } else if (section === 'profile') {
+                if (typeof loadMyProfile === 'function') loadMyProfile();
             } else if (section === 'inventory') {
                 if (typeof loadInventory === 'function') loadInventory();
             } else if (section === 'economy') {

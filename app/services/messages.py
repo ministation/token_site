@@ -1,11 +1,11 @@
 import database_social as social_db
 
 
-def send_pm(sender_id: str, receiver_id: str, content: str):
+def send_pm(sender_id: str, receiver_id: str, content: str, image_url: str | None = None):
     content = (content or "").strip()
-    if not content:
+    if not content and not image_url:
         raise ValueError("Пустое сообщение")
-    if len(content) > 2000:
+    if content and len(content) > 2000:
         raise ValueError("Сообщение слишком длинное")
     receiver = social_db.get_social_user_by_player_id(receiver_id)
     if not receiver:
@@ -13,7 +13,7 @@ def send_pm(sender_id: str, receiver_id: str, content: str):
     sender = social_db.get_social_user_by_player_id(sender_id)
     if not sender:
         raise ValueError("Отправитель не найден. Перезайдите через Discord.")
-    return social_db.send_private_message(sender_id, receiver_id, content)
+    return social_db.send_private_message(sender_id, receiver_id, content, image_url)
 
 
 def get_pm_conversation(user_id: str, other_id: str, limit=50):

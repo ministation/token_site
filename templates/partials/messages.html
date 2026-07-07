@@ -1,7 +1,7 @@
 <div class="card messages-page">
     <div class="messages-page-header">
         <h2><i class="fa-solid fa-envelope"></i> Личные сообщения</h2>
-        <p class="messages-hint">Напишите любому авторизованному игроку</p>
+        <p class="messages-hint">Текст, эмодзи и изображения — напишите любому участнику</p>
     </div>
 
     <div class="messages-layout" id="messagesLayout">
@@ -22,11 +22,24 @@
                 </button>
                 <span class="conversation-title-text"><i class="fa-solid fa-comments"></i> Выберите диалог</span>
             </div>
-            <div id="currentConversation" class="chat-messages pm-messages"></div>
-            <div class="chat-input-area pm-input-area">
-                <textarea id="pmInput" placeholder="Напишите сообщение..." rows="2"
-                    onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendPrivateMessage();}"></textarea>
-                <button type="button" onclick="sendPrivateMessage()" title="Отправить">
+            <div id="currentConversation" class="chat-messages pm-messages chat-bubbles"></div>
+            <div class="chat-input-area pm-input-area chat-composer">
+                <div class="chat-composer-tools">
+                    <button type="button" class="chat-tool-btn" id="pmEmojiBtn" title="Эмодзи">
+                        <i class="fa-regular fa-face-smile"></i>
+                    </button>
+                    <label class="chat-tool-btn" title="Изображение">
+                        <i class="fa-solid fa-image"></i>
+                        <input type="file" id="pmImage" accept="image/*" hidden>
+                    </label>
+                </div>
+                <div class="chat-composer-main">
+                    <textarea id="pmInput" placeholder="Напишите сообщение..." rows="2"
+                        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendPrivateMessage();}"></textarea>
+                    <div id="pmImagePreview" class="chat-image-preview" hidden></div>
+                    <div id="pmEmojiPicker" class="emoji-picker" hidden></div>
+                </div>
+                <button type="button" class="chat-send-btn" onclick="sendPrivateMessage()" title="Отправить">
                     <i class="fa-solid fa-paper-plane"></i>
                 </button>
             </div>

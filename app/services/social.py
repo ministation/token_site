@@ -32,10 +32,11 @@ def create_post(
     category: str = "forum",
     topic: Optional[str] = None,
     title: Optional[str] = None,
+    video_url: Optional[str] = None,
 ):
     return social_db.create_post(
         author_player_id, content, image_url,
-        category=category, topic=topic, title=title,
+        category=category, topic=topic, title=title, video_url=video_url,
     )
 
 
