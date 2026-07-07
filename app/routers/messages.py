@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Request, HTTPException, Query, Form, File, UploadFile
 from app.dependencies import get_current_social_user
 from app.services.messages import send_pm, get_pm_conversation, get_pm_dialogs, mark_pm_read, get_pm_unread_total
+from app.services.chat_enrich import enrich_player_for_chat
 from app.services.media_upload import save_upload
 
 router = APIRouter(prefix="/api/messages", tags=["messages"])
@@ -9,7 +10,13 @@ router = APIRouter(prefix="/api/messages", tags=["messages"])
 @router.get("/dialogs")
 async def dialogs(request: Request):
     user = await get_current_social_user(request)
-    return get_pm_dialogs(user['social_id'])
+    items = get_pm_dialogs(user['social_id'])
+    for d in items:
+        info = enrich_player_for_chat(d["other_id"])
+        d["avatar"] = info["avatar"]
+        d["badges"] = info["badges"]
+        d["author_role"] = info["author_role"]
+    return items
 
 
 @router.get("/unread-count")
@@ -33,10 +40,16 @@ async def conversation(other_id: str, request: Request):
     mark_pm_read(user['social_id'], other_id)
     messages = get_pm_conversation(user['social_id'], other_id)
     my_id = user['social_id']
-    return [
-        {**m, "is_own": m.get("sender_id") == my_id}
-        for m in messages
-    ]
+    partner = enrich_player_for_chat(other_id)
+    enriched = []
+    for m in messages:
+        row = {**m, "is_own": m.get("sender_id") == my_id}
+        sender = enrich_player_for_chat(m.get("sender_id", ""))
+        row["sender_avatar"] = sender["avatar"]
+        row["sender_badges"] = sender["badges"]
+        row["sender_role"] = sender["author_role"]
+        enriched.append(row)
+    return {"partner": partner, "messages": enriched}
 
 
 @router.post("/read/{other_id}")

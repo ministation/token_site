@@ -1,5 +1,6 @@
 """Значки участников сайта."""
 from datetime import datetime, timezone, timedelta
+import database_social as social_db
 from app.services.roles import get_staff_role
 
 VETERAN_DAYS = 30
@@ -42,6 +43,12 @@ def get_member_badges(
         badges.append({"id": "admin", "label": "ADMIN", "class": "admin-badge"})
     elif role == "moderator":
         badges.append({"id": "moderator", "label": "MOD", "class": "mod-badge"})
+    if discord_id and social_db.is_content_maker(discord_id):
+        badges.append({
+            "id": "content_maker",
+            "label": "КОНТЕНТ",
+            "class": "content-maker-badge",
+        })
     badges.append({"id": "member", "label": "УЧАСТНИК", "class": "member-badge"})
 
     created = _parse_created_at(created_at)

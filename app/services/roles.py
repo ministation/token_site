@@ -4,10 +4,11 @@ from app.config import ADMIN_USERNAMES, MODERATOR_USERNAMES
 
 ROLE_ADMIN = "admin"
 ROLE_MODERATOR = "moderator"
+ROLE_CONTENT_MAKER = "content_maker"
 
 
 def get_staff_role(username: str = "", discord_id: str | None = None) -> str | None:
-    """Возвращает 'admin', 'moderator' или None."""
+    """Возвращает основную staff-роль: 'admin', 'moderator' или None."""
     if discord_id:
         db_role = social_db.get_site_staff_role(discord_id)
         if db_role == ROLE_ADMIN:
@@ -20,6 +21,23 @@ def get_staff_role(username: str = "", discord_id: str | None = None) -> str | N
     if uname and uname in MODERATOR_USERNAMES:
         return ROLE_MODERATOR
     return None
+
+
+def get_chat_badges(discord_username: str = "", discord_id: str | None = None) -> list[dict]:
+    """Значки для чатов: ADMIN, MOD, КОНТЕНТ."""
+    badges: list[dict] = []
+    role = get_staff_role(discord_username, discord_id)
+    if role == ROLE_ADMIN:
+        badges.append({"id": "admin", "label": "ADMIN", "class": "admin-badge"})
+    elif role == ROLE_MODERATOR:
+        badges.append({"id": "moderator", "label": "MOD", "class": "mod-badge"})
+    if discord_id and social_db.is_content_maker(discord_id):
+        badges.append({
+            "id": "content_maker",
+            "label": "КОНТЕНТ",
+            "class": "content-maker-badge",
+        })
+    return badges
 
 
 def is_admin(username: str = "", discord_id: str | None = None) -> bool:

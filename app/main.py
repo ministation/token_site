@@ -68,6 +68,10 @@ async def startup():
     for name in MODERATOR_USERNAMES:
         social_db.seed_moderator_by_username(name)
     await get_pg_pool()
+    from app.services.game_staff import sync_all_game_moderators_on_site
+    synced = await sync_all_game_moderators_on_site()
+    if synced:
+        print(f"✅ Синхронизировано модераторов с игры: {synced}")
     print("✅ Подключено к PostgreSQL (игровая БД)")
     print("✅ SQLite для соцсети готова")
     asyncio.create_task(collector_loop(interval=300))

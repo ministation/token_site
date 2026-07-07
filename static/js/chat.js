@@ -71,10 +71,12 @@ async function loadChatUsers(query) {
         container.innerHTML = users.map(u => `
             <div class="chat-user-row">
                 <button type="button" class="chat-user-main" onclick="event.stopPropagation(); openProfile(${JSON.stringify(u.player_id)})">
-                    <img src="${u.avatar || '/static/default_avatar.png'}" class="chat-user-avatar" alt=""
-                         onerror="this.src='/static/default_avatar.png'">
+                    ${chatAvatarHtml(u.avatar, 'chat-user-avatar')}
                     <div class="chat-user-info">
-                        <div class="chat-user-name">${typeof profileLink === 'function' ? profileLink(u.player_id, u.game_nickname || u.discord_username, 'chat-user-name-link') : escapeHtml(u.game_nickname || u.discord_username)}</div>
+                        <div class="chat-user-name-row">
+                            <div class="chat-user-name">${typeof profileLink === 'function' ? profileLink(u.player_id, u.game_nickname || u.discord_username, 'chat-user-name-link') : escapeHtml(u.game_nickname || u.discord_username)}</div>
+                            ${renderChatBadgesHtml(u.badges)}
+                        </div>
                         <div class="chat-user-sub">@${escapeHtml(u.discord_username || '')}</div>
                     </div>
                 </button>
@@ -154,11 +156,13 @@ function formatChatTime(iso) {
 
 function renderGlobalChatMessage(m) {
     const isOwn = !!(currentUser?.social_id && m.author_id === currentUser.social_id);
-    const avatar = m.author_avatar
-        ? `<img src="${m.author_avatar}" class="chat-avatar" alt="" onerror="this.style.display='none'">`
-        : '<div class="chat-avatar chat-avatar-placeholder"><i class="fa-solid fa-user"></i></div>';
+    const avatar = chatAvatarHtml(m.author_avatar);
     const time = formatChatTime(m.created_at);
-    const roleBadge = typeof renderRoleBadge === 'function' ? renderRoleBadge(m.author_role) : '';
+    const badgesHtml = renderChatBadgesHtml(m.author_badges || (
+        typeof renderRoleBadge === 'function' && m.author_role
+            ? [{ class: m.author_role === 'admin' ? 'admin-badge' : 'mod-badge', label: m.author_role === 'admin' ? 'ADMIN' : 'MOD' }]
+            : []
+    ));
     const authorBtn = typeof profileLink === 'function'
         ? profileLink(m.author_id, m.author_nickname, 'global-chat-author')
         : `<span class="global-chat-author">${escapeHtml(m.author_nickname)}</span>`;
@@ -180,7 +184,7 @@ function renderGlobalChatMessage(m) {
             ${avatar}
             <div class="global-chat-content">
                 <div class="global-chat-meta">
-                    ${authorBtn}${roleBadge}
+                    ${authorBtn}${badgesHtml}
                 </div>
                 <div class="global-chat-bubble">
                     ${bodyParts.join('')}

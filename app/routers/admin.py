@@ -1,7 +1,10 @@
 from fastapi import APIRouter, Request, HTTPException, Query
 from pydantic import BaseModel
 from app.dependencies import get_current_admin, get_current_staff
-from app.services.admin import get_site_statistics, list_admins, grant_admin, grant_moderator, revoke_admin, find_user_for_admin
+from app.services.admin import (
+    get_site_statistics, list_admins, grant_admin, grant_moderator,
+    grant_content_maker, revoke_admin, revoke_content_maker, find_user_for_admin,
+)
 from app.services.bans import (
     get_all_bans, lift_ban, unban_ban, create_server_ban, create_role_ban,
     search_players, list_job_roles,
@@ -162,6 +165,27 @@ async def admin_revoke(discord_id: str, request: Request):
         raise HTTPException(status_code=400, detail="Нельзя снять админку с самого себя")
     if not revoke_admin(discord_id):
         raise HTTPException(status_code=404, detail="Администратор не найден")
+    return {"success": True}
+
+
+@router.post("/content-makers")
+async def content_maker_grant(req: GrantAdminRequest, request: Request):
+    admin = await get_current_admin(request)
+    username = req.discord_username.strip().lstrip("@")
+    if not username:
+        raise HTTPException(status_code=400, detail="Укажите Discord-ник")
+    user = find_user_for_admin(username)
+    if not user:
+        raise HTTPException(status_code=404, detail="Пользователь не найден. Он должен войти на сайт хотя бы раз.")
+    grant_content_maker(user["discord_id"], user.get("discord_username") or username, admin.get("username", ""))
+    return {"success": True, "discord_id": user["discord_id"], "discord_username": user.get("discord_username")}
+
+
+@router.delete("/content-makers/{discord_id}")
+async def content_maker_revoke(discord_id: str, request: Request):
+    await get_current_admin(request)
+    if not revoke_content_maker(discord_id):
+        raise HTTPException(status_code=404, detail="Контент-мейкер не найден")
     return {"success": True}
 
 

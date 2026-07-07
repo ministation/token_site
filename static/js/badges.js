@@ -6,10 +6,27 @@ function renderBadgesHtml(badges, extraClass = '') {
     }).join(' ');
 }
 
+function renderChatBadgesHtml(badges) {
+    if (!badges || !badges.length) return '';
+    return badges.map(b => {
+        const cls = [b.class, 'chat-role-badge'].filter(Boolean).join(' ');
+        return `<span class="${escapeHtml(cls)}">${escapeHtml(b.label)}</span>`;
+    }).join(' ');
+}
+
 function renderRoleBadge(role) {
-    if (role === 'admin') return '<span class="admin-badge chat-role-badge">ADMIN</span>';
-    if (role === 'moderator') return '<span class="mod-badge chat-role-badge">MOD</span>';
-    return '';
+    return renderChatBadgesHtml(
+        role === 'admin'
+            ? [{ class: 'admin-badge', label: 'ADMIN' }]
+            : role === 'moderator'
+                ? [{ class: 'mod-badge', label: 'MOD' }]
+                : []
+    );
+}
+
+function chatAvatarHtml(avatarUrl, className = 'chat-avatar') {
+    const src = avatarUrl || '/static/default_avatar.png';
+    return `<img src="${escapeHtml(src)}" class="${escapeHtml(className)}" alt="" onerror="this.onerror=null;this.src='/static/default_avatar.png'">`;
 }
 
 function profileHref(playerId) {

@@ -5,6 +5,7 @@ from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import RedirectResponse
 from app.config import DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, DISCORD_REDIRECT_URI
 from app.services.roles import apply_roles, ROLE_ADMIN, ROLE_MODERATOR
+from app.services.game_staff import sync_game_moderator_site_role
 from app.core.sessions import (
     get_session, set_session, delete_session, generate_session_token, user_sessions
 )
@@ -12,6 +13,12 @@ from app.services.bank import find_player_by_discord
 from app.services.social import get_or_create_social_user
 from app.services.avatars import sync_discord_avatar_for_user, resolve_avatar_url
 import database_social as social_db
+
+
+async def _sync_roles_from_game(session_data: dict) -> None:
+    discord_id = session_data.get("discord_id")
+    if discord_id and social_db.get_social_user_by_discord_id(discord_id):
+        await sync_game_moderator_site_role(discord_id, session_data.get("username", ""))
 
 
 def _apply_staff_flags(session_data: dict) -> dict:
@@ -103,6 +110,7 @@ async def callback(code: str, state: str):
         social_db.get_social_user_by_discord_id(discord_id)
     )
 
+    await _sync_roles_from_game(session_data)
     _apply_staff_flags(session_data)
     set_session(session_token, session_data)
 
@@ -190,6 +198,7 @@ async def api_me(request: Request):
         result["avatar"] = resolve_avatar_url(social)
     else:
         result["avatar"] = "/static/default_avatar.png"
+    await _sync_roles_from_game(session)
     apply_roles(result)
     if result.get("is_admin"):
         social_db.add_site_staff(session["discord_id"], session.get("username", ""), "config", ROLE_ADMIN)

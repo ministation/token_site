@@ -238,6 +238,14 @@ def _migrate_schema():
     if "role" not in admin_cols:
         cursor.execute("ALTER TABLE site_admins ADD COLUMN role TEXT DEFAULT 'admin'")
         cursor.execute("UPDATE site_admins SET role = 'admin' WHERE role IS NULL")
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS site_content_makers (
+            discord_id TEXT PRIMARY KEY,
+            discord_username TEXT,
+            granted_by TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
     post_cols = _table_columns(cursor, "posts")
     if "category" not in post_cols:
         cursor.execute("ALTER TABLE posts ADD COLUMN category TEXT DEFAULT 'forum'")
@@ -441,6 +449,51 @@ def is_site_admin(discord_id: str) -> bool:
 
 def is_site_moderator(discord_id: str) -> bool:
     return get_site_staff_role(discord_id) in ("admin", "moderator")
+
+
+def is_content_maker(discord_id: str) -> bool:
+    if not discord_id:
+        return False
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT 1 FROM site_content_makers WHERE discord_id = ? LIMIT 1", (discord_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return row is not None
+
+
+def add_content_maker(discord_id: str, discord_username: str, granted_by: str) -> bool:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO site_content_makers (discord_id, discord_username, granted_by)
+        VALUES (?, ?, ?)
+        ON CONFLICT(discord_id) DO UPDATE SET
+            discord_username = excluded.discord_username,
+            granted_by = excluded.granted_by
+    """, (discord_id, discord_username, granted_by))
+    conn.commit()
+    conn.close()
+    return True
+
+
+def remove_content_maker(discord_id: str) -> bool:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM site_content_makers WHERE discord_id = ?", (discord_id,))
+    conn.commit()
+    ok = cursor.rowcount > 0
+    conn.close()
+    return ok
+
+
+def list_content_makers() -> List[Dict]:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM site_content_makers ORDER BY created_at ASC")
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return rows
 
 
 def add_site_staff(discord_id: str, discord_username: str, granted_by: str, role: str = "admin") -> bool:
@@ -1065,7 +1118,7 @@ def list_platform_users(exclude_player_id: str, query: str = "", limit: int = 10
     if len(q) >= 1:
         like = f"%{q}%"
         cursor.execute("""
-            SELECT player_id, game_nickname, discord_username, discord_avatar, avatar_path, updated_at
+            SELECT player_id, game_nickname, discord_username, discord_id, discord_avatar, avatar_path, updated_at
             FROM social_users
             WHERE player_id != ?
               AND (LOWER(game_nickname) LIKE LOWER(?)
@@ -1075,7 +1128,7 @@ def list_platform_users(exclude_player_id: str, query: str = "", limit: int = 10
         """, (exclude_player_id, like, like, limit, offset))
     else:
         cursor.execute("""
-            SELECT player_id, game_nickname, discord_username, discord_avatar, avatar_path, updated_at
+            SELECT player_id, game_nickname, discord_username, discord_id, discord_avatar, avatar_path, updated_at
             FROM social_users
             WHERE player_id != ?
             ORDER BY updated_at DESC

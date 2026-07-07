@@ -27,6 +27,14 @@ def grant_moderator(discord_id: str, username: str, granted_by: str) -> bool:
     return social_db.add_site_moderator(discord_id, username, granted_by)
 
 
+def grant_content_maker(discord_id: str, username: str, granted_by: str) -> bool:
+    return social_db.add_content_maker(discord_id, username, granted_by)
+
+
+def revoke_content_maker(discord_id: str) -> bool:
+    return social_db.remove_content_maker(discord_id)
+
+
 def grant_admin(discord_id: str, username: str, granted_by: str) -> bool:
     return social_db.add_site_admin(discord_id, username, granted_by)
 

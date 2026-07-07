@@ -19,10 +19,13 @@ async function loadDialogs() {
             <div class="dialog-item ${currentPmPartnerId === d.other_id ? 'active' : ''}"
                  onclick='openConversation(${JSON.stringify(d.other_id)}, ${JSON.stringify(d.nickname || 'Игрок')})'>
                 <div class="dialog-avatar-wrap">
-                    <div class="dialog-avatar-placeholder"><i class="fa-solid fa-user"></i></div>
+                    ${chatAvatarHtml(d.avatar, 'dialog-avatar')}
                 </div>
                 <div class="dialog-body">
-                    <div class="dialog-name">${typeof profileLink === 'function' ? profileLink(d.other_id, d.nickname || 'Игрок', 'dialog-name-link') : escapeHtml(d.nickname || 'Игрок')}</div>
+                    <div class="dialog-name-row">
+                        <div class="dialog-name">${typeof profileLink === 'function' ? profileLink(d.other_id, d.nickname || 'Игрок', 'dialog-name-link') : escapeHtml(d.nickname || 'Игрок')}</div>
+                        ${renderChatBadgesHtml(d.badges)}
+                    </div>
                     <div class="dialog-preview">${escapeHtml(d.last_msg || '')}</div>
                 </div>
                 ${d.unread ? `<span class="dialog-unread pixel-notify">${d.unread}</span>` : ''}
@@ -62,8 +65,14 @@ async function searchPmUsers(query) {
         container.innerHTML = users.map(u => `
             <button type="button" class="pm-user-item"
                 onclick='startConversationWith(${JSON.stringify(u.player_id)}, ${JSON.stringify(u.game_nickname || u.discord_username || 'Игрок')})'>
-                <span class="pm-user-name">${typeof profileLink === 'function' ? profileLink(u.player_id, u.game_nickname || u.discord_username, 'pm-user-name-link') : escapeHtml(u.game_nickname || u.discord_username)}</span>
-                <span class="pm-user-sub">@${escapeHtml(u.discord_username || '')}</span>
+                ${chatAvatarHtml(u.avatar, 'pm-user-avatar')}
+                <span class="pm-user-main">
+                    <span class="pm-user-name-row">
+                        <span class="pm-user-name">${typeof profileLink === 'function' ? profileLink(u.player_id, u.game_nickname || u.discord_username, 'pm-user-name-link') : escapeHtml(u.game_nickname || u.discord_username)}</span>
+                        ${renderChatBadgesHtml(u.badges)}
+                    </span>
+                    <span class="pm-user-sub">@${escapeHtml(u.discord_username || '')}</span>
+                </span>
             </button>
         `).join('');
     } catch (e) {
@@ -122,22 +131,22 @@ function renderPmMessage(m, myId) {
     const imageHtml = m.image_url ? renderChatImage(m.image_url, 'pm-msg-image') : '';
     const textHtml = text ? `<span class="pm-bubble-text">${formatMessageContent(text)}</span>` : '';
     const meta = `<span class="pm-bubble-meta">${pmStatusHtml(own, m.read)}<span class="pm-time-inline">${time}</span></span>`;
+    const avatarHtml = !own
+        ? chatAvatarHtml(m.sender_avatar, 'pm-msg-avatar')
+        : '';
+    const badgesHtml = !own ? renderChatBadgesHtml(m.sender_badges) : '';
 
     if (!textHtml && !imageHtml) return '';
 
-    if (imageHtml && !textHtml) {
-        return `<div class="pm-message ${own ? 'own' : ''}">
-            <div class="pm-bubble">
-                <div class="pm-bubble-media">${imageHtml}</div>
-                <div class="pm-bubble-row pm-bubble-row-tail">${meta}</div>
-            </div>
-        </div>`;
-    }
+    const bubbleInner = imageHtml && !textHtml
+        ? `<div class="pm-bubble-media">${imageHtml}</div><div class="pm-bubble-row pm-bubble-row-tail">${meta}</div>`
+        : `${imageHtml ? `<div class="pm-bubble-media">${imageHtml}</div>` : ''}<div class="pm-bubble-row">${textHtml}${meta}</div>`;
 
     return `<div class="pm-message ${own ? 'own' : ''}">
-        <div class="pm-bubble">
-            ${imageHtml ? `<div class="pm-bubble-media">${imageHtml}</div>` : ''}
-            <div class="pm-bubble-row">${textHtml}${meta}</div>
+        ${avatarHtml}
+        <div class="pm-message-col">
+            ${badgesHtml ? `<div class="pm-msg-author-badges">${badgesHtml}</div>` : ''}
+            <div class="pm-bubble">${bubbleInner}</div>
         </div>
     </div>`;
 }
@@ -146,7 +155,22 @@ async function loadConversation(partnerId) {
     const container = document.getElementById('currentConversation');
     if (!container) return;
     try {
-        const messages = await apiCall('GET', `/api/messages/conversation/${partnerId}`);
+        const data = await apiCall('GET', `/api/messages/conversation/${partnerId}`);
+        const messages = Array.isArray(data) ? data : (data.messages || []);
+        const partner = Array.isArray(data) ? null : data.partner;
+        const title = document.getElementById('conversationTitle');
+        const titleText = title?.querySelector('.conversation-title-text');
+        if (partner && titleText) {
+            const name = partner.nickname || 'Диалог';
+            const badges = renderChatBadgesHtml(partner.badges);
+            const nameHtml = typeof profileLink === 'function'
+                ? profileLink(partnerId, name, 'pm-title-link')
+                : escapeHtml(name);
+            titleText.innerHTML = `
+                <span class="pm-title-avatar">${chatAvatarHtml(partner.avatar, 'pm-title-avatar-img')}</span>
+                <span class="pm-title-main">${nameHtml}${badges}</span>
+            `;
+        }
         if (!messages.length) {
             container.innerHTML = '<p class="empty-state">Напишите первое сообщение</p>';
             return;

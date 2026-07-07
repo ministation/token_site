@@ -2,7 +2,8 @@ from fastapi import APIRouter, Request, HTTPException, Query, Form, File, Upload
 from app.dependencies import get_current_social_user
 from app.services.chat import get_chat_messages, add_chat_message
 from app.services.avatars import resolve_avatar_url
-from app.services.roles import get_role_by_author_id, get_staff_role
+from app.services.roles import get_staff_role
+from app.services.chat_enrich import enrich_player_for_chat
 from app.services.media_upload import save_upload
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
@@ -12,7 +13,10 @@ router = APIRouter(prefix="/api/chat", tags=["chat"])
 async def get_chat(after: int = Query(0, ge=0)):
     messages = get_chat_messages(100, after)
     for m in messages:
-        m["author_role"] = get_role_by_author_id(m["author_id"])
+        info = enrich_player_for_chat(m["author_id"])
+        m["author_avatar"] = info["avatar"]
+        m["author_role"] = info["author_role"]
+        m["author_badges"] = info["badges"]
     return messages
 
 
@@ -37,5 +41,8 @@ async def post_chat(
     avatar = resolve_avatar_url(social)
     nickname = social.get("game_nickname") or social.get("discord_username") or user.get("username", "Игрок")
     msg_data = add_chat_message(user["social_id"], nickname, avatar, text, image_url)
-    msg_data["author_role"] = get_staff_role(user.get("username", ""), user.get("discord_id"))
+    info = enrich_player_for_chat(user["social_id"])
+    msg_data["author_avatar"] = info["avatar"]
+    msg_data["author_role"] = info["author_role"]
+    msg_data["author_badges"] = info["badges"]
     return {"success": True, "message": msg_data}
