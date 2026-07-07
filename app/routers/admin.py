@@ -6,6 +6,7 @@ from app.services.bans import get_all_bans, lift_ban
 from app.services.appeals import list_appeals, review_appeal
 from app.services.avatars import resolve_avatar_url
 from app.services.social import get_feed_posts
+from app.services.admin_rating import list_admin_help_ratings, delete_admin_help_rating, get_admin_rating_leaderboard
 import database_social as social_db
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -19,6 +20,40 @@ class GrantAdminRequest(BaseModel):
 class ReviewAppealRequest(BaseModel):
     status: str
     admin_response: str = ""
+
+
+@router.get("/admin-ratings/leaders")
+async def admin_rating_leaders(request: Request):
+    await get_current_admin(request)
+    return await get_admin_rating_leaderboard()
+
+
+@router.get("/admin-ratings/{user_uuid}")
+async def admin_rating_details(request: Request, user_uuid: str):
+    await get_current_admin(request)
+    try:
+        data = await list_admin_help_ratings(user_uuid)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Некорректный UUID администратора")
+    if data is None:
+        raise HTTPException(status_code=404, detail="Администратор не найден")
+    return data
+
+
+@router.delete("/admin-ratings/{rating_id}")
+async def admin_delete_rating(rating_id: int, request: Request):
+    admin = await get_current_admin(request)
+    result = await delete_admin_help_rating(rating_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Оценка не найдена")
+    social_db.log_rating_removal(
+        result["id"],
+        result["admin_uuid"],
+        result.get("player_uuid"),
+        result["stars"],
+        admin.get("username", "admin"),
+    )
+    return {"success": True, **result}
 
 
 @router.get("/stats")

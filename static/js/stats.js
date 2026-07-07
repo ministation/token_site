@@ -66,6 +66,11 @@ function renderAdminRatingRow(a) {
             onclick='messageAdminFromStats(${JSON.stringify(a.player_id)}, ${JSON.stringify(a.name)})'>
             <i class="fa-solid fa-envelope"></i></button>`
         : '';
+    const manageBtn = currentUser?.is_admin && a.rating_count > 0
+        ? `<button type="button" class="admin-rating-msg-btn" title="Управление оценками"
+            onclick='openAdminRatingsFor(${JSON.stringify(a.user_uuid)})'>
+            <i class="fa-solid fa-sliders"></i></button>`
+        : '';
     return `
         <div class="admin-rating-row">
             <div class="admin-rating-place">${a.place}</div>
@@ -77,6 +82,7 @@ function renderAdminRatingRow(a) {
             </div>
             <div class="admin-rating-actions">
                 <div class="admin-rating-score">${rating}</div>
+                ${manageBtn}
                 ${msgBtn}
             </div>
         </div>`;

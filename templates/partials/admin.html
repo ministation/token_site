@@ -4,6 +4,7 @@
 
     <div class="admin-tabs">
         <button type="button" class="tab active" onclick="showAdminTab('stats', this)">Статистика</button>
+        <button type="button" class="tab" onclick="showAdminTab('ratings', this)">Рейтинг AHelp</button>
         <button type="button" class="tab" onclick="showAdminTab('users', this)">Игроки</button>
         <button type="button" class="tab" onclick="showAdminTab('posts', this)">Форум</button>
         <button type="button" class="tab" onclick="showAdminTab('appeals', this)">Обжалования</button>
@@ -13,6 +14,16 @@
 
     <div id="adminStatsTab" class="admin-tab-content">
         <div id="adminStatsContent"><p class="empty-state">Загрузка...</p></div>
+    </div>
+
+    <div id="adminRatingsTab" class="admin-tab-content" style="display:none;">
+        <p class="admin-hint">Удаление несправедливых оценок. После удаления средний рейтинг пересчитывается в игровой БД.</p>
+        <div class="admin-inline-form">
+            <select id="adminRatingSelect" onchange="onAdminRatingSelectChange(this.value)">
+                <option value="">— Выберите администратора —</option>
+            </select>
+        </div>
+        <div id="adminRatingsContent"><p class="empty-state">Загрузка списка администраторов...</p></div>
     </div>
 
     <div id="adminUsersTab" class="admin-tab-content" style="display:none;">

@@ -6,7 +6,7 @@ let adminUserSearchTimeout = null;
 function showAdminTab(tab, btn) {
     document.querySelectorAll('.admin-tab-content').forEach(el => el.style.display = 'none');
     const map = {
-        stats: 'adminStatsTab', users: 'adminUsersTab', posts: 'adminPostsTab',
+        stats: 'adminStatsTab', ratings: 'adminRatingsTab', users: 'adminUsersTab', posts: 'adminPostsTab',
         appeals: 'adminAppealsTab', bans: 'adminBansTab', admins: 'adminAdminsTab'
     };
     const target = document.getElementById(map[tab]);
@@ -14,6 +14,7 @@ function showAdminTab(tab, btn) {
     document.querySelectorAll('.admin-tabs .tab').forEach(t => t.classList.remove('active'));
     if (btn) btn.classList.add('active');
     if (tab === 'stats') loadAdminStats();
+    if (tab === 'ratings') loadAdminRatingsPanel();
     if (tab === 'users') loadAdminUsers(false);
     if (tab === 'posts') loadAdminPostsList(false);
     if (tab === 'appeals') loadAdminAppeals(false);
@@ -31,6 +32,125 @@ function initAdminPanel() {
 function debounceAdminUserSearch() {
     clearTimeout(adminUserSearchTimeout);
     adminUserSearchTimeout = setTimeout(() => loadAdminUsers(false), 300);
+}
+
+let adminRatingSelectedUuid = '';
+
+function openAdminRatingsFor(userUuid) {
+    if (typeof showSection === 'function') showSection('admin');
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    const navBtn = document.querySelector('.nav-btn[data-section="admin"]');
+    if (navBtn) navBtn.classList.add('active');
+    adminRatingSelectedUuid = userUuid || '';
+    const tabBtn = document.querySelector('.admin-tabs .tab[onclick*="ratings"]');
+    showAdminTab('ratings', tabBtn);
+}
+
+async function loadAdminRatingsPanel() {
+    const select = document.getElementById('adminRatingSelect');
+    const container = document.getElementById('adminRatingsContent');
+    if (!select || !container) return;
+    container.innerHTML = '<p class="empty-state">Загрузка...</p>';
+    try {
+        const leaders = await apiCall('GET', '/api/admin/admin-ratings/leaders');
+        select.innerHTML = '<option value="">— Выберите администратора —</option>' +
+            leaders.map(a => {
+                const count = a.rating_count || 0;
+                const label = count > 0
+                    ? `${a.name} (${count} оц., ${a.rating != null ? a.rating.toFixed(2) : '?'})`
+                    : a.name;
+                return `<option value="${a.user_uuid}">${escapeHtml(label)}</option>`;
+            }).join('');
+        if (adminRatingSelectedUuid) {
+            select.value = adminRatingSelectedUuid;
+            await loadAdminRatingDetails(adminRatingSelectedUuid);
+        } else {
+            container.innerHTML = '<p class="empty-state">Выберите администратора, чтобы увидеть оценки</p>';
+        }
+    } catch (e) {
+        container.innerHTML = `<p class="error">${escapeHtml(e.message)}</p>`;
+    }
+}
+
+function onAdminRatingSelectChange(uuid) {
+    adminRatingSelectedUuid = uuid || '';
+    if (!uuid) {
+        const container = document.getElementById('adminRatingsContent');
+        if (container) container.innerHTML = '<p class="empty-state">Выберите администратора, чтобы увидеть оценки</p>';
+        return;
+    }
+    loadAdminRatingDetails(uuid);
+}
+
+async function loadAdminRatingDetails(userUuid) {
+    const container = document.getElementById('adminRatingsContent');
+    if (!container) return;
+    container.innerHTML = '<p class="empty-state">Загрузка оценок...</p>';
+    try {
+        const data = await apiCall('GET', `/api/admin/admin-ratings/${encodeURIComponent(userUuid)}`);
+        const admin = data.admin || {};
+        const ratings = data.ratings || [];
+        const summary = admin.rating_count > 0
+            ? `Средний рейтинг: <b>${admin.rating.toFixed(2)}</b> · оценок: <b>${admin.rating_count}</b>`
+            : 'Оценок нет';
+        if (!ratings.length) {
+            container.innerHTML = `
+                <div class="admin-rating-summary">${summary}</div>
+                <p class="empty-state">У этого администратора нет оценок в базе</p>`;
+            return;
+        }
+        container.innerHTML = `
+            <div class="admin-rating-summary">${summary}</div>
+            <div class="admin-rating-manage-list">
+                ${ratings.map(r => `
+                    <div class="admin-rating-manage-row">
+                        <div class="admin-rating-manage-main">
+                            <div class="admin-rating-manage-player">${escapeHtml(r.player_name)}</div>
+                            <div class="admin-rating-manage-meta">
+                                ${'★'.repeat(r.stars)}${'☆'.repeat(5 - r.stars)}
+                                · ${r.created_at ? new Date(r.created_at).toLocaleString('ru-RU') : '—'}
+                                ${r.round_id != null ? ` · раунд #${r.round_id}` : ''}
+                            </div>
+                        </div>
+                        <button type="button" class="btn-danger-sm" title="Удалить оценку"
+                            onclick="deleteAdminHelpRating(${r.id})">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                `).join('')}
+            </div>`;
+    } catch (e) {
+        container.innerHTML = `<p class="error">${escapeHtml(e.message)}</p>`;
+    }
+}
+
+async function refreshAdminRatingSelect() {
+    const select = document.getElementById('adminRatingSelect');
+    if (!select) return;
+    const leaders = await apiCall('GET', '/api/admin/admin-ratings/leaders');
+    const current = adminRatingSelectedUuid;
+    select.innerHTML = '<option value="">— Выберите администратора —</option>' +
+        leaders.map(a => {
+            const count = a.rating_count || 0;
+            const label = count > 0
+                ? `${a.name} (${count} оц., ${a.rating != null ? a.rating.toFixed(2) : '?'})`
+                : a.name;
+            return `<option value="${a.user_uuid}">${escapeHtml(label)}</option>`;
+        }).join('');
+    if (current) select.value = current;
+}
+
+async function deleteAdminHelpRating(ratingId) {
+    if (!currentUser?.is_admin) return;
+    if (!confirm('Удалить эту оценку? Средний рейтинг администратора будет пересчитан в игровой БД.')) return;
+    try {
+        await apiCall('DELETE', `/api/admin/admin-ratings/${ratingId}`);
+        await refreshAdminRatingSelect();
+        if (adminRatingSelectedUuid) await loadAdminRatingDetails(adminRatingSelectedUuid);
+        if (typeof refreshAdminRatingIfVisible === 'function') refreshAdminRatingIfVisible();
+    } catch (e) {
+        alert(e.message);
+    }
 }
 
 async function loadAdminStats() {

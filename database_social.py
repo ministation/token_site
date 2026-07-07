@@ -233,6 +233,17 @@ def _migrate_schema():
     cursor.execute("""
         CREATE INDEX IF NOT EXISTS idx_site_visits_key ON site_visits(visitor_key)
     """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS rating_removal_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            rating_id INTEGER NOT NULL,
+            admin_uuid TEXT NOT NULL,
+            player_uuid TEXT,
+            stars INTEGER,
+            removed_by TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
     conn.commit()
     conn.close()
 
@@ -529,6 +540,24 @@ def get_visit_stats() -> Dict:
     stats["daily"] = [dict(row) for row in cursor.fetchall()]
     conn.close()
     return stats
+
+
+def log_rating_removal(
+    rating_id: int,
+    admin_uuid: str,
+    player_uuid: str | None,
+    stars: int,
+    removed_by: str,
+) -> None:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO rating_removal_log (rating_id, admin_uuid, player_uuid, stars, removed_by)
+        VALUES (?, ?, ?, ?, ?)
+    """, (rating_id, admin_uuid, player_uuid, stars, removed_by))
+    conn.commit()
+    conn.close()
+
 
 def update_social_user(player_id: str, bio: str = None, game_nickname: str = None) -> bool:
     conn = get_db()

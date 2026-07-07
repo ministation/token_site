@@ -1,3 +1,5 @@
+import uuid
+
 import database_social as social_db
 from app.db.database import get_pg_pool
 
@@ -122,3 +124,107 @@ async def get_admin_rating_leaderboard() -> list[dict]:
             "suspended": bool(row["suspended"]),
         })
     return result
+
+
+async def _recalculate_admin_rating(conn, admin_user_id: str) -> dict:
+    uid = uuid.UUID(admin_user_id)
+    stats = await conn.fetchrow("""
+        SELECT COUNT(*)::int AS cnt, COALESCE(AVG(stars), 0) AS avg
+        FROM admin_help_rating
+        WHERE admin_user_id = $1
+    """, uid)
+    cnt = int(stats["cnt"])
+    avg = float(stats["avg"]) if cnt > 0 else 0.0
+    await conn.execute("""
+        UPDATE admin
+        SET ahelp_rating_count = $2, ahelp_rating = $3
+        WHERE user_id = $1
+    """, uid, cnt, avg)
+    return {"rating_count": cnt, "rating": avg if cnt > 0 else None}
+
+
+async def list_admin_help_ratings(admin_user_id: str) -> dict | None:
+    pg = await get_pg_pool()
+    uid = uuid.UUID(admin_user_id)
+    async with pg.acquire() as conn:
+        admin_row = await conn.fetchrow("""
+            SELECT a.user_id::text AS user_uuid,
+                   COALESCE(p.last_seen_user_name, a.user_id::text) AS name,
+                   a.ahelp_rating, a.ahelp_rating_count
+            FROM admin a
+            LEFT JOIN LATERAL (
+                SELECT last_seen_user_name
+                FROM player
+                WHERE user_id = a.user_id
+                ORDER BY last_seen_time DESC NULLS LAST
+                LIMIT 1
+            ) p ON true
+            WHERE a.user_id = $1
+        """, uid)
+        if not admin_row:
+            return None
+
+        rows = await conn.fetch("""
+            SELECT
+                r.id,
+                r.player_user_id::text AS player_uuid,
+                r.admin_user_id::text AS admin_uuid,
+                r.round_id,
+                r.stars,
+                r.created_at,
+                COALESCE(p.last_seen_user_name, r.player_user_id::text) AS player_name
+            FROM admin_help_rating r
+            LEFT JOIN LATERAL (
+                SELECT last_seen_user_name
+                FROM player
+                WHERE user_id = r.player_user_id
+                ORDER BY last_seen_time DESC NULLS LAST
+                LIMIT 1
+            ) p ON true
+            WHERE r.admin_user_id = $1
+            ORDER BY r.created_at DESC
+        """, uid)
+
+    count = int(admin_row["ahelp_rating_count"] or 0)
+    rating = float(admin_row["ahelp_rating"]) if count > 0 and admin_row["ahelp_rating"] is not None else None
+    return {
+        "admin": {
+            "user_uuid": admin_row["user_uuid"],
+            "name": admin_row["name"],
+            "rating": rating,
+            "rating_count": count,
+        },
+        "ratings": [
+            {
+                "id": row["id"],
+                "player_uuid": row["player_uuid"],
+                "player_name": row["player_name"],
+                "stars": int(row["stars"]),
+                "round_id": row["round_id"],
+                "created_at": row["created_at"].isoformat() if row["created_at"] else None,
+            }
+            for row in rows
+        ],
+    }
+
+
+async def delete_admin_help_rating(rating_id: int) -> dict | None:
+    pg = await get_pg_pool()
+    async with pg.acquire() as conn:
+        async with conn.transaction():
+            row = await conn.fetchrow("""
+                SELECT id, admin_user_id::text AS admin_uuid, player_user_id::text AS player_uuid, stars
+                FROM admin_help_rating
+                WHERE id = $1
+            """, rating_id)
+            if not row:
+                return None
+            await conn.execute("DELETE FROM admin_help_rating WHERE id = $1", rating_id)
+            updated = await _recalculate_admin_rating(conn, row["admin_uuid"])
+            return {
+                "id": row["id"],
+                "admin_uuid": row["admin_uuid"],
+                "player_uuid": row["player_uuid"],
+                "stars": int(row["stars"]),
+                **updated,
+            }
