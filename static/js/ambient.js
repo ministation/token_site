@@ -19,7 +19,7 @@
     }
 
     function resetParticle(el) {
-        const size = rand(2.5, 5.5);
+        const size = rand(6, 12);
         el.style.width = `${size}px`;
         el.style.height = `${size}px`;
         el.style.left = `${rand(0, 100)}%`;

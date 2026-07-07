@@ -39,9 +39,9 @@
     --purple: #7a5cd6;
     --discord: #5865F2;
 
-    --grad-accent: linear-gradient(135deg, #ffc82e 0%, #f0780a 100%);
-    --grad-hero: linear-gradient(150deg, #fff3c4 0%, #ffc82e 42%, #f0780a 100%);
-    --grad-warm: linear-gradient(90deg, #ffc82e 0%, #f0780a 100%);
+    --grad-accent: linear-gradient(135deg, #f5c518 0%, #f59e0b 48%, #ea580c 100%);
+    --grad-hero: linear-gradient(135deg, #fde047 0%, #f59e0b 42%, #ea580c 100%);
+    --grad-warm: linear-gradient(90deg, #f5c518 0%, #f59e0b 50%, #ea580c 100%);
     --accent-glow: rgba(240, 120, 10, 0.22);
     --accent-soft: color-mix(in srgb, var(--accent) 22%, var(--panel));
 
@@ -77,9 +77,9 @@ html[data-theme="dark"] {
     --success: #38c273;
     --success-deep: #279a58;
 
-    --grad-accent: linear-gradient(135deg, #ffd54f 0%, #ffb020 100%);
-    --grad-hero: linear-gradient(150deg, #3d2808 0%, #c87810 48%, #e07818 100%);
-    --grad-warm: linear-gradient(90deg, #ffd54f 0%, #ffb020 100%);
+    --grad-accent: linear-gradient(135deg, #ffd54f 0%, #ff9800 48%, #ff6d00 100%);
+    --grad-hero: linear-gradient(135deg, #78350f 0%, #d97706 42%, #ea580c 100%);
+    --grad-warm: linear-gradient(90deg, #ffd54f 0%, #ff9800 50%, #ff6d00 100%);
     --accent-glow: rgba(255, 176, 32, 0.28);
     --accent-soft: color-mix(in srgb, var(--accent) 24%, var(--panel));
 
@@ -174,6 +174,7 @@ html[data-theme="dark"] body::before {
     border-radius: 50%;
     pointer-events: none;
     will-change: transform, opacity;
+    box-shadow: 0 0 10px rgba(255, 180, 60, 0.35);
     animation: dustParticleFloat var(--dur, 36s) ease-in-out infinite;
     animation-delay: var(--delay, 0s);
 }
@@ -520,13 +521,10 @@ body.nav-open { overflow: hidden; }
 .hero-card {
     text-align: center;
     background: var(--grad-hero);
-    border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
-    color: #3d2208;
+    border-color: var(--accent-deep);
+    color: #fff;
     padding: 26px 22px;
     position: relative;
-}
-html[data-theme="dark"] .hero-card {
-    color: #fff8ee;
 }
 .hero-card::before {
     content: '';
@@ -544,16 +542,16 @@ html[data-theme="dark"] .hero-card {
 .hero-card .description {
     font-size: 1rem;
     line-height: 1.7;
-    color: color-mix(in srgb, currentColor 88%, transparent);
+    color: rgba(255, 255, 255, 0.92);
     max-width: 680px;
     margin: 0 auto 18px;
 }
 .hero-card .tagline {
     display: inline-block;
     font-size: 0.58rem;
-    color: inherit;
-    background: color-mix(in srgb, currentColor 8%, transparent);
-    border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+    color: #fff;
+    background: rgba(255, 255, 255, 0.16);
+    border: 1px solid rgba(255, 255, 255, 0.35);
     padding: 8px 14px;
     border-radius: var(--radius-sm);
     margin-bottom: 16px;
@@ -1578,29 +1576,24 @@ html[data-theme="dark"] .status-meta {
     justify-content: space-between;
     gap: 12px;
     padding: 14px 18px;
-    background: var(--accent-soft);
-    color: var(--ink);
-    border-bottom: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
+    background: var(--grad-hero);
+    color: #fff;
 }
 .server-status-badge {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    background: var(--panel);
-    border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.25);
     border-radius: 99px;
     padding: 5px 12px;
     font-size: 0.72rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: var(--ink);
 }
-.server-status-badge.offline {
-    background: var(--panel-2);
-    color: var(--muted);
-}
-.server-status-badge .status-dot { outline-color: color-mix(in srgb, var(--accent) 40%, var(--border)); }
+.server-status-badge.offline { background: rgba(0,0,0,0.2); }
+.server-status-badge .status-dot { outline-color: rgba(255,255,255,0.4); }
 .server-widget-name {
     font-family: var(--font-pixel);
     font-size: 0.65rem;
@@ -1712,8 +1705,7 @@ html[data-theme="dark"] .status-meta {
 }
 .server-bar {
     height: 100%;
-    background: var(--success);
-    opacity: 0.9;
+    background: var(--grad-warm);
     width: 0%;
     transition: width 0.5s ease;
 }
