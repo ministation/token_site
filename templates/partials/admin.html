@@ -7,6 +7,7 @@
         <button type="button" class="tab" data-admin-only onclick="showAdminTab('ratings', this)">Рейтинг</button>
         <button type="button" class="tab" data-admin-only onclick="showAdminTab('posts', this)">Форум</button>
         <button type="button" class="tab" data-admin-only onclick="showAdminTab('appeals', this)">Обжалования</button>
+        <button type="button" class="tab" data-admin-only onclick="showAdminTab('compensation', this)">Компенсация</button>
         <button type="button" class="tab" data-admin-only onclick="showAdminTab('game', this)">Админ панель</button>
         <button type="button" class="tab" data-staff-only onclick="showAdminTab('playtime', this)">Время</button>
         <button type="button" class="tab" data-admin-only onclick="showAdminTab('admins', this)">Staff</button>
@@ -45,6 +46,18 @@
             </select>
         </div>
         <div id="adminAppealsContent"><p class="empty-state">Загрузка...</p></div>
+    </div>
+
+    <div id="adminCompensationTab" class="admin-tab-content" style="display:none;">
+        <p class="admin-hint">Раздача компенсации после падения сервера. Блок появится на главной между описанием и онлайном.</p>
+        <div id="adminCompensationStatus" class="compensation-admin-status"><p class="empty-state">Загрузка...</p></div>
+        <div class="admin-inline-form compensation-admin-form">
+            <input type="number" id="adminCompensationAmount" min="1" max="500" value="3" placeholder="Сумма">
+            <input type="number" id="adminCompensationDuration" min="1" max="10080" value="1440" placeholder="Минут">
+            <button type="button" onclick="startAdminCompensation()"><i class="fa-solid fa-gift"></i> Открыть раздачу</button>
+        </div>
+        <p class="admin-hint">Длительность в минутах. Например: 60 = 1 час, 1440 = сутки.</p>
+        <div id="adminCompensationResult" class="result"></div>
     </div>
 
     <div id="adminGameTab" class="admin-tab-content" style="display:none;">

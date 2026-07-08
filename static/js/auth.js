@@ -34,12 +34,14 @@ async function checkAuth() {
             if (typeof initModeratorPanel === 'function') initModeratorPanel();
             if (typeof refreshAdminRatingIfVisible === 'function') refreshAdminRatingIfVisible();
             if (typeof startNotificationPolling === 'function') startNotificationPolling();
+            if (typeof loadCompensation === 'function') loadCompensation();
         } else {
             document.getElementById('loginBtn').style.display = '';
             document.getElementById('userPanel').style.display = 'none';
             updateAuthUI();
             if (typeof refreshAdminRatingIfVisible === 'function') refreshAdminRatingIfVisible();
             if (typeof stopNotificationPolling === 'function') stopNotificationPolling();
+            if (typeof loadCompensation === 'function') loadCompensation();
         }
     } catch (e) {
         console.error('Auth check failed:', e);

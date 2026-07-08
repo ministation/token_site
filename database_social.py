@@ -312,6 +312,28 @@ def _migrate_schema():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS compensation_giveaways (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            amount INTEGER NOT NULL,
+            ends_at TIMESTAMP NOT NULL,
+            created_by TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS compensation_claims (
+            giveaway_id INTEGER NOT NULL,
+            user_uuid TEXT NOT NULL,
+            claimed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (giveaway_id, user_uuid),
+            FOREIGN KEY (giveaway_id) REFERENCES compensation_giveaways(id)
+        )
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_compensation_giveaways_ends
+        ON compensation_giveaways(ends_at DESC)
+    """)
     conn.commit()
     conn.close()
 
@@ -1440,3 +1462,100 @@ def cleanup_expired_sessions(max_age_days: int = 30):
     cursor.execute("DELETE FROM sessions WHERE created_at < datetime('now', '-' || ? || ' days')", (max_age_days,))
     conn.commit()
     conn.close()
+
+
+# ---------- Компенсация за падение сервера ----------
+
+def create_compensation_giveaway(amount: int, duration_minutes: int, created_by: str) -> Dict:
+    ends_at = datetime.datetime.utcnow() + datetime.timedelta(minutes=duration_minutes)
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO compensation_giveaways (amount, ends_at, created_by) VALUES (?, ?, ?)",
+        (amount, ends_at.replace(microsecond=0).isoformat(), created_by),
+    )
+    giveaway_id = cursor.lastrowid
+    conn.commit()
+    cursor.execute("SELECT * FROM compensation_giveaways WHERE id = ?", (giveaway_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row)
+
+
+def get_compensation_giveaway_by_id(giveaway_id: int) -> Optional[Dict]:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM compensation_giveaways WHERE id = ?", (giveaway_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def get_active_compensation_giveaway() -> Optional[Dict]:
+    now = datetime.datetime.utcnow().replace(microsecond=0).isoformat()
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT * FROM compensation_giveaways
+        WHERE ends_at > ?
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (now,),
+    )
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def has_compensation_claim(giveaway_id: int, user_uuid: str) -> bool:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT 1 FROM compensation_claims WHERE giveaway_id = ? AND user_uuid = ? LIMIT 1",
+        (giveaway_id, user_uuid),
+    )
+    found = cursor.fetchone() is not None
+    conn.close()
+    return found
+
+
+def try_record_compensation_claim(giveaway_id: int, user_uuid: str) -> bool:
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "INSERT INTO compensation_claims (giveaway_id, user_uuid) VALUES (?, ?)",
+            (giveaway_id, user_uuid),
+        )
+        conn.commit()
+        return True
+    except sqlite3.IntegrityError:
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
+
+
+def revoke_compensation_claim(giveaway_id: int, user_uuid: str) -> None:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        "DELETE FROM compensation_claims WHERE giveaway_id = ? AND user_uuid = ?",
+        (giveaway_id, user_uuid),
+    )
+    conn.commit()
+    conn.close()
+
+
+def count_compensation_claims(giveaway_id: int) -> int:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT COUNT(*) FROM compensation_claims WHERE giveaway_id = ?",
+        (giveaway_id,),
+    )
+    count = int(cursor.fetchone()[0] or 0)
+    conn.close()
+    return count

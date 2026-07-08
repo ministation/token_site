@@ -11,7 +11,8 @@ function showAdminTab(tab, btn) {
     document.querySelectorAll('.admin-tab-content').forEach(el => el.style.display = 'none');
     const map = {
         stats: 'adminStatsTab', ratings: 'adminRatingsTab', posts: 'adminPostsTab',
-        appeals: 'adminAppealsTab', game: 'adminGameTab', playtime: 'adminPlaytimeTab',
+        appeals: 'adminAppealsTab', compensation: 'adminCompensationTab',
+        game: 'adminGameTab', playtime: 'adminPlaytimeTab',
         admins: 'adminAdminsTab'
     };
     const target = document.getElementById(map[tab]);
@@ -22,6 +23,7 @@ function showAdminTab(tab, btn) {
     if (tab === 'ratings') loadAdminRatingsPanel();
     if (tab === 'posts') loadAdminPostsList(false);
     if (tab === 'appeals') loadAdminAppeals(false);
+    if (tab === 'compensation') loadAdminCompensation();
     if (tab === 'game') initGameModerationTab();
     if (tab === 'playtime' && typeof initPlaytimeTransfer === 'function') initPlaytimeTransfer();
     if (tab === 'admins') loadAdminList();
@@ -224,6 +226,62 @@ async function loadAdminStats() {
             </div>`;
     } catch (e) {
         container.innerHTML = `<p class="error">${escapeHtml(e.message)}</p>`;
+    }
+}
+
+function formatCompensationAdminRemaining(seconds) {
+    const sec = Math.max(0, seconds | 0);
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    if (h > 0) return `${h} ч ${m} мин`;
+    if (m > 0) return `${m} мин`;
+    return `${sec} сек`;
+}
+
+async function loadAdminCompensation() {
+    const statusEl = document.getElementById('adminCompensationStatus');
+    if (!statusEl) return;
+    try {
+        const data = await apiCall('GET', '/api/admin/compensation');
+        if (!data.active) {
+            statusEl.innerHTML = '<p class="empty-state">Сейчас раздача компенсации не активна</p>';
+            return;
+        }
+        const ends = data.ends_at ? new Date(data.ends_at).toLocaleString('ru-RU') : '—';
+        statusEl.innerHTML = `
+            <div class="stats-grid admin-stats-grid">
+                <div class="stat-item"><div class="stat-value">${data.amount ?? 0}</div><div class="stat-label">Монет</div></div>
+                <div class="stat-item"><div class="stat-value">${data.claims_count ?? 0}</div><div class="stat-label">Собрали</div></div>
+                <div class="stat-item"><div class="stat-value">${formatCompensationAdminRemaining(data.remaining_seconds)}</div><div class="stat-label">Осталось</div></div>
+            </div>
+            <p class="admin-hint">До ${escapeHtml(ends)} · открыл ${escapeHtml(data.created_by || '—')}</p>`;
+    } catch (e) {
+        statusEl.innerHTML = `<p class="error">${escapeHtml(e.message)}</p>`;
+    }
+}
+
+async function startAdminCompensation() {
+    const amount = parseInt(document.getElementById('adminCompensationAmount')?.value, 10);
+    const duration = parseInt(document.getElementById('adminCompensationDuration')?.value, 10);
+    const resultEl = document.getElementById('adminCompensationResult');
+    if (!amount || amount < 1) {
+        if (resultEl) resultEl.innerHTML = '<p class="error">Укажите сумму компенсации</p>';
+        return;
+    }
+    if (!duration || duration < 1) {
+        if (resultEl) resultEl.innerHTML = '<p class="error">Укажите длительность в минутах</p>';
+        return;
+    }
+    try {
+        await apiCall('POST', '/api/admin/compensation', {
+            amount,
+            duration_minutes: duration,
+        });
+        if (resultEl) resultEl.innerHTML = '<p class="success">Раздача компенсации открыта</p>';
+        await loadAdminCompensation();
+        if (typeof loadCompensation === 'function') loadCompensation();
+    } catch (e) {
+        if (resultEl) resultEl.innerHTML = `<p class="error">${escapeHtml(e.message)}</p>`;
     }
 }
 

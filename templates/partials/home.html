@@ -25,6 +25,29 @@
     </div>
 </div>
 
+<div class="card compensation-card" id="compensationCard" hidden>
+    <div class="compensation-card-inner">
+        <div class="compensation-card-text">
+            <h2><i class="fa-solid fa-gift"></i> Раздача компенсации</h2>
+            <p class="compensation-hint">Сервер падал — забирайте компенсацию, пока идёт раздача</p>
+            <div class="compensation-amount">
+                <span id="compensationAmount">0</span>
+                <img src="/static/coin.png" class="coin-icon-result" alt="">
+            </div>
+            <div class="compensation-timer-wrap">
+                <span class="compensation-timer-label">Осталось</span>
+                <span class="compensation-timer" id="compensationTimer">00:00:00</span>
+            </div>
+        </div>
+        <div class="compensation-card-actions">
+            <button type="button" class="compensation-collect-btn" id="compensationCollectBtn" onclick="claimCompensation()">
+                Собрать компенсацию
+            </button>
+            <div id="compensationResult" class="result"></div>
+        </div>
+    </div>
+</div>
+
 <div class="server-widget card" id="serverStatus">
     <div class="server-widget-header">
         <div class="server-status-badge" id="serverStatusBadge">

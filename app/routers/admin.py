@@ -15,6 +15,7 @@ from app.services.appeals import list_appeals, review_appeal
 from app.services.avatars import resolve_avatar_url
 from app.services.social import get_feed_posts
 from app.services.admin_rating import list_admin_help_ratings, delete_admin_help_rating, get_admin_rating_leaderboard
+from app.services.compensation import get_admin_compensation_status, start_compensation_giveaway
 import database_social as social_db
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -43,6 +44,11 @@ class CreateRoleBanRequest(BaseModel):
     role_ids: list[str] | None = None
     reason: str
     length_minutes: int = 0
+
+
+class StartCompensationRequest(BaseModel):
+    amount: int
+    duration_minutes: int
 
 
 def _admin_game_uuid(admin: dict) -> str | None:
@@ -88,6 +94,26 @@ async def admin_delete_rating(rating_id: int, request: Request):
 async def admin_stats(request: Request):
     await get_current_admin(request)
     return await get_site_statistics()
+
+
+@router.get("/compensation")
+async def admin_compensation_status(request: Request):
+    await get_current_admin(request)
+    return get_admin_compensation_status()
+
+
+@router.post("/compensation")
+async def admin_start_compensation(req: StartCompensationRequest, request: Request):
+    admin = await get_current_admin(request)
+    try:
+        data = start_compensation_giveaway(
+            req.amount,
+            req.duration_minutes,
+            admin.get("username", "admin"),
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"success": True, **data}
 
 
 @router.get("/users")
