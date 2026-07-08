@@ -237,25 +237,92 @@ function formatCompensationAdminRemaining(seconds) {
     return `${sec} сек`;
 }
 
+function formatCompensationDate(value) {
+    if (!value) return '—';
+    const dt = new Date(value);
+    if (Number.isNaN(dt.getTime())) return escapeHtml(String(value));
+    return dt.toLocaleString('ru-RU');
+}
+
+function renderAdminCompensationCurrent(current) {
+    if (!current?.active) {
+        return '<p class="empty-state">Сейчас раздача компенсации не активна</p>';
+    }
+    const ends = formatCompensationDate(current.ends_at);
+    return `
+        <h3 class="admin-stats-heading"><i class="fa-solid fa-bolt"></i> Текущая раздача</h3>
+        <div class="stats-grid admin-stats-grid">
+            <div class="stat-item"><div class="stat-value">${current.amount ?? 0}</div><div class="stat-label">Монет за сбор</div></div>
+            <div class="stat-item"><div class="stat-value">${current.claims_count ?? 0}</div><div class="stat-label">Уже собрали</div></div>
+            <div class="stat-item"><div class="stat-value">${formatCompensationAdminRemaining(current.remaining_seconds)}</div><div class="stat-label">Осталось</div></div>
+        </div>
+        <p class="admin-hint">До ${ends} · открыл ${escapeHtml(current.created_by || '—')}</p>`;
+}
+
+function renderAdminCompensationSummary(summary) {
+    const s = summary || {};
+    return `
+        <div class="stats-grid admin-stats-grid">
+            <div class="stat-item"><div class="stat-value">${s.total_giveaways ?? 0}</div><div class="stat-label">Раздач всего</div></div>
+            <div class="stat-item"><div class="stat-value">${s.total_coins_distributed ?? 0}</div><div class="stat-label">Монет раздали</div></div>
+            <div class="stat-item"><div class="stat-value">${s.total_claims ?? 0}</div><div class="stat-label">Сборов</div></div>
+            <div class="stat-item"><div class="stat-value">${s.unique_players ?? 0}</div><div class="stat-label">Уникальных игроков</div></div>
+        </div>`;
+}
+
+function renderAdminCompensationHistory(history) {
+    const rows = history || [];
+    if (!rows.length) {
+        return '<p class="empty-state">История раздач пока пуста</p>';
+    }
+    return `
+        <div class="admin-visits-table-wrap table-scroll compensation-history-table-wrap">
+            <table class="admin-visits-table compensation-history-table">
+                <thead>
+                    <tr>
+                        <th>Дата открытия</th>
+                        <th>Окончание</th>
+                        <th>Монет</th>
+                        <th>Собрали</th>
+                        <th>Раздали</th>
+                        <th>Кто открыл</th>
+                        <th>Статус</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${rows.map(item => `
+                        <tr>
+                            <td>${formatCompensationDate(item.created_at)}</td>
+                            <td>${formatCompensationDate(item.ends_at)}</td>
+                            <td>${item.amount ?? 0}</td>
+                            <td>${item.claims_count ?? 0}</td>
+                            <td>${item.coins_distributed ?? 0}</td>
+                            <td>${escapeHtml(item.created_by || '—')}</td>
+                            <td><span class="compensation-status-badge ${item.is_active ? 'active' : 'ended'}">${item.is_active ? 'Активна' : 'Завершена'}</span></td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>`;
+}
+
 async function loadAdminCompensation() {
     const statusEl = document.getElementById('adminCompensationStatus');
+    const summaryEl = document.getElementById('adminCompensationSummary');
+    const historyEl = document.getElementById('adminCompensationHistory');
     if (!statusEl) return;
+    if (summaryEl) summaryEl.innerHTML = '<p class="empty-state">Загрузка...</p>';
+    if (historyEl) historyEl.innerHTML = '<p class="empty-state">Загрузка...</p>';
     try {
         const data = await apiCall('GET', '/api/admin/compensation');
-        if (!data.active) {
-            statusEl.innerHTML = '<p class="empty-state">Сейчас раздача компенсации не активна</p>';
-            return;
-        }
-        const ends = data.ends_at ? new Date(data.ends_at).toLocaleString('ru-RU') : '—';
-        statusEl.innerHTML = `
-            <div class="stats-grid admin-stats-grid">
-                <div class="stat-item"><div class="stat-value">${data.amount ?? 0}</div><div class="stat-label">Монет</div></div>
-                <div class="stat-item"><div class="stat-value">${data.claims_count ?? 0}</div><div class="stat-label">Собрали</div></div>
-                <div class="stat-item"><div class="stat-value">${formatCompensationAdminRemaining(data.remaining_seconds)}</div><div class="stat-label">Осталось</div></div>
-            </div>
-            <p class="admin-hint">До ${escapeHtml(ends)} · открыл ${escapeHtml(data.created_by || '—')}</p>`;
+        statusEl.innerHTML = renderAdminCompensationCurrent(data.current || {});
+        if (summaryEl) summaryEl.innerHTML = renderAdminCompensationSummary(data.summary);
+        if (historyEl) historyEl.innerHTML = renderAdminCompensationHistory(data.history);
     } catch (e) {
-        statusEl.innerHTML = `<p class="error">${escapeHtml(e.message)}</p>`;
+        const err = `<p class="error">${escapeHtml(e.message)}</p>`;
+        statusEl.innerHTML = err;
+        if (summaryEl) summaryEl.innerHTML = err;
+        if (historyEl) historyEl.innerHTML = err;
     }
 }
 

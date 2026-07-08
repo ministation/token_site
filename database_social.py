@@ -1559,3 +1559,63 @@ def count_compensation_claims(giveaway_id: int) -> int:
     count = int(cursor.fetchone()[0] or 0)
     conn.close()
     return count
+
+
+def get_compensation_summary() -> Dict:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) FROM compensation_giveaways")
+    total_giveaways = int(cursor.fetchone()[0] or 0)
+    cursor.execute("SELECT COUNT(*) FROM compensation_claims")
+    total_claims = int(cursor.fetchone()[0] or 0)
+    cursor.execute("SELECT COUNT(DISTINCT user_uuid) FROM compensation_claims")
+    unique_players = int(cursor.fetchone()[0] or 0)
+    cursor.execute("""
+        SELECT COALESCE(SUM(g.amount * sub.cnt), 0)
+        FROM compensation_giveaways g
+        JOIN (
+            SELECT giveaway_id, COUNT(*) AS cnt
+            FROM compensation_claims
+            GROUP BY giveaway_id
+        ) sub ON sub.giveaway_id = g.id
+    """)
+    total_coins = int(cursor.fetchone()[0] or 0)
+    conn.close()
+    return {
+        "total_giveaways": total_giveaways,
+        "total_claims": total_claims,
+        "unique_players": unique_players,
+        "total_coins_distributed": total_coins,
+    }
+
+
+def get_compensation_history(limit: int = 100) -> List[Dict]:
+    now = datetime.utcnow().replace(microsecond=0).isoformat()
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT
+            g.id,
+            g.amount,
+            g.ends_at,
+            g.created_by,
+            g.created_at,
+            COUNT(c.user_uuid) AS claims_count
+        FROM compensation_giveaways g
+        LEFT JOIN compensation_claims c ON c.giveaway_id = g.id
+        GROUP BY g.id
+        ORDER BY g.created_at DESC
+        LIMIT ?
+        """,
+        (limit,),
+    )
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    for row in rows:
+        claims = int(row.get("claims_count") or 0)
+        amount = int(row.get("amount") or 0)
+        row["claims_count"] = claims
+        row["coins_distributed"] = amount * claims
+        row["is_active"] = (row.get("ends_at") or "") > now
+    return rows

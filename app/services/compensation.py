@@ -48,9 +48,41 @@ def get_public_compensation(user_uuid: Optional[str] = None) -> dict:
 
 def get_admin_compensation_status() -> dict:
     row = social_db.get_active_compensation_giveaway()
-    if not row:
-        return {"active": False}
-    return _serialize_giveaway(row)
+    current = _serialize_giveaway(row) if row else None
+    if current:
+        current["active"] = current["remaining_seconds"] > 0
+    else:
+        current = {"active": False}
+    return {
+        "current": current,
+        "summary": social_db.get_compensation_summary(),
+        "history": [
+            _serialize_history_item(item)
+            for item in social_db.get_compensation_history()
+        ],
+    }
+
+
+def _serialize_history_item(row: dict) -> dict:
+    created_at = row.get("created_at")
+    ends_at = _parse_ends_at(row["ends_at"])
+    created_dt = None
+    if created_at:
+        try:
+            created_dt = _parse_ends_at(str(created_at))
+        except ValueError:
+            created_dt = None
+    now = datetime.datetime.utcnow()
+    return {
+        "id": row["id"],
+        "amount": row["amount"],
+        "created_at": created_dt.isoformat() if created_dt else created_at,
+        "ends_at": ends_at.isoformat(),
+        "created_by": row.get("created_by"),
+        "claims_count": row.get("claims_count", 0),
+        "coins_distributed": row.get("coins_distributed", 0),
+        "is_active": bool(row.get("is_active")) and ends_at > now,
+    }
 
 
 def start_compensation_giveaway(amount: int, duration_minutes: int, created_by: str) -> dict:
