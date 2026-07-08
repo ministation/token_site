@@ -10,7 +10,7 @@ let gameSelectedPlayer = null;
 function showAdminTab(tab, btn) {
     document.querySelectorAll('.admin-tab-content').forEach(el => el.style.display = 'none');
     const map = {
-        stats: 'adminStatsTab', ratings: 'adminRatingsTab', posts: 'adminPostsTab',
+        stats: 'adminStatsTab', ratings: 'adminRatingsTab',
         appeals: 'adminAppealsTab', compensation: 'adminCompensationTab',
         game: 'adminGameTab', playtime: 'adminPlaytimeTab',
         admins: 'adminAdminsTab'
@@ -21,7 +21,6 @@ function showAdminTab(tab, btn) {
     if (btn) btn.classList.add('active');
     if (tab === 'stats') loadAdminStats();
     if (tab === 'ratings') loadAdminRatingsPanel();
-    if (tab === 'posts') loadAdminPostsList(false);
     if (tab === 'appeals') loadAdminAppeals(false);
     if (tab === 'compensation') loadAdminCompensation();
     if (tab === 'game') initGameModerationTab();

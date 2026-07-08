@@ -5,7 +5,6 @@
     <div class="admin-tabs">
         <button type="button" class="tab active" data-admin-only onclick="showAdminTab('stats', this)">Метрика</button>
         <button type="button" class="tab" data-admin-only onclick="showAdminTab('ratings', this)">Рейтинг</button>
-        <button type="button" class="tab" data-admin-only onclick="showAdminTab('posts', this)">Форум</button>
         <button type="button" class="tab" data-admin-only onclick="showAdminTab('appeals', this)">Обжалования</button>
         <button type="button" class="tab" data-admin-only onclick="showAdminTab('compensation', this)">Компенсация</button>
         <button type="button" class="tab" data-admin-only onclick="showAdminTab('game', this)">Админ панель</button>
@@ -28,13 +27,6 @@
     </div>
 
     <div id="adminUsersTab" class="admin-tab-content" style="display:none;" hidden></div>
-
-    <div id="adminPostsTab" class="admin-tab-content" style="display:none;">
-        <div id="adminPostsList"><p class="empty-state">Загрузка...</p></div>
-        <div class="bans-load-more">
-            <button type="button" onclick="loadAdminPostsList(true)"><i class="fa-solid fa-angles-down"></i> Загрузить ещё</button>
-        </div>
-    </div>
 
     <div id="adminAppealsTab" class="admin-tab-content" style="display:none;">
         <div class="admin-inline-form">

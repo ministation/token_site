@@ -1421,7 +1421,7 @@ def get_global_chat_messages(limit: int = 100, after_id: int = 0) -> List[Dict]:
     return [dict(r) for r in rows]
 
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 
 def load_sessions_from_db() -> dict:
     """Загружает все активные сессии в словарь."""
@@ -1467,7 +1467,7 @@ def cleanup_expired_sessions(max_age_days: int = 30):
 # ---------- Компенсация за падение сервера ----------
 
 def create_compensation_giveaway(amount: int, duration_minutes: int, created_by: str) -> Dict:
-    ends_at = datetime.datetime.utcnow() + datetime.timedelta(minutes=duration_minutes)
+    ends_at = datetime.utcnow() + timedelta(minutes=duration_minutes)
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute(
@@ -1492,7 +1492,7 @@ def get_compensation_giveaway_by_id(giveaway_id: int) -> Optional[Dict]:
 
 
 def get_active_compensation_giveaway() -> Optional[Dict]:
-    now = datetime.datetime.utcnow().replace(microsecond=0).isoformat()
+    now = datetime.utcnow().replace(microsecond=0).isoformat()
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute(
