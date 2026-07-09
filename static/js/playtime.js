@@ -488,7 +488,7 @@ async function unlockAllPlaytimeRoles() {
         alert('Укажите ник игрока');
         return;
     }
-    if (!confirm('Добавить время на все роли, которым не хватает до разблокировки?')) return;
+    if (!confirm('Добавить по 50 ч на каждую роль и 50 ч общего времени?')) return;
 
     try {
         const data = await apiCall('POST', '/api/playtime/unlock-all', {

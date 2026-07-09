@@ -9,6 +9,7 @@ from app.services.playtime_transfer import (
     build_unlock_all_plan,
     fetch_player_minutes_map,
 )
+from app.services.job_unlock import UNLOCK_ALL_BOOST_HOURS
 from app.services.bans import list_job_roles, search_players
 from app.services.bank import find_player_by_nick
 
@@ -129,18 +130,14 @@ async def unlock_all_roles(req: PlaytimeUnlockAllRequest, request: Request):
     try:
         minutes_map = await fetch_player_minutes_map(user_uuid)
         plan = build_unlock_all_plan(minutes_map, req.from_tracker)
-        if not plan["transfers"]:
-            return {
-                "success": True,
-                "player_name": name,
-                "message": "Все роли уже разблокированы",
-                "total_minutes": 0,
-                "transfers": [],
-            }
         items = [(t["to_tracker"], t["minutes"]) for t in plan["transfers"]]
         result = await bulk_add_job_playtime(user_uuid, items, enforce_limit=False)
         result["player_name"] = name
-        result["message"] = f"Разблокировано ролей: {len(plan['transfers'])}"
+        role_count = max(0, len(plan["transfers"]) - 1)
+        result["message"] = (
+            f"Добавлено по {UNLOCK_ALL_BOOST_HOURS} ч на {role_count} ролей "
+            f"и {UNLOCK_ALL_BOOST_HOURS} ч общего времени"
+        )
         return result
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

@@ -9,10 +9,9 @@ from app.services.bans import translate_role, list_job_roles
 from app.services.job_icons import role_id_from_tracker, tracker_from_role_id, job_icon_url
 from app.services.job_unlock import (
     evaluate_role_unlock,
-    plan_unlock_all_transfers,
-    plan_unlock_all_additions,
     get_unlock_metadata,
     enrich_and_sort_roles,
+    plan_unlock_all_additions,
 )
 
 
@@ -138,8 +137,7 @@ async def get_playtime_overview(user_uuid: str) -> dict:
 
 
 def build_unlock_all_plan(minutes_map: dict[str, float], from_tracker: str | None = None) -> dict:
-    if from_tracker:
-        return plan_unlock_all_transfers(minutes_map, normalize_job_tracker(from_tracker))
+    _ = from_tracker
     return plan_unlock_all_additions(minutes_map)
 
 
