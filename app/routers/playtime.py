@@ -5,7 +5,7 @@ from app.dependencies import get_current_user
 from app.services.playtime_transfer import (
     get_playtime_overview,
     transfer_job_playtime,
-    bulk_transfer_job_playtime,
+    bulk_add_job_playtime,
     build_unlock_all_plan,
     fetch_player_minutes_map,
 )
@@ -17,9 +17,9 @@ router = APIRouter(prefix="/api/playtime", tags=["playtime"])
 
 class PlaytimeTransferRequest(BaseModel):
     player_nick: str
-    from_tracker: str
     to_tracker: str
     minutes: float = Field(gt=0)
+    from_tracker: str | None = None
 
 
 class PlaytimeBulkItem(BaseModel):
@@ -29,13 +29,13 @@ class PlaytimeBulkItem(BaseModel):
 
 class PlaytimeBulkTransferRequest(BaseModel):
     player_nick: str
-    from_tracker: str
     transfers: list[PlaytimeBulkItem] = Field(min_length=1)
+    from_tracker: str | None = None
 
 
 class PlaytimeUnlockAllRequest(BaseModel):
     player_nick: str
-    from_tracker: str
+    from_tracker: str | None = None
 
 
 def _can_manage_playtime(user: dict) -> bool:
@@ -46,7 +46,7 @@ def _require_manager(user: dict) -> None:
     if not _can_manage_playtime(user):
         raise HTTPException(
             status_code=403,
-            detail="Перенос времени доступен хранителям времени и администраторам",
+            detail="Накрутка времени доступна хранителям времени и администраторам",
         )
 
 
@@ -99,7 +99,7 @@ async def transfer_playtime(req: PlaytimeTransferRequest, request: Request):
     user_uuid, name = await _resolve_target_uuid(req.player_nick)
     try:
         result = await transfer_job_playtime(
-            user_uuid, req.from_tracker, req.to_tracker, req.minutes,
+            user_uuid, req.from_tracker or "", req.to_tracker, req.minutes,
         )
         result["player_name"] = name
         return result
@@ -114,7 +114,7 @@ async def transfer_playtime_bulk(req: PlaytimeBulkTransferRequest, request: Requ
     user_uuid, name = await _resolve_target_uuid(req.player_nick)
     try:
         items = [(item.to_tracker, item.minutes) for item in req.transfers]
-        result = await bulk_transfer_job_playtime(user_uuid, req.from_tracker, items)
+        result = await bulk_add_job_playtime(user_uuid, items)
         result["player_name"] = name
         return result
     except ValueError as e:
@@ -137,13 +137,8 @@ async def unlock_all_roles(req: PlaytimeUnlockAllRequest, request: Request):
                 "total_minutes": 0,
                 "transfers": [],
             }
-        if plan["total_minutes"] > plan["available_minutes"]:
-            raise ValueError(
-                f"Недостаточно времени на «{plan['from_label']}»: "
-                f"нужно {plan['total_minutes']} мин, доступно {plan['available_minutes']} мин"
-            )
         items = [(t["to_tracker"], t["minutes"]) for t in plan["transfers"]]
-        result = await bulk_transfer_job_playtime(user_uuid, req.from_tracker, items)
+        result = await bulk_add_job_playtime(user_uuid, items)
         result["player_name"] = name
         result["message"] = f"Разблокировано ролей: {len(plan['transfers'])}"
         return result

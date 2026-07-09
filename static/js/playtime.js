@@ -129,7 +129,7 @@ function renderPlaytimeRolesTable() {
                         <th>Роль</th>
                         <th>Сейчас</th>
                         <th>Статус</th>
-                        <th>Перенести (мин)</th>
+                        <th>Добавить (мин)</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -139,30 +139,6 @@ function renderPlaytimeRolesTable() {
         </div>
         <p class="playtime-unlock-hint">Требования из билда <a href="https://github.com/ministation/mini-station-goob" target="_blank" rel="noopener">mini-station-goob</a>. Наведите на «−N м» для условия.</p>
     `;
-}
-
-function renderPlaytimeSources() {
-    const select = document.getElementById('playtimeFromTracker');
-    const row = document.getElementById('playtimeSourceRow');
-    if (!select || !row) return;
-
-    const sources = playtimeOverview?.sources || [];
-    if (!sources.length) {
-        row.hidden = true;
-        select.innerHTML = '';
-        return;
-    }
-
-    row.hidden = false;
-    const current = select.value;
-    select.innerHTML = sources.map(s => `
-        <option value="${escapeHtml(s.tracker)}">
-            ${escapeHtml(s.label)} — ${escapeHtml(s.time_text)}
-        </option>
-    `).join('');
-    if (current && sources.some(s => s.tracker === current)) {
-        select.value = current;
-    }
 }
 
 function getPlaytimeRole(tracker) {
@@ -187,9 +163,8 @@ function setPlaytimeRoleMinutes(tracker, value) {
 function togglePlaytimeSelectAll() {
     const checked = document.getElementById('playtimeSelectAll')?.checked;
     if (!playtimeOverview?.roles) return;
-    const fromTracker = document.getElementById('playtimeFromTracker')?.value;
     for (const role of playtimeOverview.roles) {
-        if (role._hidden || role.tracker === fromTracker) continue;
+        if (role._hidden) continue;
         role._selected = !!checked;
     }
     renderPlaytimeRolesTable();
@@ -397,32 +372,26 @@ function applyPlaytimeBulkMinutes() {
         alert('Укажите количество минут');
         return;
     }
-    const fromTracker = document.getElementById('playtimeFromTracker')?.value;
     if (!playtimeOverview?.roles) return;
     for (const role of playtimeOverview.roles) {
-        if (!role._selected || role.tracker === fromTracker) continue;
+        if (!role._selected) continue;
         role._transferMinutes = minutes;
     }
     renderPlaytimeRolesTable();
 }
 
 function collectPlaytimeTransfers() {
-    const fromTracker = document.getElementById('playtimeFromTracker')?.value;
-    if (!fromTracker) {
-        throw new Error('Выберите роль, откуда переносить время');
-    }
     const transfers = [];
     for (const role of playtimeOverview?.roles || []) {
-        if (role.tracker === fromTracker) continue;
         if (!role._selected) continue;
         const minutes = parseFloat(role._transferMinutes);
         if (!minutes || minutes <= 0) continue;
         transfers.push({ to_tracker: role.tracker, minutes });
     }
     if (!transfers.length) {
-        throw new Error('Отметьте роли и укажите минуты для переноса');
+        throw new Error('Отметьте роли и укажите минуты для добавления');
     }
-    return { fromTracker, transfers };
+    return { transfers };
 }
 
 async function ensurePlaytimeRoleCatalog() {
@@ -483,14 +452,11 @@ async function loadPlaytimeOverview() {
             title.innerHTML = `Игрок: <strong>${escapeHtml(data.player_name || nick)}</strong> · ролей в списке: ${playtimeOverview.roles.length}`;
         }
         if (toolbar) toolbar.hidden = false;
-        renderPlaytimeSources();
         renderPlaytimeRolesTable();
     } catch (e) {
         playtimeOverview = null;
         if (table) table.innerHTML = `<p class="error">${escapeHtml(e.message)}</p>`;
         if (toolbar) toolbar.hidden = true;
-        const sourceRow = document.getElementById('playtimeSourceRow');
-        if (sourceRow) sourceRow.hidden = true;
     }
 }
 
@@ -499,15 +465,14 @@ async function submitPlaytimeBulkTransfer() {
     const nick = document.getElementById('playtimePlayerNick')?.value.trim() || '';
 
     try {
-        const { fromTracker, transfers } = collectPlaytimeTransfers();
+        const { transfers } = collectPlaytimeTransfers();
         const data = await apiCall('POST', '/api/playtime/transfer/bulk', {
             player_nick: nick,
-            from_tracker: fromTracker,
             transfers,
         });
         const labels = data.transfers.map(t => `${t.to_label} (${t.minutes} м)`).join(', ');
         if (result) {
-            result.innerHTML = `<p class="success">Перенесено ${data.total_minutes} мин с «${escapeHtml(data.from_label)}» на: ${escapeHtml(labels)} (${escapeHtml(data.player_name || '')})</p>`;
+            result.innerHTML = `<p class="success">Добавлено ${data.total_minutes} мин: ${escapeHtml(labels)} (${escapeHtml(data.player_name || '')})</p>`;
         }
         await loadPlaytimeOverview();
     } catch (e) {
@@ -518,27 +483,21 @@ async function submitPlaytimeBulkTransfer() {
 async function unlockAllPlaytimeRoles() {
     const result = document.getElementById('playtimeTransferResult');
     const nick = document.getElementById('playtimePlayerNick')?.value.trim() || '';
-    const fromTracker = document.getElementById('playtimeFromTracker')?.value;
 
     if (!nick) {
         alert('Укажите ник игрока');
         return;
     }
-    if (!fromTracker) {
-        alert('Выберите роль, откуда переносить время');
-        return;
-    }
-    if (!confirm('Перенести время на все роли, которым не хватает до разблокировки?')) return;
+    if (!confirm('Добавить время на все роли, которым не хватает до разблокировки?')) return;
 
     try {
         const data = await apiCall('POST', '/api/playtime/unlock-all', {
             player_nick: nick,
-            from_tracker: fromTracker,
         });
         if (result) {
             const msg = data.message || 'Готово';
             const detail = data.total_minutes
-                ? ` Перенесено ${data.total_minutes} мин с «${data.from_label}».`
+                ? ` Добавлено ${data.total_minutes} мин.`
                 : '';
             result.innerHTML = `<p class="success">${escapeHtml(msg)}${escapeHtml(detail)} (${escapeHtml(data.player_name || '')})</p>`;
         }
@@ -549,21 +508,6 @@ async function unlockAllPlaytimeRoles() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    const fromSelect = document.getElementById('playtimeFromTracker');
-    if (fromSelect && !fromSelect.dataset.bound) {
-        fromSelect.dataset.bound = '1';
-        fromSelect.addEventListener('change', () => {
-            const fromTracker = fromSelect.value;
-            for (const role of playtimeOverview?.roles || []) {
-                if (role.tracker === fromTracker) {
-                    role._selected = false;
-                    role._transferMinutes = '';
-                }
-            }
-            renderPlaytimeRolesTable();
-        });
-    }
-
     document.addEventListener('click', (e) => {
         if (!e.target.closest('.playtime-search-wrap')) {
             hidePlaytimeRoleSuggestions();

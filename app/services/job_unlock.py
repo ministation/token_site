@@ -265,6 +265,71 @@ def evaluate_role_unlock(role_id: str, minutes_map: dict[str, float]) -> dict:
     }
 
 
+def plan_unlock_all_additions(minutes_map: dict[str, float]) -> dict:
+    """Сколько минут добавить на каждую роль/трекер, чтобы открыть все роли."""
+    data = _load_data()
+    state = _PlaytimeState(minutes_map, data["role_to_department"])
+    additions: dict[str, float] = {}
+
+    for _ in range(300):
+        progress = False
+        for job in data["jobs"].values():
+            if is_job_unlocked(job, state):
+                continue
+            for req in job.get("requirements", []):
+                if req.get("inverted") or req.get("type") not in TIME_REQ_TYPES:
+                    continue
+                if _check_time_requirement(req, state, job["tracker"]):
+                    continue
+
+                target_tracker = job["tracker"]
+                add_seconds = 0.0
+                if req["type"] == "DepartmentTimeRequirement":
+                    dept = req.get("department")
+                    add_seconds = float(req.get("time_seconds") or 0) - state.dept_seconds.get(dept, 0.0)
+                elif req["type"] == "OverallPlaytimeRequirement":
+                    target_tracker = "Overall"
+                    add_seconds = float(req.get("time_seconds") or 0) - state.overall_seconds
+                elif req["type"] == "OverallTimeRequirement":
+                    target_tracker = req.get("tracker") or job["tracker"]
+                    add_seconds = (
+                        float(req.get("time_seconds") or 0)
+                        - state.minutes_by_tracker.get(target_tracker, 0.0) * 60.0
+                    )
+                elif req["type"] == "RoleTimeRequirement":
+                    target_tracker = _role_tracker_from_req(req.get("role", "")) or job["tracker"]
+                    add_seconds = (
+                        float(req.get("time_seconds") or 0)
+                        - state.minutes_by_tracker.get(target_tracker, 0.0) * 60.0
+                    )
+
+                if add_seconds <= 0:
+                    continue
+
+                add_minutes = round(add_seconds / 60.0, 1)
+                additions[target_tracker] = round(additions.get(target_tracker, 0.0) + add_minutes, 1)
+                state.add_minutes(target_tracker, add_minutes)
+                progress = True
+                break
+        if not progress:
+            break
+
+    items = [
+        {
+            "to_tracker": tracker,
+            "to_label": translate_tracker_label(tracker),
+            "minutes": minutes,
+        }
+        for tracker, minutes in sorted(additions.items(), key=lambda item: item[0])
+        if minutes > 0
+    ]
+    total = round(sum(item["minutes"] for item in items), 1)
+    return {
+        "transfers": items,
+        "total_minutes": total,
+    }
+
+
 def plan_unlock_all_transfers(minutes_map: dict[str, float], from_tracker: str) -> dict:
     data = _load_data()
     state = _PlaytimeState(minutes_map, data["role_to_department"])

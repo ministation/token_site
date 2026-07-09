@@ -215,7 +215,7 @@
     </div>
 
     <div id="adminPlaytimeTab" class="admin-tab-content playtime-transfer-section" style="display:none;">
-        <p class="admin-hint">Перенос наигранного времени между ролями. Доступно хранителям времени и администраторам.</p>
+        <p class="admin-hint">Перенос времени на роли.</p>
 
         <label class="playtime-label" for="playtimePlayerNick">Игрок (ckey / ник)</label>
         <div class="playtime-keeper-row">
@@ -228,11 +228,6 @@
         </div>
 
         <p class="playtime-player-title" id="playtimePlayerTitle" hidden></p>
-
-        <div class="playtime-source-row" id="playtimeSourceRow" hidden>
-            <label class="playtime-label" for="playtimeFromTracker">Откуда переносить</label>
-            <select id="playtimeFromTracker"></select>
-        </div>
 
         <div class="playtime-toolbar" id="playtimeToolbar">
             <div class="playtime-search-wrap playtime-role-search-wrap">
@@ -252,7 +247,7 @@
                 <i class="fa-solid fa-unlock"></i> Разблокировать все роли
             </button>
             <button type="button" class="playtime-submit-btn" onclick="submitPlaytimeBulkTransfer()">
-                <i class="fa-solid fa-right-left"></i> Перенести выбранные
+                <i class="fa-solid fa-plus"></i> Добавить выбранным
             </button>
         </div>
 
