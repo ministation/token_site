@@ -138,7 +138,7 @@ async def unlock_all_roles(req: PlaytimeUnlockAllRequest, request: Request):
                 "transfers": [],
             }
         items = [(t["to_tracker"], t["minutes"]) for t in plan["transfers"]]
-        result = await bulk_add_job_playtime(user_uuid, items)
+        result = await bulk_add_job_playtime(user_uuid, items, enforce_limit=False)
         result["player_name"] = name
         result["message"] = f"Разблокировано ролей: {len(plan['transfers'])}"
         return result

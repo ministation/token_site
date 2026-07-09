@@ -146,6 +146,8 @@ def build_unlock_all_plan(minutes_map: dict[str, float], from_tracker: str | Non
 async def bulk_add_job_playtime(
     target_user_uuid: str,
     additions: list[tuple[str, float]],
+    *,
+    enforce_limit: bool = True,
 ) -> dict:
     uid = _parse_user_uuid(target_user_uuid)
     if not uid:
@@ -162,8 +164,11 @@ async def bulk_add_job_playtime(
         raise ValueError("Укажите хотя бы одну роль и количество минут")
 
     total = round(sum(minutes for _, minutes in normalized), 1)
-    if total > 24 * 60 * 30:
-        raise ValueError("Слишком большая накрутка за один раз")
+    max_boost = 24 * 60 * 365
+    if enforce_limit and total > max_boost:
+        raise ValueError(
+            f"Слишком большая накрутка за один раз ({total} мин, максимум {max_boost} мин)"
+        )
 
     pg = await get_pg_pool()
     async with pg.acquire() as conn:
