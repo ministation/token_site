@@ -182,7 +182,32 @@ function showSection(sectionId) {
     document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
     const target = document.getElementById(sectionId + 'Section');
     if (target) target.classList.add('active');
+    document.body.classList.toggle('section-chat', sectionId === 'chat');
+    document.body.classList.toggle('section-messages', sectionId === 'messages');
+    if (sectionId === 'chat' || sectionId === 'messages') {
+        requestAnimationFrame(() => syncPanelHeightToSidebar(sectionId));
+    }
     if (sectionId !== 'messages' && typeof stopPmPolling === 'function') stopPmPolling();
     if (sectionId !== 'chat' && typeof stopGlobalChatPolling === 'function') stopGlobalChatPolling();
     if (sectionId !== 'chat' && typeof stopChatUsersPolling === 'function') stopChatUsersPolling();
 }
+
+function syncPanelHeightToSidebar(sectionId) {
+    if (window.matchMedia('(max-width: 900px)').matches) return;
+    const sidebar = document.getElementById('mainNav');
+    if (!sidebar) return;
+    const shell = sectionId === 'messages'
+        ? document.querySelector('#messagesSection .dc-shell')
+        : document.querySelector('#chatSection .dc-shell');
+    if (!shell) return;
+    const h = Math.round(sidebar.getBoundingClientRect().height);
+    if (h < 200) return;
+    shell.style.height = `${h}px`;
+    shell.style.maxHeight = 'none';
+    shell.style.minHeight = '0';
+}
+
+window.addEventListener('resize', () => {
+    if (document.body.classList.contains('section-chat')) syncPanelHeightToSidebar('chat');
+    else if (document.body.classList.contains('section-messages')) syncPanelHeightToSidebar('messages');
+});

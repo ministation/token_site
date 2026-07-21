@@ -5239,7 +5239,6 @@ label.chat-tool-btn input[type="file"] {
     gap: 16px;
     min-width: 0;
     max-width: 100%;
-    overflow-x: clip;
     padding-bottom: 24px;
 }
 .donate-hero { padding: 18px 20px !important; }
@@ -5284,10 +5283,11 @@ label.chat-tool-btn input[type="file"] {
 
 .donate-shell {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 320px);
     gap: 16px;
     align-items: start;
     min-width: 0;
+    width: 100%;
 }
 .donate-catalog { min-width: 0; }
 .donate-tiers {
@@ -5428,10 +5428,16 @@ label.chat-tool-btn input[type="file"] {
 .donate-checkout {
     position: sticky;
     top: 88px;
-    padding: 16px !important;
+    padding: 16px;
     min-width: 0;
     max-width: 100%;
-    overflow: hidden;
+    width: 100%;
+    box-sizing: border-box;
+    overflow: visible;
+    background: var(--panel);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-hard);
 }
 .donate-checkout h2 {
     margin: 0 0 12px;
@@ -5491,7 +5497,7 @@ label.chat-tool-btn input[type="file"] {
 }
 .donate-method-option {
     display: grid;
-    grid-template-columns: auto 40px minmax(0, 1fr);
+    grid-template-columns: 18px minmax(52px, 72px) minmax(0, 1fr);
     gap: 10px;
     align-items: center;
     padding: 10px 12px;
@@ -5500,7 +5506,10 @@ label.chat-tool-btn input[type="file"] {
     background: var(--panel-2);
     cursor: pointer;
     min-height: 52px;
+    box-sizing: border-box;
+    width: 100%;
 }
+.donate-method-option.is-active,
 .donate-method-option:has(input:checked) {
     border-color: var(--accent);
     box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent);
@@ -5511,10 +5520,13 @@ label.chat-tool-btn input[type="file"] {
     height: 18px;
 }
 .donate-method-icon {
-    width: 40px;
-    height: 28px;
+    width: 72px;
+    max-width: 100%;
+    height: 32px;
     object-fit: contain;
-    border-radius: 4px;
+    object-position: left center;
+    border-radius: 0;
+    background: transparent;
 }
 .donate-method-text {
     min-width: 0;
@@ -5575,7 +5587,7 @@ label.chat-tool-btn input[type="file"] {
 
 @media (max-width: 900px) {
     .donate-shell { grid-template-columns: 1fr; }
-    .donate-checkout { position: static; }
+    .donate-checkout { position: static; width: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {

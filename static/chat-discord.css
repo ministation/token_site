@@ -5,12 +5,49 @@
 .dc-shell {
     display: flex;
     flex-direction: column;
-    /* До низа вьюпорта — на уровне нижней границы боковой панели */
-    height: calc(100dvh - 124px);
+    height: 100%;
     max-height: none;
-    min-height: 420px;
+    min-height: 0;
     padding: 0 !important;
     overflow: hidden;
+}
+
+/* Чат по высоте = боковая панель (навигация + ссылки) */
+body.section-chat .layout,
+body.section-messages .layout {
+    align-items: stretch;
+}
+
+body.section-chat .content,
+body.section-messages .content {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    align-self: stretch;
+}
+
+body.section-chat #chatSection.active,
+body.section-messages #messagesSection.active {
+    flex: 1 1 auto;
+    display: flex !important;
+    flex-direction: column;
+    min-height: 0;
+    height: auto;
+}
+
+body.section-chat .dc-shell,
+body.section-messages .messages-page.dc-shell {
+    flex: 1 1 auto;
+    /* высоту выставляет syncPanelHeightToSidebar() = низ блока «Ссылки» */
+    max-height: none !important;
+    min-height: 0 !important;
+}
+
+body.section-chat .sidebar,
+body.section-messages .sidebar {
+    align-self: stretch;
+    height: auto;
 }
 
 .dc-channel-header {
@@ -596,9 +633,9 @@ button.dc-name:hover {
 }
 
 .messages-page.dc-shell {
-    height: calc(100dvh - 124px);
+    height: 100%;
     max-height: none;
-    min-height: 420px;
+    min-height: 0;
 }
 
 .messages-page.dc-shell .messages-page-header.dc-channel-header {
@@ -715,6 +752,17 @@ button.dc-name:hover {
         height: calc(100dvh - 112px);
         max-height: none;
         min-height: 360px;
+    }
+
+    body.section-chat .layout,
+    body.section-messages .layout {
+        align-items: flex-start;
+    }
+
+    body.section-chat .dc-shell,
+    body.section-messages .messages-page.dc-shell {
+        height: calc(100dvh - 112px) !important;
+        min-height: 360px !important;
     }
 
     .dc-layout.chat-with-users-layout {

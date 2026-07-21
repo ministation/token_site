@@ -104,7 +104,7 @@ PAYMENT_METHODS = [
         "id": 2,
         "label": "СБП / QR",
         "hint": "Быстрый перевод через СБП",
-        "icon": "/static/payment/sbp.svg",
+        "icon": "/static/payment/sbp.png",
     },
     {
         "id": 10,

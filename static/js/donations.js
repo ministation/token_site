@@ -61,11 +61,11 @@ function renderDonateMethods() {
     if (!list || !donateCatalog) return;
     const methods = donateCatalog.methods || [];
     list.innerHTML = methods.map(m => `
-        <label class="donate-method-option">
+        <label class="donate-method-option${Number(m.id) === Number(selectedDonateMethod) ? ' is-active' : ''}">
             <input type="radio" name="donateMethod" value="${m.id}"
                 ${Number(m.id) === Number(selectedDonateMethod) ? 'checked' : ''}
-                onchange="selectedDonateMethod = Number(this.value)">
-            <img class="donate-method-icon" src="${escapeHtml(m.icon || '')}" alt="" width="40" height="28"
+                onchange="selectedDonateMethod = Number(this.value); document.querySelectorAll('.donate-method-option').forEach(el => el.classList.toggle('is-active', el.querySelector('input')?.checked));">
+            <img class="donate-method-icon" src="${escapeHtml(m.icon || '')}" alt=""
                 onerror="this.style.display='none'">
             <span class="donate-method-text">
                 <strong>${escapeHtml(m.label)}</strong>
