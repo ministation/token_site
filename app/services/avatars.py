@@ -11,6 +11,17 @@ def resolve_avatar_url(user: dict | None) -> str:
     path = user.get("avatar_path")
     if path and (path.startswith("/static/") or path.startswith("http")):
         return path
+    discord_id = user.get("discord_id")
+    avatar_hash = user.get("discord_avatar")
+    if (
+        discord_id
+        and avatar_hash
+        and isinstance(avatar_hash, str)
+        and not avatar_hash.startswith("/")
+        and not avatar_hash.startswith("http")
+    ):
+        ext = "gif" if avatar_hash.startswith("a_") else "png"
+        return f"https://cdn.discordapp.com/avatars/{discord_id}/{avatar_hash}.{ext}?size=128"
     return DEFAULT_AVATAR
 
 

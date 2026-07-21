@@ -268,7 +268,7 @@ async def admin_all_bans(
     player: str = Query(""),
     q: str = Query(""),
 ):
-    await get_current_admin(request)
+    await get_current_staff(request)
     if ban_type is not None and ban_type not in (0, 1):
         raise HTTPException(status_code=400, detail="Некорректный тип бана")
     if status not in ("all", "active", "expired"):
@@ -286,7 +286,7 @@ async def admin_all_bans(
 
 @router.post("/bans/server")
 async def admin_create_server_ban(req: CreateServerBanRequest, request: Request):
-    admin = await get_current_admin(request)
+    admin = await get_current_staff(request)
     try:
         result = await create_server_ban(
             _admin_game_uuid(admin),
@@ -302,7 +302,7 @@ async def admin_create_server_ban(req: CreateServerBanRequest, request: Request)
 
 @router.post("/bans/role")
 async def admin_create_role_ban(req: CreateRoleBanRequest, request: Request):
-    admin = await get_current_admin(request)
+    admin = await get_current_staff(request)
     role_ids = [r.strip() for r in (req.role_ids or []) if r and r.strip()]
     if not role_ids and req.role_id:
         role_ids = [req.role_id.strip()]
@@ -325,7 +325,7 @@ async def admin_create_role_ban(req: CreateRoleBanRequest, request: Request):
 
 @router.post("/bans/{ban_id}/unban")
 async def admin_unban(ban_id: int, request: Request):
-    admin = await get_current_admin(request)
+    admin = await get_current_staff(request)
     ok = await unban_ban(ban_id, _admin_game_uuid(admin))
     if not ok:
         raise HTTPException(status_code=404, detail="Бан не найден")
@@ -334,13 +334,13 @@ async def admin_unban(ban_id: int, request: Request):
 
 @router.get("/game/players/search")
 async def admin_search_players(request: Request, q: str = Query("", min_length=2)):
-    await get_current_admin(request)
+    await get_current_staff(request)
     return await search_players(q)
 
 
 @router.get("/game/players/{user_uuid}")
 async def admin_player_profile(request: Request, user_uuid: str):
-    await get_current_admin(request)
+    await get_current_staff(request)
     profile = await get_full_player_dossier(user_uuid)
     if not profile:
         raise HTTPException(status_code=404, detail="Игрок не найден")
@@ -349,7 +349,7 @@ async def admin_player_profile(request: Request, user_uuid: str):
 
 @router.get("/game/jobs")
 async def admin_job_list(request: Request):
-    await get_current_admin(request)
+    await get_current_staff(request)
     return list_job_roles()
 
 

@@ -129,7 +129,7 @@ def _build_ghost_image_index() -> dict[str, str]:
             continue
         folder = entry[:-4]
         img_file = None
-        for fname in ("animated.png", "icon.png"):
+        for fname in ("icon.png", "animated.png"):
             if os.path.isfile(os.path.join(dirpath, fname)):
                 img_file = fname
                 break

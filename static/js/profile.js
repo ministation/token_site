@@ -172,7 +172,8 @@ function showProfileUserList(title, users) {
         </div>
         ${users.map(u => `
             <button type="button" class="profile-user-list-item" onclick="openProfile(${JSON.stringify(u.player_id)})">
-                <img src="${u.discord_avatar || '/static/default_avatar.png'}" alt="" onerror="this.src='/static/default_avatar.png'">
+                <img src="${escapeHtml(u.discord_avatar || '/static/default_avatar.png')}" alt=""
+                     onerror="this.onerror=null;this.src='/static/default_avatar.png'">
                 <span>${escapeHtml(u.game_nickname || u.discord_username || 'Игрок')}</span>
             </button>
         `).join('')}

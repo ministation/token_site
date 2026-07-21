@@ -31,7 +31,7 @@ async def get_current_admin(request: Request) -> dict:
 
 
 async def get_current_staff(request: Request) -> dict:
-    """Администратор или модератор (обжалования)."""
+    """Администратор или модератор (игровая панель и обжалования)."""
     user = await get_current_user(request)
     if not user.get("is_moderator"):
         raise HTTPException(status_code=403, detail="Доступ только для модерации")

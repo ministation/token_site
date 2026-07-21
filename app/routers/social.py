@@ -295,13 +295,29 @@ async def api_unfollow(request: Request, target_player_id: str):
 @router.get("/followers/{player_id}")
 async def api_get_followers(player_id: str, limit: int = 20):
     followers = get_followers(player_id, limit)
-    return followers
+    return [
+        {
+            "player_id": u["player_id"],
+            "game_nickname": u.get("game_nickname"),
+            "discord_username": u.get("discord_username"),
+            "discord_avatar": profile_avatar(u),
+        }
+        for u in followers
+    ]
 
 
 @router.get("/following/{player_id}")
 async def api_get_following(player_id: str, limit: int = 20):
     following = get_following(player_id, limit)
-    return following
+    return [
+        {
+            "player_id": u["player_id"],
+            "game_nickname": u.get("game_nickname"),
+            "discord_username": u.get("discord_username"),
+            "discord_avatar": profile_avatar(u),
+        }
+        for u in following
+    ]
 
 
 # ==================== ПОИСК ====================

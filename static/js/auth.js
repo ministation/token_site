@@ -31,7 +31,6 @@ async function checkAuth() {
             }
             updateAuthUI();
             if (typeof initAdminPanel === 'function') initAdminPanel();
-            if (typeof initModeratorPanel === 'function') initModeratorPanel();
             if (typeof refreshAdminRatingIfVisible === 'function') refreshAdminRatingIfVisible();
             if (typeof startNotificationPolling === 'function') startNotificationPolling();
             if (typeof loadCompensation === 'function') loadCompensation();

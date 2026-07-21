@@ -52,12 +52,8 @@ function canAccessSection(section, opts = {}) {
             return false;
         }
     }
-    if (section === 'admin' && !currentUser?.is_admin && !currentUser?.is_time_keeper) {
-        alert('Доступ только для администраторов и хранителей времени');
-        return false;
-    }
-    if (section === 'moderator' && !currentUser?.is_moderator) {
-        alert('Доступ только для модерации');
+    if (section === 'admin' && !currentUser?.is_admin && !currentUser?.is_time_keeper && !currentUser?.is_moderator) {
+        alert('Доступ только для администраторов и staff');
         return false;
     }
     return true;
@@ -116,7 +112,6 @@ function handleHashRoute() {
         bans: 'Наказания',
         online: 'Статистика',
         admin: 'Админ',
-        moderator: 'Модерация',
     };
     document.title = `${titles[section] || 'Страница'} — Мини-станция`;
 }
@@ -150,12 +145,13 @@ function runSectionInit(section, playerId = null) {
     } else if (section === 'admin') {
         if (typeof configureAdminTabsForUser === 'function') configureAdminTabsForUser();
         if (currentUser?.is_admin && typeof loadAdminStats === 'function') loadAdminStats();
-        else if (currentUser?.is_time_keeper && typeof showAdminTab === 'function') {
+        else if (currentUser?.is_moderator && typeof showAdminTab === 'function') {
+            const gameBtn = document.querySelector('.admin-tabs .tab[data-mod-ok][onclick*="game"]');
+            showAdminTab('game', gameBtn);
+        } else if (currentUser?.is_time_keeper && typeof showAdminTab === 'function') {
             const playtimeBtn = document.querySelector('.admin-tabs .tab[data-staff-only]');
             showAdminTab('playtime', playtimeBtn);
         }
-    } else if (section === 'moderator') {
-        if (typeof loadModeratorAppeals === 'function') loadModeratorAppeals();
     }
 }
 

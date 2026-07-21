@@ -3177,12 +3177,6 @@ html[data-theme="dark"] .status-meta {
     flex: 1;
     margin-bottom: 0;
 }
-.global-chat-input button {
-    width: 48px;
-    height: 48px;
-    padding: 0;
-    flex-shrink: 0;
-}
 .chat-login-hint {
     text-align: center;
     color: var(--muted);
@@ -3195,7 +3189,7 @@ html[data-theme="dark"] .status-meta {
 .chat-composer {
     display: flex;
     gap: 8px;
-    align-items: flex-end;
+    align-items: center;
     padding: 10px;
     border-top: 1px solid var(--border);
     background: var(--panel);
@@ -3205,14 +3199,14 @@ html[data-theme="dark"] .status-meta {
     flex-direction: row;
     gap: 6px;
     flex-shrink: 0;
-    align-self: flex-end;
+    align-items: center;
 }
 .chat-tool-btn,
 label.chat-tool-btn {
-    width: 38px;
-    height: 38px;
-    min-width: 38px;
-    min-height: 38px;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -3226,7 +3220,8 @@ label.chat-tool-btn {
     box-shadow: none;
     flex-shrink: 0;
     transform: none;
-    font-size: 0.95rem;
+    font-size: 1rem;
+    line-height: 1;
 }
 .chat-tool-btn:hover,
 label.chat-tool-btn:hover,
@@ -3248,12 +3243,28 @@ label.chat-tool-btn input[type="file"] {
     opacity: 0;
     pointer-events: none;
 }
-.chat-composer-main { flex: 1; min-width: 0; position: relative; }
+.chat-composer-main {
+    flex: 1;
+    min-width: 0;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
 .chat-composer-main input,
 .chat-composer-main textarea {
     width: 100%;
+    height: 44px;
+    min-height: 44px;
     margin-bottom: 0;
     min-width: 0;
+    padding: 0 13px;
+    line-height: 44px;
+    resize: none;
+}
+.chat-composer-main textarea {
+    line-height: 1.35;
+    padding: 10px 13px;
 }
 .chat-send-btn {
     width: 44px;
@@ -3263,8 +3274,9 @@ label.chat-tool-btn input[type="file"] {
     padding: 0;
     flex-shrink: 0;
     border-radius: var(--radius-sm);
-    align-self: flex-end;
+    align-self: center;
     transform: none;
+    line-height: 1;
 }
 .chat-send-btn:hover,
 .chat-send-btn:active {
@@ -3463,6 +3475,7 @@ label.chat-tool-btn input[type="file"] {
 .profile-user-list-item {
     display: flex;
     align-items: center;
+    justify-content: flex-start;
     gap: 10px;
     width: 100%;
     padding: 10px 12px;
@@ -3471,12 +3484,27 @@ label.chat-tool-btn input[type="file"] {
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     box-shadow: none;
+    text-align: left;
+    transform: none;
+}
+.profile-user-list-item:hover,
+.profile-user-list-item:active {
+    transform: none;
+    box-shadow: none;
 }
 .profile-user-list-item img {
     width: 36px;
     height: 36px;
     border-radius: 50%;
     object-fit: cover;
+    flex-shrink: 0;
+}
+.profile-user-list-item span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: left;
 }
 #inventoryPanels { margin-top: 12px; }
 #inventoryPanels[hidden] { display: none !important; }

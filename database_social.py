@@ -1099,7 +1099,8 @@ def get_followers(player_id: str, limit: int = 20) -> List[Dict]:
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT su.player_id, su.game_nickname, su.discord_username, su.discord_avatar
+        SELECT su.player_id, su.game_nickname, su.discord_username, su.discord_id,
+               su.discord_avatar, su.avatar_path, su.avatar_custom
         FROM follows f
         JOIN social_users su ON f.follower_player_id = su.player_id
         WHERE f.following_player_id = ?
@@ -1114,7 +1115,8 @@ def get_following(player_id: str, limit: int = 20) -> List[Dict]:
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT su.player_id, su.game_nickname, su.discord_username, su.discord_avatar
+        SELECT su.player_id, su.game_nickname, su.discord_username, su.discord_id,
+               su.discord_avatar, su.avatar_path, su.avatar_custom
         FROM follows f
         JOIN social_users su ON f.following_player_id = su.player_id
         WHERE f.follower_player_id = ?

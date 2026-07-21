@@ -1,4 +1,4 @@
-"""Роли staff на сайте: admin (полный доступ) и moderator (только обжалования)."""
+"""Роли staff на сайте: admin (полный доступ) и moderator (админ-панель + обжалования)."""
 import database_social as social_db
 from app.config import ADMIN_USERNAMES, MODERATOR_USERNAMES
 

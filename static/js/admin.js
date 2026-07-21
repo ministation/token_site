@@ -29,23 +29,29 @@ function showAdminTab(tab, btn) {
 }
 
 function canAccessAdminPanel() {
-    return !!(currentUser?.is_admin || currentUser?.is_time_keeper);
+    return !!(currentUser?.is_admin || currentUser?.is_time_keeper || currentUser?.is_moderator);
 }
 
 function configureAdminTabsForUser() {
     const isAdmin = !!currentUser?.is_admin;
-    const canPlaytime = canAccessAdminPanel();
+    const isModerator = !!currentUser?.is_moderator;
+    const canPlaytime = isAdmin || !!currentUser?.is_time_keeper;
     document.querySelectorAll('.admin-tabs .tab[data-admin-only]').forEach(el => {
-        el.style.display = isAdmin ? '' : 'none';
+        const modOk = el.hasAttribute('data-mod-ok');
+        el.style.display = (isAdmin || (modOk && isModerator)) ? '' : 'none';
     });
     document.querySelectorAll('.admin-tabs .tab[data-staff-only]').forEach(el => {
         el.style.display = canPlaytime ? '' : 'none';
     });
     const hint = document.querySelector('.admin-panel > .admin-hint');
     if (hint) {
-        hint.textContent = isAdmin
-            ? 'Управление сайтом — только для администраторов'
-            : 'Накрутка времени на роли — для хранителей времени';
+        if (isAdmin) {
+            hint.textContent = 'Управление сайтом — только для администраторов';
+        } else if (isModerator && !isAdmin) {
+            hint.textContent = 'Игровая модерация и обжалования';
+        } else {
+            hint.textContent = 'Накрутка времени на роли — для хранителей времени';
+        }
     }
 }
 
@@ -56,6 +62,9 @@ function initAdminPanel() {
     configureAdminTabsForUser();
     if (currentUser?.is_admin) {
         loadAdminStats();
+    } else if (currentUser?.is_moderator) {
+        const gameBtn = document.querySelector('.admin-tabs .tab[data-mod-ok][onclick*="game"]');
+        showAdminTab('game', gameBtn);
     } else {
         const playtimeBtn = document.querySelector('.admin-tabs .tab[data-staff-only]');
         showAdminTab('playtime', playtimeBtn);
@@ -446,7 +455,6 @@ async function reviewAppeal(appealId, status) {
     const response = prompt(msg) || '';
     try {
         await apiCall('POST', `/api/admin/appeals/${appealId}/review`, { status, admin_response: response });
-        if (document.getElementById('moderatorAppealsContent')) loadModeratorAppeals();
         if (document.getElementById('adminAppealsContent')) loadAdminAppeals(false);
     } catch (e) {
         alert(e.message);

@@ -5,9 +5,9 @@
     <div class="admin-tabs">
         <button type="button" class="tab active" data-admin-only onclick="showAdminTab('stats', this)">Метрика</button>
         <button type="button" class="tab" data-admin-only onclick="showAdminTab('ratings', this)">Рейтинг</button>
-        <button type="button" class="tab" data-admin-only onclick="showAdminTab('appeals', this)">Обжалования</button>
+        <button type="button" class="tab" data-admin-only data-mod-ok onclick="showAdminTab('appeals', this)">Обжалования</button>
         <button type="button" class="tab" data-admin-only onclick="showAdminTab('compensation', this)">Компенсация</button>
-        <button type="button" class="tab" data-admin-only onclick="showAdminTab('game', this)">Админ панель</button>
+        <button type="button" class="tab" data-admin-only data-mod-ok onclick="showAdminTab('game', this)">Админ панель</button>
         <button type="button" class="tab" data-staff-only onclick="showAdminTab('playtime', this)">Время</button>
         <button type="button" class="tab" data-admin-only onclick="showAdminTab('admins', this)">Staff</button>
     </div>
