@@ -199,8 +199,11 @@ async def api_me(request: Request):
     if social:
         result["social_id"] = social["player_id"]
         result["avatar"] = resolve_avatar_url(social)
+        from app.services.presence import status_from_last_seen
+        result["presence"] = status_from_last_seen(social.get("last_seen_at"))
     else:
         result["avatar"] = "/static/default_avatar.png"
+        result["presence"] = "offline"
     await _sync_roles_from_game(session)
     apply_roles(result)
     if result.get("is_admin"):

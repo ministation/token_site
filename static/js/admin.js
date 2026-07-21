@@ -376,7 +376,9 @@ async function loadAdminUsers(append) {
         }
         const html = users.map(u => `
             <div class="admin-user-row">
-                <img src="${u.avatar || '/static/default_avatar.png'}" class="admin-user-avatar" alt="">
+                ${typeof chatAvatarHtml === 'function'
+                    ? chatAvatarHtml(u.avatar, 'admin-user-avatar', u.presence || u.online_status || 'offline')
+                    : `<img src="${u.avatar || '/static/default_avatar.png'}" class="admin-user-avatar" alt="">`}
                 <div class="admin-user-info">
                     <div class="admin-user-name">${escapeHtml(u.game_nickname || u.discord_username)}</div>
                     <div class="admin-user-sub">@${escapeHtml(u.discord_username || '')} · ${escapeHtml(u.player_id?.slice(0, 8) || '')}…</div>
@@ -411,7 +413,9 @@ async function loadAdminPostsList(append) {
             const title = p.title ? `<strong>${escapeHtml(p.title)}</strong><br>` : '';
             return `
             <div class="admin-post-row">
-                <img src="${p.author_avatar || '/static/default_avatar.png'}" class="admin-user-avatar" alt="">
+                ${typeof chatAvatarHtml === 'function'
+                    ? chatAvatarHtml(p.author_avatar, 'admin-user-avatar', p.author_presence || 'offline')
+                    : `<img src="${p.author_avatar || '/static/default_avatar.png'}" class="admin-user-avatar" alt="">`}
                 <div class="admin-post-body">
                     <div class="admin-post-meta">
                         <strong>#${p.id}</strong> · ${escapeHtml(section)}${escapeHtml(topic)}

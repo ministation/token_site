@@ -17,6 +17,7 @@ import database_social as social_db
 from app.services.bank import get_balance_by_player_id
 from app.services.media_upload import save_upload
 from app.services.badges import get_member_badges
+from app.services.presence import status_from_last_seen, statuses_for
 
 router = APIRouter(prefix="/api/social", tags=["social"])
 
@@ -28,6 +29,18 @@ async def feed_updates():
 
 def profile_avatar(row: dict) -> str:
     return resolve_avatar_url(row)
+
+
+def _attach_author_presence(posts: list[dict]) -> list[dict]:
+    ids = [p.get("author_player_id") for p in posts if p.get("author_player_id")]
+    mapping = statuses_for(ids)
+    for p in posts:
+        pid = p.get("author_player_id")
+        if pid:
+            p["author_presence"] = mapping.get(pid, "offline")
+        else:
+            p["author_presence"] = "offline"
+    return posts
 
 
 def serialize_post(p: dict, *, anonymize: bool = False) -> dict:
@@ -47,6 +60,7 @@ def serialize_post(p: dict, *, anonymize: bool = False) -> dict:
         "comment_count": p["comment_count"],
         "liked_by_me": bool(p.get("liked_by_me")),
         "created_at": p["created_at"],
+        "author_presence": "offline",
     }
     if anonymize or category == "news":
         data["author_player_id"] = ""
@@ -60,6 +74,7 @@ def serialize_post(p: dict, *, anonymize: bool = False) -> dict:
         data["author_discord_username"] = p["discord_username"]
         data["author_discord_id"] = p.get("discord_id", "")
         data["author_avatar"] = profile_avatar(p)
+        data["author_presence"] = status_from_last_seen(p.get("last_seen_at"))
     return data
 
 
@@ -102,6 +117,7 @@ async def api_get_profile(request: Request, player_id: str):
             profile.get("discord_id"),
             profile.get("created_at"),
         ),
+        "presence": status_from_last_seen(profile.get("last_seen_at")),
     }
 
 
@@ -172,7 +188,7 @@ async def api_feed(
     cat = (category or "").strip().lower() or None
     top = (topic or "").strip().lower() or None
     posts = get_feed_posts(viewer_id, limit, offset, cat, top)
-    return [serialize_post(p) for p in posts]
+    return _attach_author_presence([serialize_post(p) for p in posts])
 
 
 @router.get("/posts/user/{player_id}")
@@ -191,7 +207,7 @@ async def api_user_posts(request: Request, player_id: str, limit: int = 20, offs
             liked = cursor.fetchone() is not None
             conn.close()
         result.append(serialize_post({**p, "liked_by_me": liked}))
-    return result
+    return _attach_author_presence(result)
 
 
 @router.delete("/posts/{post_id}")
@@ -249,14 +265,18 @@ async def api_add_comment(request: Request, post_id: int, comment: CommentCreate
 @router.get("/posts/{post_id}/comments")
 async def api_get_comments(post_id: int):
     comments = get_comments(post_id)
+    ids = [c.get("author_player_id") for c in comments if c.get("author_player_id")]
+    presence_map = statuses_for(ids)
     result = []
     for c in comments:
+        pid = c.get("author_player_id")
         result.append({
             "id": c["id"],
             "post_id": c["post_id"],
-            "author_player_id": c["author_player_id"],
+            "author_player_id": pid,
             "author_nickname": c.get("game_nickname", "Unknown"),
             "author_avatar": profile_avatar(c),
+            "author_presence": presence_map.get(pid, "offline") if pid else "offline",
             "content": c["content"],
             "created_at": c["created_at"]
         })
@@ -295,12 +315,14 @@ async def api_unfollow(request: Request, target_player_id: str):
 @router.get("/followers/{player_id}")
 async def api_get_followers(player_id: str, limit: int = 20):
     followers = get_followers(player_id, limit)
+    presence_map = statuses_for([u["player_id"] for u in followers])
     return [
         {
             "player_id": u["player_id"],
             "game_nickname": u.get("game_nickname"),
             "discord_username": u.get("discord_username"),
             "discord_avatar": profile_avatar(u),
+            "presence": presence_map.get(u["player_id"], "offline"),
         }
         for u in followers
     ]
@@ -309,12 +331,14 @@ async def api_get_followers(player_id: str, limit: int = 20):
 @router.get("/following/{player_id}")
 async def api_get_following(player_id: str, limit: int = 20):
     following = get_following(player_id, limit)
+    presence_map = statuses_for([u["player_id"] for u in following])
     return [
         {
             "player_id": u["player_id"],
             "game_nickname": u.get("game_nickname"),
             "discord_username": u.get("discord_username"),
             "discord_avatar": profile_avatar(u),
+            "presence": presence_map.get(u["player_id"], "offline"),
         }
         for u in following
     ]
@@ -346,7 +370,11 @@ async def api_social_search(q: str = "", limit: int = 50):
                 "discord_username": r.get("discord_username"),
                 "discord_avatar": profile_avatar(r),
                 "balance": balance,
+                "presence": status_from_last_seen(r.get("last_seen_at")),
             })
+        presence_map = statuses_for([e["player_id"] for e in enriched])
+        for e in enriched:
+            e["presence"] = presence_map.get(e["player_id"], e.get("presence") or "offline")
         return enriched
     except Exception as e:
         print(f"Search error: {e}")

@@ -24,17 +24,20 @@ function renderRoleBadge(role) {
     );
 }
 
-function chatAvatarHtml(avatarUrl, className = 'chat-avatar', presence = null) {
+function normalizePresence(presence) {
+    return ['online', 'idle', 'dnd', 'offline'].includes(presence) ? presence : 'offline';
+}
+
+function chatAvatarHtml(avatarUrl, className = 'chat-avatar', presence = 'offline') {
     const src = avatarUrl || '/static/default_avatar.png';
-    const img = `<img src="${escapeHtml(src)}" class="${escapeHtml(className)}" alt="" onerror="this.onerror=null;this.src='/static/default_avatar.png'">`;
-    if (!presence) return img;
-    const status = ['online', 'idle', 'dnd', 'offline'].includes(presence) ? presence : 'offline';
+    const status = normalizePresence(presence);
     const titles = { online: 'В сети', idle: 'Не активен', dnd: 'Не беспокоить', offline: 'Не в сети' };
+    const img = `<img src="${escapeHtml(src)}" class="${escapeHtml(className)}" alt="" onerror="this.onerror=null;this.src='/static/default_avatar.png'">`;
     return `<span class="dc-avatar-wrap" title="${titles[status]}"><span class="dc-avatar-mask">${img}</span><span class="dc-presence dc-presence-${status}" aria-label="${titles[status]}"></span></span>`;
 }
 
 function presenceDotHtml(presence) {
-    const status = ['online', 'idle', 'dnd', 'offline'].includes(presence) ? presence : 'offline';
+    const status = normalizePresence(presence);
     return `<span class="dc-presence dc-presence-${status}" aria-hidden="true"></span>`;
 }
 

@@ -124,6 +124,7 @@ async def admin_start_compensation(req: StartCompensationRequest, request: Reque
 @router.get("/users")
 async def admin_users(request: Request, q: str = "", limit: int = 50, offset: int = 0):
     await get_current_admin(request)
+    from app.services.presence import status_from_last_seen
     users = social_db.list_all_social_users(q, limit, offset)
     return {
         "total": social_db.count_social_users(),
@@ -134,6 +135,7 @@ async def admin_users(request: Request, q: str = "", limit: int = 50, offset: in
                 "is_admin": social_db.is_site_admin(u.get("discord_id", "")),
                 "is_moderator": social_db.is_site_moderator(u.get("discord_id", "")),
                 "staff_role": social_db.get_site_staff_role(u.get("discord_id", "")),
+                "presence": status_from_last_seen(u.get("last_seen_at")),
             }
             for u in users
         ],
@@ -145,6 +147,8 @@ async def admin_posts(request: Request, limit: int = 30, offset: int = 0):
     await get_current_admin(request)
     posts = get_feed_posts(None, limit, offset)
     from app.routers.social import profile_avatar
+    from app.services.presence import statuses_for
+    presence_map = statuses_for([p.get("author_player_id") for p in posts])
     return [
         {
             "id": p["id"],
@@ -152,15 +156,14 @@ async def admin_posts(request: Request, limit: int = 30, offset: int = 0):
             "author_nickname": p.get("game_nickname"),
             "author_discord": p.get("discord_username"),
             "author_avatar": profile_avatar(p),
-            "content": p["content"],
-            "image_url": p.get("image_url"),
-            "category": p.get("category") or "forum",
-            "category_label": social_db.POST_CATEGORIES.get(p.get("category") or "forum", "Форум"),
-            "topic": p.get("topic"),
-            "topic_label": social_db.POST_TOPICS.get(p.get("topic"), "") if p.get("topic") else "",
+            "author_presence": presence_map.get(p.get("author_player_id"), "offline"),
             "title": p.get("title") or "",
-            "like_count": p.get("like_count", 0),
-            "comment_count": p.get("comment_count", 0),
+            "content": p["content"],
+            "category": p.get("category"),
+            "category_label": social_db.POST_CATEGORIES.get(p.get("category") or "forum", p.get("category")),
+            "topic_label": social_db.POST_TOPICS.get(p.get("topic"), "") if p.get("topic") else "",
+            "like_count": p["like_count"],
+            "comment_count": p["comment_count"],
             "created_at": p["created_at"],
         }
         for p in posts

@@ -5,7 +5,9 @@
 .dc-shell {
     display: flex;
     flex-direction: column;
-    min-height: 560px;
+    height: min(72vh, 720px);
+    max-height: min(72vh, 720px);
+    min-height: 480px;
     padding: 0 !important;
     overflow: hidden;
 }
@@ -41,8 +43,10 @@
     display: grid !important;
     grid-template-columns: 248px minmax(0, 1fr) !important;
     gap: 0 !important;
-    flex: 1;
-    min-height: 480px;
+    flex: 1 1 auto;
+    min-height: 0 !important;
+    height: auto;
+    overflow: hidden;
 }
 
 .dc-members.chat-users-sidebar {
@@ -53,6 +57,8 @@
     background: var(--panel-2);
     border-right: 1px solid var(--border);
     min-height: 0;
+    max-height: 100%;
+    overflow: hidden;
     order: 0;
 }
 
@@ -61,6 +67,8 @@
     flex-direction: column;
     min-height: 0;
     min-width: 0;
+    max-height: 100%;
+    overflow: hidden;
     background: var(--panel);
     border-right: none;
     order: 1;
@@ -87,9 +95,10 @@
 }
 
 .dc-members .chat-users-list {
-    flex: 1;
+    flex: 1 1 auto;
     max-height: none;
     min-height: 0;
+    overflow-x: hidden;
     overflow-y: auto;
     background: transparent;
     border: none;
@@ -138,21 +147,24 @@
     box-shadow: none;
 }
 
-/* Messages scroller */
+/* Messages scroller — bounded by shell, not growing forever */
 .dc-messages.global-chat-messages,
 .dc-messages.pm-messages {
-    flex: 1;
-    min-height: 360px;
+    flex: 1 1 auto;
+    min-height: 0 !important;
     max-height: none !important;
     margin: 0 !important;
     padding: 8px 0 16px !important;
-    overflow-y: auto;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
     background: var(--panel) !important;
     border: none !important;
     border-radius: 0 !important;
     display: flex;
     flex-direction: column;
     gap: 0;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 /* Discord message row — force grid over legacy flex */
@@ -164,14 +176,16 @@
     gap: 0 !important;
     padding: 2px 16px 2px 8px !important;
     margin: 0 !important;
-    max-width: none !important;
+    max-width: 100% !important;
     width: 100%;
+    box-sizing: border-box;
     align-self: stretch !important;
     align-items: flex-start;
     border: none !important;
     border-radius: 0 !important;
     background: transparent !important;
     box-shadow: none !important;
+    overflow: hidden;
     transition: background 0.1s ease;
 }
 
@@ -179,8 +193,12 @@
     background: color-mix(in srgb, var(--ink) 4%, transparent) !important;
 }
 
-.dc-msg.own {
+.dc-messages .dc-msg.pm-message,
+.dc-messages .pm-message.dc-msg,
+.dc-messages .pm-message {
+    max-width: 100% !important;
     margin-left: 0 !important;
+    margin-right: 0 !important;
     align-self: stretch !important;
 }
 
@@ -304,8 +322,10 @@ button.dc-name:hover {
     line-height: 1.45;
     color: var(--ink);
     word-break: break-word;
+    overflow-wrap: anywhere;
     white-space: pre-wrap;
     float: none !important;
+    max-width: 100%;
 }
 
 .dc-attach {
@@ -363,13 +383,14 @@ button.dc-name:hover {
     margin-left: 0 !important;
 }
 
-/* ---------- Discord presence dots ---------- */
+/* ---------- Discord presence (global, any avatar) ---------- */
 .dc-avatar-wrap {
     position: relative;
     display: inline-block;
     flex-shrink: 0;
     width: fit-content;
     line-height: 0;
+    vertical-align: middle;
 }
 
 .dc-avatar-mask {
@@ -387,49 +408,21 @@ button.dc-name:hover {
     height: 14px;
     border-radius: 50%;
     box-sizing: border-box;
-    border: 3px solid var(--panel-2);
+    border: 3px solid var(--panel);
     background-clip: padding-box;
     pointer-events: none;
     z-index: 1;
 }
 
-.dc-msg .dc-presence,
-.dc-main .dc-presence {
-    border-color: var(--panel);
-}
-
-.dc-msg:hover .dc-presence {
-    border-color: color-mix(in srgb, var(--ink) 4%, var(--panel));
-}
-
-.dc-presence-online {
-    background-color: #23a55a;
-}
+.dc-presence-online { background-color: #23a55a; }
 
 .dc-presence-idle {
     background-color: #f0b232;
-    /* Discord idle moon cutout */
-    background-image: radial-gradient(circle at 30% 30%, var(--panel-2) 42%, transparent 43%);
-}
-
-.dc-msg .dc-presence-idle,
-.dc-main .dc-presence-idle {
     background-image: radial-gradient(circle at 30% 30%, var(--panel) 42%, transparent 43%);
 }
 
 .dc-presence-dnd {
     background-color: #f23f43;
-    /* Discord DND bar cutout */
-    background-image: linear-gradient(
-        transparent 38%,
-        var(--panel-2) 38%,
-        var(--panel-2) 62%,
-        transparent 62%
-    );
-}
-
-.dc-msg .dc-presence-dnd,
-.dc-main .dc-presence-dnd {
     background-image: linear-gradient(
         transparent 38%,
         var(--panel) 38%,
@@ -440,21 +433,80 @@ button.dc-name:hover {
 
 .dc-presence-offline {
     background-color: #80848e;
-    /* Discord offline ring */
-    background-image: radial-gradient(circle at center, var(--panel-2) 38%, transparent 39%);
-}
-
-.dc-msg .dc-presence-offline,
-.dc-main .dc-presence-offline {
     background-image: radial-gradient(circle at center, var(--panel) 38%, transparent 39%);
 }
 
-.dc-members .dc-presence {
+.side-group .dc-presence,
+.dc-members .dc-presence,
+.messages-sidebar .dc-presence,
+.dialogs-list .dc-presence,
+.pm-user-results .dc-presence {
+    border-color: var(--panel-2);
+}
+
+.dc-members .dc-presence-idle,
+.messages-sidebar .dc-presence-idle,
+.dialogs-list .dc-presence-idle,
+.pm-user-results .dc-presence-idle {
+    background-image: radial-gradient(circle at 30% 30%, var(--panel-2) 42%, transparent 43%);
+}
+
+.dc-members .dc-presence-dnd,
+.messages-sidebar .dc-presence-dnd,
+.dialogs-list .dc-presence-dnd,
+.pm-user-results .dc-presence-dnd {
+    background-image: linear-gradient(
+        transparent 38%,
+        var(--panel-2) 38%,
+        var(--panel-2) 62%,
+        transparent 62%
+    );
+}
+
+.dc-members .dc-presence-offline,
+.messages-sidebar .dc-presence-offline,
+.dialogs-list .dc-presence-offline,
+.pm-user-results .dc-presence-offline {
+    background-image: radial-gradient(circle at center, var(--panel-2) 38%, transparent 39%);
+}
+
+.dc-members .dc-presence,
+.dialogs-list .dc-presence,
+.pm-user-results .dc-presence,
+.profile-user-list-item .dc-presence,
+.search-result-item .dc-presence,
+#userPanel .dc-presence {
     width: 12px;
     height: 12px;
     border-width: 2.5px;
     bottom: -1px;
     right: -1px;
+}
+
+.dc-avatar-wrap .post-avatar { width: 44px; height: 44px; display: block; }
+.dc-avatar-wrap .comment-avatar { width: 30px; height: 30px; display: block; }
+.dc-avatar-wrap .profile-avatar,
+.dc-avatar-wrap .profile-page-avatar { width: 110px; height: 110px; display: block; }
+.dc-avatar-wrap .search-avatar { width: 44px; height: 44px; display: block; }
+.dc-avatar-wrap .dialog-avatar { width: 40px; height: 40px; display: block; object-fit: cover; border-radius: 50%; }
+.dc-avatar-wrap .pm-user-avatar { width: 36px; height: 36px; display: block; }
+.dc-avatar-wrap .pm-title-avatar-img { width: 32px; height: 32px; display: block; border-radius: 50%; object-fit: cover; }
+.dc-avatar-wrap .admin-user-avatar { width: 40px; height: 40px; display: block; }
+#userPanel .dc-avatar-wrap img {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+}
+.profile-page-avatar-wrap .dc-presence,
+.dc-avatar-wrap .profile-page-avatar + .dc-presence,
+.profile-header .dc-presence {
+    width: 22px;
+    height: 22px;
+    border-width: 4px;
+    bottom: 4px;
+    right: 4px;
 }
 
 /* Composer */
@@ -535,8 +587,9 @@ button.dc-name:hover {
 }
 
 .messages-page.dc-shell {
-    min-height: 560px;
-    height: auto;
+    height: min(72vh, 720px);
+    max-height: min(72vh, 720px);
+    min-height: 480px;
 }
 
 .messages-page.dc-shell .messages-page-header.dc-channel-header {
@@ -547,20 +600,28 @@ button.dc-name:hover {
     display: grid;
     grid-template-columns: 260px minmax(0, 1fr);
     gap: 0;
-    flex: 1;
-    min-height: 480px;
+    flex: 1 1 auto;
+    min-height: 0 !important;
+    overflow: hidden;
 }
 
 .messages-page.dc-shell .messages-sidebar {
+    display: flex;
+    flex-direction: column;
     padding: 12px 10px;
     background: var(--panel-2);
     border-right: 1px solid var(--border);
+    min-height: 0;
+    max-height: 100%;
+    overflow: hidden;
 }
 
 .messages-page.dc-shell .dialogs-list {
-    flex: 1;
+    flex: 1 1 auto;
     max-height: none;
     min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
     border: none;
     background: transparent;
     border-radius: 0;
@@ -582,6 +643,11 @@ button.dc-name:hover {
     border-radius: 0;
     background: var(--panel);
     min-height: 0;
+    min-width: 0;
+    max-height: 100%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 .messages-page.dc-shell .conversation-header {
@@ -606,29 +672,64 @@ button.dc-name:hover {
 .pm-status { display: none; }
 .dc-header .dc-status { display: inline-flex; }
 
+.dc-avatar-wrap .profile-list-avatar,
+.dc-avatar-wrap .user-panel-avatar {
+    width: 32px;
+    height: 32px;
+    display: block;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.profile-page-hero .dc-avatar-wrap {
+    flex-shrink: 0;
+}
+
+.profile-page-hero .dc-presence {
+    width: 22px;
+    height: 22px;
+    border-width: 4px;
+    bottom: 4px;
+    right: 4px;
+}
+
+.comment {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+}
+
 @media (max-width: 900px) {
+    .dc-shell,
+    .messages-page.dc-shell {
+        height: min(78vh, 640px);
+        max-height: min(78vh, 640px);
+    }
+
     .dc-layout.chat-with-users-layout {
         grid-template-columns: 1fr !important;
+        grid-template-rows: minmax(120px, 30%) minmax(0, 1fr);
     }
 
     .dc-members.chat-users-sidebar {
         order: -1;
-        max-height: 180px;
+        max-height: none;
         border-right: none;
         border-bottom: 1px solid var(--border);
     }
 
     .dc-members .chat-users-list {
-        max-height: 120px;
+        max-height: none;
     }
 
-    .dc-main {
+    .dc-main.chat-main-area {
         border-right: none;
-        min-height: 420px;
+        min-height: 0 !important;
     }
 
     .messages-page.dc-shell .messages-layout {
         grid-template-columns: 1fr;
+        grid-template-rows: minmax(120px, 30%) minmax(0, 1fr);
     }
 }
 

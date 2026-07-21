@@ -18,7 +18,9 @@ async function checkAuth() {
             const panel = document.getElementById('userPanel');
             panel.style.display = 'flex';
             panel.innerHTML = `
-                ${data.avatar ? `<img src="${data.avatar}" alt="" onerror="this.style.display='none'">` : ''}
+                ${typeof chatAvatarHtml === 'function'
+                    ? chatAvatarHtml(data.avatar, 'user-panel-avatar', data.presence || 'offline')
+                    : (data.avatar ? `<img src="${data.avatar}" alt="" onerror="this.style.display='none'">` : '')}
                 <span id="userName">${data.display_name || data.username}${staffBadgeHtml(data)}</span>
                 <button type="button" onclick="openMyProfile()" title="Мой профиль"><i class="fa-solid fa-user"></i></button>
                 <button type="button" onclick="logout()">Выйти</button>

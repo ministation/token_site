@@ -13,9 +13,9 @@ async function searchSocial(query = '') {
         
         container.innerHTML = results.map(user => `
             <div class="search-result-item">
-                <img src="${user.discord_avatar || '/static/default_avatar.png'}" 
-                     class="search-avatar" alt="" 
-                     onerror="this.src='/static/default_avatar.png'">
+                ${typeof chatAvatarHtml === 'function'
+                    ? chatAvatarHtml(user.discord_avatar, 'search-avatar', user.presence || 'offline')
+                    : `<img src="${user.discord_avatar || '/static/default_avatar.png'}" class="search-avatar" alt="" onerror="this.src='/static/default_avatar.png'">`}
                 <div style="flex:1;">
                     <div><strong>${escapeHtml(user.game_nickname || user.nickname || 'Без имени')}</strong></div>
                     <div style="font-size:0.8rem; color:#888;">@${escapeHtml(user.discord_username || 'Не привязан')}</div>

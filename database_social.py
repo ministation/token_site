@@ -1326,7 +1326,7 @@ def list_all_social_users(query: str = "", limit: int = 50, offset: int = 0) -> 
         like = f"%{q}%"
         cursor.execute("""
             SELECT player_id, user_uuid, discord_id, discord_username, game_nickname,
-                   avatar_path, created_at, updated_at
+                   avatar_path, created_at, updated_at, last_seen_at
             FROM social_users
             WHERE LOWER(game_nickname) LIKE LOWER(?)
                OR LOWER(discord_username) LIKE LOWER(?)
@@ -1336,7 +1336,7 @@ def list_all_social_users(query: str = "", limit: int = 50, offset: int = 0) -> 
     else:
         cursor.execute("""
             SELECT player_id, user_uuid, discord_id, discord_username, game_nickname,
-                   avatar_path, created_at, updated_at
+                   avatar_path, created_at, updated_at, last_seen_at
             FROM social_users
             ORDER BY updated_at DESC
             LIMIT ? OFFSET ?

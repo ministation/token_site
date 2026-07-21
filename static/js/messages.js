@@ -19,7 +19,7 @@ async function loadDialogs() {
             <div class="dialog-item ${currentPmPartnerId === d.other_id ? 'active' : ''}"
                  onclick='openConversation(${JSON.stringify(d.other_id)}, ${JSON.stringify(d.nickname || 'Игрок')})'>
                 <div class="dialog-avatar-wrap">
-                    ${chatAvatarHtml(d.avatar, 'dialog-avatar')}
+                    ${chatAvatarHtml(d.avatar, 'dialog-avatar', d.presence || d.online_status || 'offline')}
                 </div>
                 <div class="dialog-body">
                     <div class="dialog-name-row">
@@ -65,7 +65,7 @@ async function searchPmUsers(query) {
         container.innerHTML = users.map(u => `
             <button type="button" class="pm-user-item"
                 onclick='startConversationWith(${JSON.stringify(u.player_id)}, ${JSON.stringify(u.game_nickname || u.discord_username || 'Игрок')})'>
-                ${chatAvatarHtml(u.avatar, 'pm-user-avatar')}
+                ${chatAvatarHtml(u.avatar, 'pm-user-avatar', u.presence || u.online_status || 'offline')}
                 <span class="pm-user-main">
                     <span class="pm-user-name-row">
                         <span class="pm-user-name">${typeof profileLink === 'function' ? profileLink(u.player_id, u.game_nickname || u.discord_username, 'pm-user-name-link') : escapeHtml(u.game_nickname || u.discord_username)}</span>
@@ -135,7 +135,7 @@ function renderPmMessage(m, myId, opts = {}) {
     const avatarHtml = compact
         ? `<div class="dc-avatar-col" aria-hidden="true"><span class="dc-compact-time">${time}</span></div>`
         : (own
-            ? `<div class="dc-avatar-col">${chatAvatarHtml(currentUser?.avatar, 'pm-msg-avatar dc-avatar', currentUser?.presence || 'online')}</div>`
+            ? `<div class="dc-avatar-col">${chatAvatarHtml(currentUser?.avatar, 'pm-msg-avatar dc-avatar', currentUser?.presence || 'offline')}</div>`
             : `<div class="dc-avatar-col">${chatAvatarHtml(m.sender_avatar, 'pm-msg-avatar dc-avatar', m.sender_presence || 'offline')}</div>`);
     const name = own
         ? (currentUser?.display_name || currentUser?.username || 'Вы')
@@ -175,7 +175,7 @@ async function loadConversation(partnerId) {
                 ? profileLink(partnerId, name, 'pm-title-link')
                 : escapeHtml(name);
             titleText.innerHTML = `
-                <span class="pm-title-avatar">${chatAvatarHtml(partner.avatar, 'pm-title-avatar-img')}</span>
+                <span class="pm-title-avatar">${chatAvatarHtml(partner.avatar, 'pm-title-avatar-img', partner.presence || 'offline')}</span>
                 <span class="pm-title-main">${nameHtml}${badges}</span>
             `;
         }

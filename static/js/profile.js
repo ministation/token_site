@@ -42,8 +42,9 @@ async function loadProfile(playerId) {
 
         container.innerHTML = `
             <div class="profile-page-hero">
-                <img src="${avatarUrl}" class="profile-avatar profile-page-avatar" alt=""
-                     onerror="this.src='/static/default_avatar.png'">
+                ${typeof chatAvatarHtml === 'function'
+                    ? chatAvatarHtml(avatarUrl, 'profile-avatar profile-page-avatar', p.presence || 'offline')
+                    : `<img src="${avatarUrl}" class="profile-avatar profile-page-avatar" alt="" onerror="this.src='/static/default_avatar.png'">`}
                 <div class="profile-info profile-page-info">
                     <div class="profile-page-name-row">
                         <h2>${escapeHtml(p.game_nickname || 'Игрок')}</h2>
@@ -172,8 +173,9 @@ function showProfileUserList(title, users) {
         </div>
         ${users.map(u => `
             <button type="button" class="profile-user-list-item" onclick="openProfile(${JSON.stringify(u.player_id)})">
-                <img src="${escapeHtml(u.discord_avatar || '/static/default_avatar.png')}" alt=""
-                     onerror="this.onerror=null;this.src='/static/default_avatar.png'">
+                ${typeof chatAvatarHtml === 'function'
+                    ? chatAvatarHtml(u.discord_avatar, 'profile-list-avatar', u.presence || 'offline')
+                    : `<img src="${escapeHtml(u.discord_avatar || '/static/default_avatar.png')}" alt="" onerror="this.onerror=null;this.src='/static/default_avatar.png'">`}
                 <span>${escapeHtml(u.game_nickname || u.discord_username || 'Игрок')}</span>
             </button>
         `).join('')}

@@ -2298,7 +2298,7 @@ html[data-theme="dark"] .status-meta {
     display: grid;
     grid-template-columns: 260px 1fr;
     gap: 14px;
-    min-height: 420px;
+    min-height: 0;
 }
 .dialogs-list {
     background: var(--panel-2);
@@ -2389,8 +2389,10 @@ html[data-theme="dark"] .status-meta {
 }
 .pm-messages {
     flex: 1;
+    min-height: 0;
     max-height: 360px;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 10px 12px;
     background: transparent;
     border: none;
@@ -3155,13 +3157,13 @@ html[data-theme="dark"] .status-meta {
 }
 
 /* === Global chat === */
-.global-chat-card { display: flex; flex-direction: column; min-height: 520px; }
+.global-chat-card { display: flex; flex-direction: column; min-height: 0; }
 .global-chat-header { margin-bottom: 12px; }
 .global-chat-header h2 { margin-bottom: 4px; }
 .chat-hint-inline { color: var(--muted); font-size: 0.85rem; }
 .global-chat-messages {
     flex: 1;
-    min-height: 380px;
+    min-height: 0;
     max-height: 480px;
     overflow-y: auto;
     background: var(--panel-2);
@@ -4199,7 +4201,7 @@ label.chat-tool-btn input[type="file"] {
     display: grid;
     grid-template-columns: 240px 1fr;
     gap: 12px;
-    min-height: 480px;
+    min-height: 0;
 }
 .chat-users-sidebar {
     display: flex;
@@ -4237,7 +4239,7 @@ label.chat-tool-btn input[type="file"] {
 .chat-main-area {
     display: flex;
     flex-direction: column;
-    min-height: 480px;
+    min-height: 0;
 }
 
 @media (max-width: 768px) {

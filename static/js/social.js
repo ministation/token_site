@@ -224,13 +224,16 @@ function renderPost(post) {
                 <i class="fa-solid fa-trash"></i>
            </button>`
         : '';
+    const avatarHtml = typeof chatAvatarHtml === 'function'
+        ? chatAvatarHtml(avatarUrl, 'post-avatar', post.author_presence || 'offline')
+        : `<img src="${escapeHtml(avatarUrl)}" class="post-avatar" alt="" onerror="this.src='/static/default_avatar.png'">`;
     return `
         <div class="post card forum-post" data-post-id="${post.id}">
             ${renderPostBadges(post)}
             ${titleHtml}
             <div class="post-header">
                 <button type="button" class="post-avatar-btn" onclick="openProfile(${JSON.stringify(post.author_player_id)})">
-                    <img src="${avatarUrl}" class="post-avatar" alt="" onerror="this.src='/static/default_avatar.png'">
+                    ${avatarHtml}
                 </button>
                 <div class="post-author-info">
                     <div class="post-author-name">${authorName}</div>
@@ -320,7 +323,10 @@ async function toggleComments(postId) {
                 const author = typeof profileLink === 'function' && c.author_player_id
                     ? profileLink(c.author_player_id, c.game_nickname || c.author_nickname || 'Игрок', 'comment-author-link')
                     : escapeHtml(c.game_nickname || c.author_nickname || 'Игрок');
-                html += '<div class="comment"><img src="' + (c.author_avatar || '/static/default_avatar.png') + '" class="comment-avatar" alt="">' +
+                html += '<div class="comment">' +
+                    (typeof chatAvatarHtml === 'function'
+                        ? chatAvatarHtml(c.author_avatar, 'comment-avatar', c.author_presence || 'offline')
+                        : `<img src="${escapeHtml(c.author_avatar || '/static/default_avatar.png')}" class="comment-avatar" alt="">`) +
                     '<div class="comment-content"><div class="comment-author">' + author + '</div>' +
                     '<div class="comment-text">' + escapeHtml(c.content) + '</div></div></div>';
             });

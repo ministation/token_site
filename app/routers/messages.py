@@ -16,6 +16,7 @@ async def dialogs(request: Request):
         d["avatar"] = info["avatar"]
         d["badges"] = info["badges"]
         d["author_role"] = info["author_role"]
+        d["presence"] = info.get("presence") or "offline"
     return items
 
 
