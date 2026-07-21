@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 40" role="img" aria-label="Visa Mastercard">
+  <rect width="64" height="40" rx="8" fill="#1A1F36"/>
+  <rect x="8" y="12" width="18" height="12" rx="2" fill="#1A1F71"/>
+  <path fill="#fff" d="M11.2 20.4c0-2.1 1.6-3.4 3.5-3.4 1.1 0 1.9.4 2.5 1l-.9 1c-.4-.4-.9-.7-1.5-.7-.9 0-1.6.7-1.6 2.1s.7 2.1 1.6 2.1c.6 0 1.1-.2 1.5-.7l.9 1c-.6.6-1.4 1-2.5 1-1.9 0-3.5-1.4-3.5-3.4z"/>
+  <circle cx="40" cy="20" r="7.5" fill="#EB001B"/>
+  <circle cx="48" cy="20" r="7.5" fill="#F79E1B"/>
+  <path fill="#FF5F00" d="M44 14.2a7.5 7.5 0 0 1 0 11.6 7.5 7.5 0 0 1 0-11.6z"/>
+</svg>

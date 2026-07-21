@@ -71,10 +71,11 @@ function navigateTo(path) {
 
 function parseHashRoute() {
     const raw = (location.hash || '#/home').replace(/^#\/?/, '');
-    const parts = raw.split('/').filter(Boolean);
+    const pathOnly = raw.split('?')[0];
+    const parts = pathOnly.split('/').filter(Boolean);
     const head = parts[0] || 'home';
     if (head === 'player' && parts[1]) {
-        return { section: 'inventory', playerId: decodeURIComponent(parts[1]) };
+        return { section: 'inventory', playerId: decodeURIComponent(parts[1].split('?')[0]) };
     }
     return { section: head, playerId: null };
 }
@@ -126,7 +127,6 @@ function runSectionInit(section, playerId = null) {
         if (typeof loadFeed === 'function') loadFeed();
         if (typeof loadServerStatus === 'function') loadServerStatus();
         if (typeof markAllFeedSeen === 'function') markAllFeedSeen();
-        if (typeof loadHomeDonatePreview === 'function') loadHomeDonatePreview();
     } else if (section === 'chat') {
         if (typeof initGlobalChat === 'function') initGlobalChat();
         if (typeof loadChatUsers === 'function') loadChatUsers('');

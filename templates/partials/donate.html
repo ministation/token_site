@@ -1,24 +1,27 @@
-<div class="card donate-page">
-    <div class="donate-hero">
-        <h2><i class="fa-solid fa-heart"></i> Поддержка проекта</h2>
-        <p>Выберите уровень спонсорства и оплатите на сайте через Platega (СБП, карта). Сайт и сервер бесплатны — подписка добровольная.</p>
-    </div>
+<div class="donate-page">
+    <header class="donate-hero card">
+        <a href="#/home" class="donate-back"><i class="fa-solid fa-arrow-left"></i> На главную</a>
+        <h1><i class="fa-solid fa-heart"></i> Поддержка проекта</h1>
+        <p>Выберите уровень спонсорства. Оплата на сайте через Platega (СБП / карта). Сайт и сервер бесплатны — подписка добровольная.</p>
+    </header>
 
     <div id="donatePayStatus" class="donate-pay-banner" hidden role="status" aria-live="polite"></div>
 
-    <div class="donate-layout">
-        <div class="donate-tiers" id="donateTiers" aria-label="Тарифы">
-            <p class="empty-state">Загрузка тарифов...</p>
-        </div>
+    <div class="donate-shell">
+        <section class="donate-catalog" aria-label="Тарифы">
+            <div class="donate-tiers" id="donateTiers">
+                <p class="empty-state">Загрузка тарифов...</p>
+            </div>
+        </section>
 
-        <aside class="donate-checkout card" id="donateCheckout">
-            <h3>Оформление</h3>
+        <aside class="donate-checkout card" id="donateCheckout" aria-label="Оформление">
+            <h2>Оформление</h2>
             <div id="donateSelectedEmpty" class="donate-selected-empty">
                 Выберите тариф слева
             </div>
             <div id="donateSelected" class="donate-selected" hidden>
-                <img id="donateSelectedIcon" src="" alt="" class="donate-selected-icon">
-                <div>
+                <img id="donateSelectedIcon" src="" alt="" class="donate-selected-icon" width="72" height="72">
+                <div class="donate-selected-meta">
                     <div class="donate-selected-name" id="donateSelectedName">—</div>
                     <div class="donate-selected-price" id="donateSelectedPrice">—</div>
                 </div>
@@ -26,7 +29,7 @@
 
             <fieldset class="donate-methods" id="donateMethods" hidden>
                 <legend>Способ оплаты</legend>
-                <div id="donateMethodList"></div>
+                <div id="donateMethodList" class="donate-method-list"></div>
             </fieldset>
 
             <label class="donate-contact-label" for="donateContact" id="donateContactWrap" hidden>

@@ -2,31 +2,8 @@ let donateCatalog = null;
 let selectedDonateTierId = null;
 let selectedDonateMethod = 2;
 
-async function loadHomeDonatePreview() {
-    const box = document.getElementById('homeDonateTiers');
-    if (!box) return;
-    try {
-        const data = await apiCall('GET', '/api/donations/catalog');
-        const tiers = data.tiers || [];
-        if (!tiers.length) {
-            box.innerHTML = '<p class="empty-state">Тарифы скоро появятся</p>';
-            return;
-        }
-        box.innerHTML = tiers.map(t => `
-            <button type="button" class="home-donate-tier ${t.featured ? 'featured' : ''}"
-                onclick="navigateTo('donate'); setTimeout(() => selectDonateTier(${t.id}), 0)">
-                <img src="${escapeHtml(t.icon)}" alt="" class="home-donate-tier-icon"
-                    onerror="this.style.visibility='hidden'">
-                <span class="home-donate-tier-name">${escapeHtml(t.name)}</span>
-                <span class="home-donate-tier-price">${escapeHtml(t.price_label)}<small>/мес</small></span>
-            </button>
-        `).join('');
-    } catch {
-        box.innerHTML = '<p class="empty-state">Не удалось загрузить тарифы</p>';
-    }
-}
-
 async function initDonateSection() {
+    selectedDonateTierId = null;
     await loadDonateCatalog();
     handleDonateReturnQuery();
 }
@@ -49,25 +26,31 @@ async function loadDonateCatalog() {
             hint.textContent = 'Ключи Platega ещё не заданы на сервере (PLATEGA_MERCHANT_ID / PLATEGA_SECRET). Интерфейс готов — после выдачи ключей оплата заработает.';
         }
         if (selectedDonateTierId) selectDonateTier(selectedDonateTierId);
+        else selectDonateTier(null);
     } catch (e) {
         box.innerHTML = `<p class="error">${escapeHtml(e.message || 'Ошибка загрузки')}</p>`;
     }
 }
 
 function renderDonateTierCard(t) {
-    const perks = (t.perks || []).map(p => `<li>${escapeHtml(p)}</li>`).join('');
+    const perks = (t.perks || []).map(p => `<li><span>${escapeHtml(p)}</span></li>`).join('');
     const active = selectedDonateTierId === t.id ? ' active' : '';
+    const featured = t.featured ? ' featured' : '';
     return `
-        <article class="donate-tier-card${active}${t.featured ? ' featured' : ''}" data-tier="${t.id}">
+        <article class="donate-tier-card${active}${featured}" data-tier="${t.id}">
+            ${t.featured ? '<span class="donate-tier-badge">Популярный</span>' : ''}
             <button type="button" class="donate-tier-select" onclick="selectDonateTier(${t.id})" aria-pressed="${active ? 'true' : 'false'}">
-                <img src="${escapeHtml(t.icon)}" alt="" class="donate-tier-icon" onerror="this.style.visibility='hidden'">
+                <div class="donate-tier-media">
+                    <img src="${escapeHtml(t.icon)}" alt="" class="donate-tier-icon" width="140" height="140"
+                        onerror="this.style.visibility='hidden'">
+                </div>
                 <div class="donate-tier-copy">
                     <div class="donate-tier-top">
                         <span class="donate-tier-level">Ур. ${t.id}</span>
                         <h3>${escapeHtml(t.name)}</h3>
                     </div>
                     <div class="donate-tier-price">${escapeHtml(t.price_label)} <span>/ мес</span></div>
-                    <ul>${perks}</ul>
+                    <ul class="donate-tier-perks">${perks}</ul>
                 </div>
             </button>
         </article>`;
@@ -81,8 +64,10 @@ function renderDonateMethods() {
         <label class="donate-method-option">
             <input type="radio" name="donateMethod" value="${m.id}"
                 ${Number(m.id) === Number(selectedDonateMethod) ? 'checked' : ''}
-                onchange="selectedDonateMethod=${m.id}">
-            <span>
+                onchange="selectedDonateMethod = Number(this.value)">
+            <img class="donate-method-icon" src="${escapeHtml(m.icon || '')}" alt="" width="40" height="28"
+                onerror="this.style.display='none'">
+            <span class="donate-method-text">
                 <strong>${escapeHtml(m.label)}</strong>
                 <small>${escapeHtml(m.hint || '')}</small>
             </span>
@@ -91,9 +76,9 @@ function renderDonateMethods() {
 }
 
 function selectDonateTier(tierId) {
-    selectedDonateTierId = Number(tierId);
+    selectedDonateTierId = tierId == null || tierId === '' ? null : Number(tierId);
     document.querySelectorAll('.donate-tier-card').forEach(el => {
-        const on = Number(el.dataset.tier) === selectedDonateTierId;
+        const on = selectedDonateTierId != null && Number(el.dataset.tier) === selectedDonateTierId;
         el.classList.toggle('active', on);
         const btn = el.querySelector('.donate-tier-select');
         if (btn) btn.setAttribute('aria-pressed', on ? 'true' : 'false');
@@ -125,6 +110,10 @@ function selectDonateTier(tierId) {
     const contact = document.getElementById('donateContact');
     if (contact && !contact.value && currentUser?.username) contact.value = currentUser.username;
     if (payBtn) payBtn.disabled = false;
+
+    if (window.matchMedia('(max-width: 900px)').matches) {
+        document.getElementById('donateCheckout')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
 }
 
 async function startDonationCheckout() {
@@ -207,7 +196,3 @@ async function handleDonateReturnQuery() {
             : 'Не удалось проверить статус заказа.';
     }
 }
-
-document.addEventListener('DOMContentLoaded', () => {
-    if (document.getElementById('homeDonateTiers')) loadHomeDonatePreview();
-});
