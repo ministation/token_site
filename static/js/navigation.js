@@ -116,8 +116,8 @@ function handleHashRoute() {
         privacy: 'Политика конфиденциальности',
         terms: 'Пользовательское соглашение',
         pricing: 'Цены и тарифы',
-        donate: 'Поддержка проекта',
-        support: 'Поддержка',
+        donate: 'Поддержка',
+        support: 'Обращения',
     };
     document.title = `${titles[section] || 'Страница'} — Мини-станция`;
 }

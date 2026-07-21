@@ -5,9 +5,10 @@
 .dc-shell {
     display: flex;
     flex-direction: column;
-    height: min(72vh, 720px);
-    max-height: min(72vh, 720px);
-    min-height: 480px;
+    /* До низа вьюпорта — на уровне нижней границы боковой панели */
+    height: calc(100dvh - 124px);
+    max-height: none;
+    min-height: 420px;
     padding: 0 !important;
     overflow: hidden;
 }
@@ -595,9 +596,9 @@ button.dc-name:hover {
 }
 
 .messages-page.dc-shell {
-    height: min(72vh, 720px);
-    max-height: min(72vh, 720px);
-    min-height: 480px;
+    height: calc(100dvh - 124px);
+    max-height: none;
+    min-height: 420px;
 }
 
 .messages-page.dc-shell .messages-page-header.dc-channel-header {
@@ -711,8 +712,9 @@ button.dc-name:hover {
 @media (max-width: 900px) {
     .dc-shell,
     .messages-page.dc-shell {
-        height: min(78vh, 640px);
-        max-height: min(78vh, 640px);
+        height: calc(100dvh - 112px);
+        max-height: none;
+        min-height: 360px;
     }
 
     .dc-layout.chat-with-users-layout {
