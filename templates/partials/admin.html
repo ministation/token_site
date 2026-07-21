@@ -5,8 +5,7 @@
     <div class="admin-tabs">
         <button type="button" class="tab active" data-admin-only onclick="showAdminTab('stats', this)">Метрика</button>
         <button type="button" class="tab" data-admin-only onclick="showAdminTab('ratings', this)">Рейтинг</button>
-        <button type="button" class="tab" data-admin-only data-mod-ok onclick="showAdminTab('appeals', this)">Обжалования</button>
-        <button type="button" class="tab" data-admin-only data-mod-ok onclick="showAdminTab('tickets', this)">Тикеты</button>
+        <button type="button" class="tab" data-admin-only data-mod-ok onclick="showAdminTab('inbox', this)">Обращения</button>
         <button type="button" class="tab" data-admin-only onclick="showAdminTab('compensation', this)">Компенсация</button>
         <button type="button" class="tab" data-admin-only data-mod-ok onclick="showAdminTab('game', this)">Админ панель</button>
         <button type="button" class="tab" data-staff-only onclick="showAdminTab('playtime', this)">Время</button>
@@ -29,29 +28,37 @@
 
     <div id="adminUsersTab" class="admin-tab-content" style="display:none;" hidden></div>
 
-    <div id="adminAppealsTab" class="admin-tab-content" style="display:none;">
-        <div class="admin-inline-form">
-            <select id="adminAppealFilter" onchange="loadAdminAppeals(false)">
-                <option value="">Все</option>
-                <option value="pending" selected>Ожидают</option>
-                <option value="approved">Одобрены</option>
-                <option value="rejected">Отклонены</option>
-            </select>
-        </div>
-        <div id="adminAppealsContent"><p class="empty-state">Загрузка...</p></div>
-    </div>
-
-    <div id="adminTicketsTab" class="admin-tab-content" style="display:none;">
-        <p class="admin-hint">Обращения из раздела «Поддержка» на сайте.</p>
-        <div class="admin-inline-form">
-            <select id="adminSupportFilter" onchange="loadAdminSupportTickets(false)">
+    <div id="adminInboxTab" class="admin-tab-content" style="display:none;">
+        <p class="admin-hint">Тикеты поддержки и обжалования банов — в одном разделе.</p>
+        <div class="inbox-toolbar" role="toolbar" aria-label="Фильтры обращений">
+            <div class="inbox-type-tabs" role="tablist" aria-label="Тип обращения">
+                <button type="button" class="inbox-type-btn active" role="tab" aria-selected="true"
+                    data-inbox-type="active" onclick="setAdminInboxType('active', this)">Активные</button>
+                <button type="button" class="inbox-type-btn" role="tab" aria-selected="false"
+                    data-inbox-type="tickets" onclick="setAdminInboxType('tickets', this)">Тикеты</button>
+                <button type="button" class="inbox-type-btn" role="tab" aria-selected="false"
+                    data-inbox-type="appeals" onclick="setAdminInboxType('appeals', this)">Обжалования</button>
+                <button type="button" class="inbox-type-btn" role="tab" aria-selected="false"
+                    data-inbox-type="all" onclick="setAdminInboxType('all', this)">Все</button>
+            </div>
+            <label class="inbox-status-label" for="adminInboxStatus">Статус</label>
+            <select id="adminInboxStatus" onchange="loadAdminInbox()">
                 <option value="open" selected>Открытые</option>
-                <option value="answered">Отвеченные</option>
-                <option value="closed">Закрытые</option>
-                <option value="">Все</option>
+                <option value="done">Закрытые / решённые</option>
+                <option value="">Любой</option>
             </select>
         </div>
-        <div id="adminSupportTicketsContent"><p class="empty-state">Загрузка...</p></div>
+        <div class="inbox-layout">
+            <div class="inbox-list" id="adminInboxList" role="listbox" aria-label="Список обращений">
+                <p class="empty-state">Загрузка...</p>
+            </div>
+            <div class="inbox-detail" id="adminInboxDetail" aria-live="polite">
+                <div class="inbox-detail-empty">
+                    <i class="fa-regular fa-envelope-open" aria-hidden="true"></i>
+                    <p>Выберите обращение слева</p>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div id="adminCompensationTab" class="admin-tab-content" style="display:none;">

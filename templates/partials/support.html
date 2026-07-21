@@ -1,24 +1,24 @@
 <div class="card legal-card">
     <h2><i class="fa-solid fa-life-ring"></i> Поддержка</h2>
-    <p class="legal-updated">Обратная связь в личном формате: тикет, почта или Discord — без групповых чатов.</p>
+    <p class="legal-updated">Личная обратная связь: тикет, почта или Discord — без групповых чатов.</p>
 
     <div class="support-contacts" id="supportContacts">
         <div class="support-contact-card">
-            <i class="fa-solid fa-envelope"></i>
+            <i class="fa-solid fa-envelope" aria-hidden="true"></i>
             <div>
                 <strong>Почта</strong>
-                <a id="supportEmailLink" href="mailto:support@ministation.ru">mini-station-14@yandex.ru</a>
+                <a id="supportEmailLink" href="mailto:mini-station-14@yandex.ru">mini-station-14@yandex.ru</a>
             </div>
         </div>
         <div class="support-contact-card">
-            <i class="fa-brands fa-discord"></i>
+            <i class="fa-brands fa-discord" aria-hidden="true"></i>
             <div>
                 <strong>Discord (ЛС)</strong>
                 <span id="supportDiscordName">dotnet_build</span>
             </div>
         </div>
         <div class="support-contact-card" id="supportTelegramCard" hidden>
-            <i class="fa-brands fa-telegram"></i>
+            <i class="fa-brands fa-telegram" aria-hidden="true"></i>
             <div>
                 <strong>Telegram (ЛС)</strong>
                 <a id="supportTelegramLink" href="#" target="_blank" rel="noopener"></a>
@@ -27,33 +27,34 @@
     </div>
 
     <div class="support-form-wrap">
-        <h3><i class="fa-solid fa-ticket"></i> Тикет в поддержку</h3>
-        <p class="admin-hint">Опишите вопрос: оплата Boosty, доступ к привилегиям, баг сайта. Ответ придёт на указанный контакт.</p>
+        <h3><i class="fa-solid fa-ticket" aria-hidden="true"></i> Новый тикет</h3>
+        <p class="admin-hint">Оплата Boosty, привилегии, баги сайта. Ответ придёт на указанный контакт.</p>
         <form id="supportTicketForm" class="support-form" onsubmit="submitSupportTicket(event)">
-            <label>
-                Контакт для ответа
-                <input type="text" id="supportContact" name="contact" required maxlength="200"
-                    placeholder="email@example.com или Discord username">
-            </label>
-            <label>
-                Тема
-                <input type="text" id="supportSubject" name="subject" required maxlength="200"
-                    placeholder="Например: не пришла подписка Boosty">
-            </label>
-            <label>
-                Сообщение
-                <textarea id="supportBody" name="body" rows="5" required maxlength="4000"
-                    placeholder="Суть проблемы, логин Discord, дата оплаты..."></textarea>
-            </label>
-            <button type="submit" class="support-submit">
-                <i class="fa-solid fa-paper-plane"></i> Отправить тикет
+            <label for="supportContact">Контакт для ответа</label>
+            <input type="text" id="supportContact" name="contact" required maxlength="200"
+                autocomplete="email"
+                placeholder="mini-station-14@yandex.ru или Discord username"
+                aria-describedby="supportContactHint">
+            <p id="supportContactHint" class="field-hint">Почта или Discord-ник — куда ответить</p>
+
+            <label for="supportSubject">Тема</label>
+            <input type="text" id="supportSubject" name="subject" required maxlength="200"
+                autocomplete="off"
+                placeholder="Например: не пришла подписка Boosty">
+
+            <label for="supportBody">Сообщение</label>
+            <textarea id="supportBody" name="body" rows="5" required maxlength="4000"
+                placeholder="Суть проблемы, Discord, дата оплаты..."></textarea>
+
+            <button type="submit" class="support-submit" id="supportSubmitBtn">
+                <i class="fa-solid fa-paper-plane" aria-hidden="true"></i> Отправить тикет
             </button>
-            <div id="supportFormResult" class="result"></div>
+            <div id="supportFormResult" class="result" role="status" aria-live="polite"></div>
         </form>
     </div>
 
     <div class="support-my-tickets" id="supportMyTicketsWrap" hidden>
         <h3>Мои обращения</h3>
-        <div id="supportMyTickets"><p class="empty-state">Загрузка...</p></div>
+        <div id="supportMyTickets" class="support-ticket-list"><p class="empty-state">Загрузка...</p></div>
     </div>
 </div>

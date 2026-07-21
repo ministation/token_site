@@ -11,7 +11,8 @@ function showAdminTab(tab, btn) {
     document.querySelectorAll('.admin-tab-content').forEach(el => el.style.display = 'none');
     const map = {
         stats: 'adminStatsTab', ratings: 'adminRatingsTab',
-        appeals: 'adminAppealsTab', tickets: 'adminTicketsTab',
+        inbox: 'adminInboxTab',
+        appeals: 'adminInboxTab', tickets: 'adminInboxTab',
         compensation: 'adminCompensationTab',
         game: 'adminGameTab', playtime: 'adminPlaytimeTab',
         admins: 'adminAdminsTab'
@@ -22,8 +23,9 @@ function showAdminTab(tab, btn) {
     if (btn) btn.classList.add('active');
     if (tab === 'stats') loadAdminStats();
     if (tab === 'ratings') loadAdminRatingsPanel();
-    if (tab === 'appeals') loadAdminAppeals(false);
-    if (tab === 'tickets' && typeof loadAdminSupportTickets === 'function') loadAdminSupportTickets(false);
+    if (tab === 'inbox' || tab === 'appeals' || tab === 'tickets') {
+        if (typeof loadAdminInbox === 'function') loadAdminInbox();
+    }
     if (tab === 'compensation') loadAdminCompensation();
     if (tab === 'game') initGameModerationTab();
     if (tab === 'playtime' && typeof initPlaytimeTransfer === 'function') initPlaytimeTransfer();
@@ -437,31 +439,20 @@ async function loadAdminPostsList(append) {
 }
 
 async function loadAdminAppeals(append) {
-    const container = document.getElementById('adminAppealsContent');
-    if (!container) return;
-    const status = document.getElementById('adminAppealFilter')?.value || '';
-    if (!append) container.innerHTML = '<p class="empty-state">Загрузка...</p>';
-    try {
-        const url = '/api/admin/appeals?limit=50' + (status ? '&status=' + status : '');
-        const appeals = await apiCall('GET', url);
-        if (!appeals.length) {
-            container.innerHTML = '<p class="empty-state">Обжалований нет</p>';
-            return;
-        }
-        container.innerHTML = appeals.map(a => typeof renderAppealCard === 'function' ? renderAppealCard(a) : '').join('');
-    } catch (e) {
-        container.innerHTML = `<p class="error">${escapeHtml(e.message)}</p>`;
-    }
+    if (typeof loadAdminInbox === 'function') return loadAdminInbox();
 }
 
 async function reviewAppeal(appealId, status) {
+    if (typeof submitAppealDecision === 'function') {
+        return submitAppealDecision(appealId, status);
+    }
     const msg = status === 'approved'
         ? 'Одобрить обжалование и снять бан в игровой БД?\nКомментарий (необязательно):'
         : 'Причина отклонения:';
     const response = prompt(msg) || '';
     try {
         await apiCall('POST', `/api/admin/appeals/${appealId}/review`, { status, admin_response: response });
-        if (document.getElementById('adminAppealsContent')) loadAdminAppeals(false);
+        if (typeof loadAdminInbox === 'function') loadAdminInbox();
     } catch (e) {
         alert(e.message);
     }
