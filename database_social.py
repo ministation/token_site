@@ -225,6 +225,8 @@ def _migrate_schema():
         cursor.execute("ALTER TABLE social_users ADD COLUMN avatar_path TEXT")
     if "avatar_custom" not in user_cols:
         cursor.execute("ALTER TABLE social_users ADD COLUMN avatar_custom INTEGER DEFAULT 0")
+    if "last_seen_at" not in user_cols:
+        cursor.execute("ALTER TABLE social_users ADD COLUMN last_seen_at TIMESTAMP")
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS site_admins (
             discord_id TEXT PRIMARY KEY,
@@ -1246,7 +1248,8 @@ def list_platform_users(exclude_player_id: str, query: str = "", limit: int = 10
     if len(q) >= 1:
         like = f"%{q}%"
         cursor.execute("""
-            SELECT player_id, game_nickname, discord_username, discord_id, discord_avatar, avatar_path, updated_at
+            SELECT player_id, game_nickname, discord_username, discord_id, discord_avatar, avatar_path,
+                   updated_at, last_seen_at
             FROM social_users
             WHERE player_id != ?
               AND (LOWER(game_nickname) LIKE LOWER(?)
@@ -1256,7 +1259,8 @@ def list_platform_users(exclude_player_id: str, query: str = "", limit: int = 10
         """, (exclude_player_id, like, like, limit, offset))
     else:
         cursor.execute("""
-            SELECT player_id, game_nickname, discord_username, discord_id, discord_avatar, avatar_path, updated_at
+            SELECT player_id, game_nickname, discord_username, discord_id, discord_avatar, avatar_path,
+                   updated_at, last_seen_at
             FROM social_users
             WHERE player_id != ?
             ORDER BY updated_at DESC
@@ -1265,6 +1269,35 @@ def list_platform_users(exclude_player_id: str, query: str = "", limit: int = 10
     rows = [dict(r) for r in cursor.fetchall()]
     conn.close()
     return rows
+
+
+def touch_presence(player_id: str) -> None:
+    if not player_id:
+        return
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE social_users SET last_seen_at = CURRENT_TIMESTAMP WHERE player_id = ?",
+        (player_id,),
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_presence_map(player_ids: List[str]) -> Dict[str, Optional[str]]:
+    ids = [pid for pid in player_ids if pid]
+    if not ids:
+        return {}
+    conn = get_db()
+    cursor = conn.cursor()
+    placeholders = ",".join("?" for _ in ids)
+    cursor.execute(
+        f"SELECT player_id, last_seen_at FROM social_users WHERE player_id IN ({placeholders})",
+        ids,
+    )
+    out = {row["player_id"]: row["last_seen_at"] for row in cursor.fetchall()}
+    conn.close()
+    return out
 
 
 def list_all_social_users(query: str = "", limit: int = 50, offset: int = 0) -> List[Dict]:

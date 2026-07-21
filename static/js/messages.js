@@ -133,10 +133,10 @@ function renderPmMessage(m, myId, opts = {}) {
     const textHtml = text ? `<div class="dc-content">${formatMessageContent(text)}</div>` : '';
     const compact = !!opts.compact;
     const avatarHtml = compact
-        ? '<div class="dc-avatar-spacer" aria-hidden="true"></div>'
+        ? `<div class="dc-avatar-col" aria-hidden="true"><span class="dc-compact-time">${time}</span></div>`
         : (own
-            ? chatAvatarHtml(currentUser?.avatar, 'pm-msg-avatar dc-avatar')
-            : chatAvatarHtml(m.sender_avatar, 'pm-msg-avatar dc-avatar'));
+            ? `<div class="dc-avatar-col">${chatAvatarHtml(currentUser?.avatar, 'pm-msg-avatar dc-avatar', currentUser?.presence || 'online')}</div>`
+            : `<div class="dc-avatar-col">${chatAvatarHtml(m.sender_avatar, 'pm-msg-avatar dc-avatar', m.sender_presence || 'offline')}</div>`);
     const name = own
         ? (currentUser?.display_name || currentUser?.username || 'Вы')
         : (m.sender_nickname || m.sender_name || 'Игрок');
@@ -153,7 +153,6 @@ function renderPmMessage(m, myId, opts = {}) {
         ${avatarHtml}
         <div class="dc-body">
             ${compact ? '' : `<div class="dc-header">${nameHtml}${badgesHtml}<span class="dc-timestamp">${time}</span>${pmStatusHtml(own, m.read)}</div>`}
-            ${compact ? `<div class="dc-compact-meta">${pmStatusHtml(own, m.read)}<span class="dc-timestamp">${time}</span></div>` : ''}
             ${textHtml}
             ${imageHtml ? `<div class="dc-attach">${imageHtml}</div>` : ''}
         </div>

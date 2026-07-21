@@ -17,6 +17,7 @@ async def get_chat(after: int = Query(0, ge=0)):
         m["author_avatar"] = info["avatar"]
         m["author_role"] = info["author_role"]
         m["author_badges"] = info["badges"]
+        m["author_presence"] = info.get("presence") or "offline"
     return messages
 
 
@@ -45,4 +46,5 @@ async def post_chat(
     msg_data["author_avatar"] = info["avatar"]
     msg_data["author_role"] = info["author_role"]
     msg_data["author_badges"] = info["badges"]
+    msg_data["author_presence"] = info.get("presence") or "offline"
     return {"success": True, "message": msg_data}

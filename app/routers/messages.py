@@ -48,6 +48,7 @@ async def conversation(other_id: str, request: Request):
         row["sender_avatar"] = sender["avatar"]
         row["sender_badges"] = sender["badges"]
         row["sender_role"] = sender["author_role"]
+        row["sender_presence"] = sender.get("presence") or "offline"
         enriched.append(row)
     return {"partner": partner, "messages": enriched}
 

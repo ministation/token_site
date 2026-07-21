@@ -1,5 +1,6 @@
 let globalChatLastId = 0;
 let globalChatPollInterval = null;
+let chatUsersPollInterval = null;
 let globalChatInitialized = false;
 let chatUserSearchTimeout = null;
 
@@ -12,6 +13,7 @@ function initGlobalChat() {
     }
     loadChatUsers('');
     startGlobalChatPolling();
+    startChatUsersPolling();
 }
 
 function setupChatImagePreview(inputId, previewId) {
@@ -68,10 +70,15 @@ async function loadChatUsers(query) {
             container.innerHTML = '<p class="empty-state">Никого не найдено</p>';
             return;
         }
-        container.innerHTML = users.map(u => `
-            <div class="chat-user-row">
+        const online = users.filter(u => (u.presence || u.online_status) === 'online' || (u.presence || u.online_status) === 'idle' || (u.presence || u.online_status) === 'dnd');
+        const offline = users.filter(u => !['online', 'idle', 'dnd'].includes(u.presence || u.online_status));
+
+        const rowHtml = (u) => {
+            const status = u.presence || u.online_status || 'offline';
+            return `
+            <div class="chat-user-row" data-presence="${escapeHtml(status)}">
                 <button type="button" class="chat-user-main" onclick="event.stopPropagation(); openProfile(${JSON.stringify(u.player_id)})">
-                    ${chatAvatarHtml(u.avatar, 'chat-user-avatar')}
+                    ${chatAvatarHtml(u.avatar, 'chat-user-avatar', status)}
                     <div class="chat-user-info">
                         <div class="chat-user-name-row">
                             <div class="chat-user-name">${typeof profileLink === 'function' ? profileLink(u.player_id, u.game_nickname || u.discord_username, 'chat-user-name-link') : escapeHtml(u.game_nickname || u.discord_username)}</div>
@@ -84,8 +91,17 @@ async function loadChatUsers(query) {
                     onclick='messageUserFromChat(${JSON.stringify(u.player_id)}, ${JSON.stringify(u.game_nickname || u.discord_username || 'Игрок')})'>
                     <i class="fa-solid fa-envelope"></i>
                 </button>
-            </div>
-        `).join('');
+            </div>`;
+        };
+
+        let html = '';
+        if (online.length) {
+            html += `<div class="dc-member-group"><div class="dc-member-group-title">В сети — ${online.length}</div>${online.map(rowHtml).join('')}</div>`;
+        }
+        if (offline.length) {
+            html += `<div class="dc-member-group"><div class="dc-member-group-title">Не в сети — ${offline.length}</div>${offline.map(rowHtml).join('')}</div>`;
+        }
+        container.innerHTML = html || '<p class="empty-state">Никого не найдено</p>';
     } catch (e) {
         container.innerHTML = '<p class="error">Не удалось загрузить список</p>';
     }
@@ -109,6 +125,22 @@ function stopGlobalChatPolling() {
     if (globalChatPollInterval) {
         clearInterval(globalChatPollInterval);
         globalChatPollInterval = null;
+    }
+}
+
+function startChatUsersPolling() {
+    stopChatUsersPolling();
+    chatUsersPollInterval = setInterval(() => {
+        const input = document.getElementById('chatUserSearch');
+        const q = input ? input.value.trim() : '';
+        if (!q) loadChatUsers('');
+    }, 15000);
+}
+
+function stopChatUsersPolling() {
+    if (chatUsersPollInterval) {
+        clearInterval(chatUsersPollInterval);
+        chatUsersPollInterval = null;
     }
 }
 
@@ -163,9 +195,10 @@ function formatChatTime(iso) {
 function renderGlobalChatMessage(m, opts = {}) {
     const isOwn = !!(currentUser?.social_id && m.author_id === currentUser.social_id);
     const compact = !!opts.compact;
+    const presence = m.author_presence || 'offline';
     const avatar = compact
-        ? '<div class="dc-avatar-spacer" aria-hidden="true"></div>'
-        : chatAvatarHtml(m.author_avatar, 'chat-avatar dc-avatar');
+        ? `<div class="dc-avatar-col" aria-hidden="true"><span class="dc-compact-time">${formatChatTime(m.created_at)}</span></div>`
+        : `<div class="dc-avatar-col">${chatAvatarHtml(m.author_avatar, 'chat-avatar dc-avatar', presence)}</div>`;
     const time = formatChatTime(m.created_at);
     const badgesHtml = renderChatBadgesHtml(m.author_badges || (
         typeof renderRoleBadge === 'function' && m.author_role
@@ -186,7 +219,6 @@ function renderGlobalChatMessage(m, opts = {}) {
             ${avatar}
             <div class="dc-body">
                 ${compact ? '' : `<div class="dc-header">${authorBtn}${badgesHtml}<span class="dc-timestamp">${time}</span>${statusHtml}</div>`}
-                ${compact ? `<div class="dc-compact-meta">${statusHtml}<span class="dc-timestamp">${time}</span></div>` : ''}
                 ${textHtml}
                 ${imageHtml ? `<div class="dc-attach">${imageHtml}</div>` : ''}
             </div>

@@ -2,6 +2,7 @@
 import database_social as social_db
 from app.services.avatars import resolve_avatar_url, DEFAULT_AVATAR
 from app.services.roles import get_staff_role, ROLE_ADMIN, ROLE_MODERATOR, get_chat_badges
+from app.services.presence import status_from_last_seen
 
 
 def enrich_player_for_chat(player_id: str) -> dict:
@@ -13,6 +14,7 @@ def enrich_player_for_chat(player_id: str) -> dict:
             "nickname": "Игрок",
             "author_role": None,
             "badges": [],
+            "presence": "offline",
         }
     discord_username = user.get("discord_username") or ""
     discord_id = user.get("discord_id")
@@ -23,4 +25,5 @@ def enrich_player_for_chat(player_id: str) -> dict:
         "nickname": user.get("game_nickname") or discord_username or "Игрок",
         "author_role": role,
         "badges": get_chat_badges(discord_username, discord_id),
+        "presence": status_from_last_seen(user.get("last_seen_at")),
     }

@@ -114,6 +114,11 @@ async function pollNotifications() {
         return;
     }
     try {
+        await apiCall('POST', '/api/presence/heartbeat');
+    } catch {
+        /* ignore */
+    }
+    try {
         const unread = await apiCall('GET', '/api/messages/unread-count');
         const count = Number(unread.unread) || 0;
         maybeNotifyNewPm(count);

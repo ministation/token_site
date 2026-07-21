@@ -174,4 +174,5 @@ function showSection(sectionId) {
     if (target) target.classList.add('active');
     if (sectionId !== 'messages' && typeof stopPmPolling === 'function') stopPmPolling();
     if (sectionId !== 'chat' && typeof stopGlobalChatPolling === 'function') stopGlobalChatPolling();
+    if (sectionId !== 'chat' && typeof stopChatUsersPolling === 'function') stopChatUsersPolling();
 }
