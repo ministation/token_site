@@ -4571,3 +4571,274 @@ label.chat-tool-btn input[type="file"] {
         grid-template-columns: 1fr;
     }
 }
+
+/* === Site footer + legal / pricing / support === */
+.site-footer {
+    border-top: 2px solid var(--border);
+    background: color-mix(in srgb, var(--panel) 92%, transparent);
+    margin-top: 8px;
+}
+.site-footer-inner {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 22px 18px 28px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px 28px;
+    align-items: flex-start;
+    justify-content: space-between;
+    box-sizing: border-box;
+}
+.site-footer-brand {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 160px;
+}
+.site-footer-brand strong {
+    font-family: var(--font-pixel);
+    font-size: 0.55rem;
+    color: var(--ink);
+}
+.site-footer-brand span {
+    font-size: 0.82rem;
+    color: var(--muted);
+}
+.site-footer-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 18px;
+    align-items: center;
+}
+.site-footer-nav a,
+.site-footer-meta a {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 0.85rem;
+}
+.site-footer-nav a:hover,
+.site-footer-meta a:hover {
+    color: var(--accent-deep);
+    text-decoration: underline;
+}
+.site-footer-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    color: var(--dim);
+    font-size: 0.82rem;
+}
+
+.legal-card { max-width: 920px; }
+.legal-updated {
+    color: var(--muted);
+    font-size: 0.88rem;
+    margin: -4px 0 16px;
+}
+.legal-prose {
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    line-height: 1.55;
+    color: var(--ink);
+}
+.legal-prose h3 {
+    font-family: var(--font-pixel);
+    font-size: 0.52rem;
+    margin: 18px 0 8px;
+    color: var(--ink);
+}
+.legal-prose p { margin: 0 0 10px; }
+.legal-prose ul {
+    margin: 0 0 12px;
+    padding-left: 1.2em;
+}
+.legal-prose li { margin-bottom: 4px; }
+.legal-prose a { color: var(--link); }
+.legal-contact { margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--border); }
+
+.pricing-note {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    margin-bottom: 16px;
+    font-size: 0.9rem;
+    line-height: 1.45;
+}
+.pricing-note p { margin: 0 0 8px; }
+.pricing-note p:last-child { margin-bottom: 0; }
+
+.pricing-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+    margin-bottom: 18px;
+}
+.pricing-tier {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px;
+    background: var(--panel-2);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-hard);
+}
+.pricing-tier.featured {
+    border-color: var(--accent);
+}
+.pricing-tier-head h3 {
+    margin: 6px 0 4px;
+    font-size: 1rem;
+    font-family: var(--font-body);
+    font-weight: 700;
+}
+.pricing-level {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--accent) 18%, var(--panel));
+    color: var(--accent-deep);
+    font-family: var(--font-pixel);
+    font-size: 0.45rem;
+}
+.pricing-price {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--ink);
+}
+.pricing-price span {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--muted);
+}
+.pricing-tier ul {
+    margin: 0;
+    padding-left: 1.1em;
+    flex: 1;
+    font-size: 0.86rem;
+    line-height: 1.4;
+    color: var(--ink);
+}
+.pricing-tier li { margin-bottom: 4px; }
+.pricing-cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: auto;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: var(--accent);
+    color: #fff !important;
+    text-decoration: none !important;
+    font-weight: 700;
+    font-size: 0.88rem;
+}
+.pricing-cta:hover { background: var(--accent-deep); }
+.pricing-fineprint { font-size: 0.85rem; color: var(--muted); }
+
+.support-contacts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 10px;
+    margin-bottom: 18px;
+}
+.support-contact-card {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 12px 14px;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+}
+.support-contact-card i {
+    color: var(--accent);
+    margin-top: 3px;
+}
+.support-contact-card strong {
+    display: block;
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-bottom: 2px;
+}
+.support-contact-card a,
+.support-contact-card span {
+    color: var(--ink);
+    font-weight: 600;
+    word-break: break-all;
+}
+
+.support-form-wrap h3,
+.support-my-tickets h3 {
+    margin: 8px 0 10px;
+    font-size: 0.95rem;
+}
+.support-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-width: 560px;
+}
+.support-form label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 0.85rem;
+    color: var(--muted);
+}
+.support-form input,
+.support-form textarea {
+    width: 100%;
+    box-sizing: border-box;
+}
+.support-submit {
+    align-self: flex-start;
+}
+.support-ticket-row {
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    margin-bottom: 8px;
+    background: var(--panel-2);
+}
+.support-ticket-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+}
+.support-ticket-status {
+    font-size: 0.78rem;
+    color: var(--muted);
+}
+.support-ticket-status.status-open { color: var(--accent-deep); }
+.support-ticket-status.status-answered { color: #1a7f4b; }
+.support-ticket-body,
+.support-ticket-reply {
+    margin: 0 0 6px;
+    font-size: 0.9rem;
+    white-space: pre-wrap;
+}
+.support-ticket-meta {
+    font-size: 0.75rem;
+    color: var(--dim);
+}
+.support-admin-card { margin-bottom: 12px; }
+
+@media (max-width: 768px) {
+    .site-footer-inner {
+        flex-direction: column;
+        padding: 18px 12px 24px;
+    }
+    .site-footer-nav {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+}

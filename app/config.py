@@ -56,9 +56,10 @@ TRANSFER_COOLDOWN = int(os.getenv("TRANSFER_COOLDOWN", "60"))
 # Чат
 MAX_CHAT_MESSAGES = int(os.getenv("MAX_CHAT_MESSAGES", "100"))
 
-# Сервер
-SERVER_HOST = os.getenv("SERVER_HOST", "0.0.0.0")
-SERVER_PORT = int(os.getenv("SERVER_PORT", "8067"))
+SUPPORT_EMAIL = os.getenv("SUPPORT_EMAIL", "mini-station-14@yandex.ru")
+SUPPORT_DISCORD_USERNAME = os.getenv("SUPPORT_DISCORD_USERNAME", "dotnet_build")
+SUPPORT_TELEGRAM_USERNAME = os.getenv("SUPPORT_TELEGRAM_USERNAME", "mini_station_support")
+BOOSTY_URL = os.getenv("BOOSTY_URL", "https://boosty.to/mini-station/")
 
 # Файлы и загрузки
 SESSIONS_FILE = os.getenv("SESSIONS_FILE", "sessions.json")

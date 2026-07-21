@@ -6,6 +6,7 @@
         <button type="button" class="tab active" data-admin-only onclick="showAdminTab('stats', this)">Метрика</button>
         <button type="button" class="tab" data-admin-only onclick="showAdminTab('ratings', this)">Рейтинг</button>
         <button type="button" class="tab" data-admin-only data-mod-ok onclick="showAdminTab('appeals', this)">Обжалования</button>
+        <button type="button" class="tab" data-admin-only data-mod-ok onclick="showAdminTab('tickets', this)">Тикеты</button>
         <button type="button" class="tab" data-admin-only onclick="showAdminTab('compensation', this)">Компенсация</button>
         <button type="button" class="tab" data-admin-only data-mod-ok onclick="showAdminTab('game', this)">Админ панель</button>
         <button type="button" class="tab" data-staff-only onclick="showAdminTab('playtime', this)">Время</button>
@@ -38,6 +39,19 @@
             </select>
         </div>
         <div id="adminAppealsContent"><p class="empty-state">Загрузка...</p></div>
+    </div>
+
+    <div id="adminTicketsTab" class="admin-tab-content" style="display:none;">
+        <p class="admin-hint">Обращения из раздела «Поддержка» на сайте.</p>
+        <div class="admin-inline-form">
+            <select id="adminSupportFilter" onchange="loadAdminSupportTickets(false)">
+                <option value="open" selected>Открытые</option>
+                <option value="answered">Отвеченные</option>
+                <option value="closed">Закрытые</option>
+                <option value="">Все</option>
+            </select>
+        </div>
+        <div id="adminSupportTicketsContent"><p class="empty-state">Загрузка...</p></div>
     </div>
 
     <div id="adminCompensationTab" class="admin-tab-content" style="display:none;">

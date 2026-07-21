@@ -336,6 +336,24 @@ def _migrate_schema():
         CREATE INDEX IF NOT EXISTS idx_compensation_giveaways_ends
         ON compensation_giveaways(ends_at DESC)
     """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS support_tickets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            player_id TEXT,
+            contact TEXT NOT NULL,
+            subject TEXT NOT NULL,
+            body TEXT NOT NULL,
+            status TEXT DEFAULT 'open',
+            admin_response TEXT,
+            reviewed_by TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_support_tickets_status
+        ON support_tickets(status, created_at DESC)
+    """)
     conn.commit()
     conn.close()
 
@@ -1404,6 +1422,73 @@ def update_ban_appeal(appeal_id: int, status: str, admin_response: str, reviewed
         SET status = ?, admin_response = ?, reviewed_by = ?, updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
     """, (status, admin_response, reviewed_by, appeal_id))
+    conn.commit()
+    ok = cursor.rowcount > 0
+    conn.close()
+    return ok
+
+
+def create_support_ticket(contact: str, subject: str, body: str, player_id: str | None = None) -> int:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO support_tickets (player_id, contact, subject, body)
+        VALUES (?, ?, ?, ?)
+    """, (player_id, contact.strip(), subject.strip(), body.strip()))
+    conn.commit()
+    ticket_id = cursor.lastrowid
+    conn.close()
+    return ticket_id
+
+
+def list_support_tickets(status: str | None = None, limit: int = 50, offset: int = 0) -> List[Dict]:
+    conn = get_db()
+    cursor = conn.cursor()
+    st = (status or "").strip()
+    if st:
+        cursor.execute("""
+            SELECT * FROM support_tickets WHERE status = ?
+            ORDER BY created_at DESC LIMIT ? OFFSET ?
+        """, (st, limit, offset))
+    else:
+        cursor.execute("""
+            SELECT * FROM support_tickets
+            ORDER BY created_at DESC LIMIT ? OFFSET ?
+        """, (limit, offset))
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return rows
+
+
+def list_support_tickets_by_player(player_id: str, limit: int = 30) -> List[Dict]:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT * FROM support_tickets WHERE player_id = ?
+        ORDER BY created_at DESC LIMIT ?
+    """, (player_id, limit))
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return rows
+
+
+def get_support_ticket(ticket_id: int) -> Optional[Dict]:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM support_tickets WHERE id = ?", (ticket_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def update_support_ticket(ticket_id: int, status: str, admin_response: str, reviewed_by: str) -> bool:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE support_tickets
+        SET status = ?, admin_response = ?, reviewed_by = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    """, (status, admin_response, reviewed_by, ticket_id))
     conn.commit()
     ok = cursor.rowcount > 0
     conn.close()

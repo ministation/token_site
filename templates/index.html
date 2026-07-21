@@ -93,10 +93,42 @@
             <div id="adminSection" class="section">
                 {% include 'partials/admin.html' %}
             </div>
+            <div id="privacySection" class="section">
+                {% include 'partials/privacy.html' %}
+            </div>
+            <div id="termsSection" class="section">
+                {% include 'partials/terms.html' %}
+            </div>
+            <div id="pricingSection" class="section">
+                {% include 'partials/pricing.html' %}
+            </div>
+            <div id="supportSection" class="section">
+                {% include 'partials/support.html' %}
+            </div>
 
             <datalist id="playersList"></datalist>
         </main>
     </div>
+
+    <footer class="site-footer">
+        <div class="site-footer-inner">
+            <div class="site-footer-brand">
+                <strong>Мини-станция</strong>
+                <span>SS14 · некоммерческий проект</span>
+            </div>
+            <nav class="site-footer-nav" aria-label="Правовая информация">
+                <a href="#/privacy">Политика конфиденциальности</a>
+                <a href="#/terms">Пользовательское соглашение</a>
+                <a href="#/pricing">Цены и тарифы</a>
+                <a href="#/support">Поддержка</a>
+            </nav>
+            <div class="site-footer-meta">
+                <a href="mailto:support@ministation.ru">support@ministation.ru</a>
+                <span>·</span>
+                <a href="https://boosty.to/mini-station/" target="_blank" rel="noopener">Boosty</a>
+            </div>
+        </div>
+    </footer>
 
     <script src="/static/js/common.js"></script>
     <script src="/static/js/auth.js"></script>
@@ -116,6 +148,7 @@
     <script src="/static/js/inventory.js"></script>
     <script src="/static/js/playtime.js"></script>
     <script src="/static/js/admin.js"></script>
+    <script src="/static/js/support.js"></script>
     <script src="/static/script.js"></script>
 
     <script>

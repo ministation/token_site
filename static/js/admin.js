@@ -11,7 +11,8 @@ function showAdminTab(tab, btn) {
     document.querySelectorAll('.admin-tab-content').forEach(el => el.style.display = 'none');
     const map = {
         stats: 'adminStatsTab', ratings: 'adminRatingsTab',
-        appeals: 'adminAppealsTab', compensation: 'adminCompensationTab',
+        appeals: 'adminAppealsTab', tickets: 'adminTicketsTab',
+        compensation: 'adminCompensationTab',
         game: 'adminGameTab', playtime: 'adminPlaytimeTab',
         admins: 'adminAdminsTab'
     };
@@ -22,6 +23,7 @@ function showAdminTab(tab, btn) {
     if (tab === 'stats') loadAdminStats();
     if (tab === 'ratings') loadAdminRatingsPanel();
     if (tab === 'appeals') loadAdminAppeals(false);
+    if (tab === 'tickets' && typeof loadAdminSupportTickets === 'function') loadAdminSupportTickets(false);
     if (tab === 'compensation') loadAdminCompensation();
     if (tab === 'game') initGameModerationTab();
     if (tab === 'playtime' && typeof initPlaytimeTransfer === 'function') initPlaytimeTransfer();

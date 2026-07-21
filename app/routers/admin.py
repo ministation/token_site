@@ -31,6 +31,11 @@ class ReviewAppealRequest(BaseModel):
     admin_response: str = ""
 
 
+class ReviewTicketRequest(BaseModel):
+    status: str
+    admin_response: str = ""
+
+
 class CreateServerBanRequest(BaseModel):
     player: str
     reason: str
@@ -378,4 +383,31 @@ async def admin_review_appeal(appeal_id: int, req: ReviewAppealRequest, request:
         raise HTTPException(status_code=400, detail=str(e))
     if not ok:
         raise HTTPException(status_code=404, detail="Обжалование не найдено")
+    return {"success": True}
+
+
+@router.get("/support-tickets")
+async def admin_support_tickets(
+    request: Request,
+    status: str = Query("", max_length=20),
+    limit: int = 50,
+    offset: int = 0,
+):
+    await get_current_staff(request)
+    from app.services import support as support_svc
+    return support_svc.list_tickets(status, limit, offset)
+
+
+@router.post("/support-tickets/{ticket_id}/review")
+async def admin_review_support_ticket(ticket_id: int, req: ReviewTicketRequest, request: Request):
+    staff = await get_current_staff(request)
+    from app.services import support as support_svc
+    try:
+        ok = support_svc.reply_ticket(
+            ticket_id, req.status, req.admin_response, staff.get("username", "")
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    if not ok:
+        raise HTTPException(status_code=404, detail="Тикет не найден")
     return {"success": True}

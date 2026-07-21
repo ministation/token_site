@@ -112,6 +112,10 @@ function handleHashRoute() {
         bans: 'Наказания',
         online: 'Статистика',
         admin: 'Админ',
+        privacy: 'Политика конфиденциальности',
+        terms: 'Пользовательское соглашение',
+        pricing: 'Цены и тарифы',
+        support: 'Поддержка',
     };
     document.title = `${titles[section] || 'Страница'} — Мини-станция`;
 }
@@ -152,6 +156,8 @@ function runSectionInit(section, playerId = null) {
             const playtimeBtn = document.querySelector('.admin-tabs .tab[data-staff-only]');
             showAdminTab('playtime', playtimeBtn);
         }
+    } else if (section === 'support') {
+        if (typeof initSupportSection === 'function') initSupportSection();
     }
 }
 
