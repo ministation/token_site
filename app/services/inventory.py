@@ -95,10 +95,26 @@ GHOST_LABELS: dict[str, str] = {
     "skeleton": "Скелет",
     "ian": "Иан",
     "fire": "Огненный призрак",
-    "discocat": "Диско-кот",
+    "discocat": "Диско кот",
+    "disco_cat": "Диско кот",
+    "disco cat": "Диско кот",
+    "disco": "Диско кот",
     "blazeit": "Blaze It",
+    "blaze it": "Blaze It",
     "rainbow": "Радужный призрак",
     "rooster": "Петух",
+    "mouse": "Мышь",
+    "godface": "Лик бога",
+    "lizardwizard": "Ящер-волшебник",
+    "wendor": "Вендор",
+    "puroslavking": "Puro Slav King",
+    "yourmommy": "Your Mommy",
+    "kreses": "Kreses",
+    "no_mad": "No Mad",
+    "nomad": "No Mad",
+    "scituzer2": "Scituzer",
+    "trest100": "Trest",
+    "vetochka": "Веточка",
 }
 
 GHOST_TABLE_CANDIDATES = [
@@ -128,17 +144,32 @@ def _build_ghost_image_index() -> dict[str, str]:
         if not os.path.isdir(dirpath) or not entry.endswith(".rsi"):
             continue
         folder = entry[:-4]
-        img_file = None
-        for fname in ("icon.png", "animated.png"):
-            if os.path.isfile(os.path.join(dirpath, fname)):
-                img_file = fname
-                break
-        if not img_file:
+        pngs = [
+            f for f in os.listdir(dirpath)
+            if f.lower().endswith(".png") and os.path.isfile(os.path.join(dirpath, f))
+        ]
+        if not pngs:
             continue
+        preferred: list[str] = []
+        lower_map = {f.lower(): f for f in pngs}
+        if "icon.png" in lower_map:
+            preferred.append(lower_map["icon.png"])
+        folder_png = f"{folder.lower()}.png"
+        if folder_png in lower_map and lower_map[folder_png] not in preferred:
+            preferred.append(lower_map[folder_png])
+        for f in sorted(pngs):
+            if f.lower() == "animated.png":
+                continue
+            if f not in preferred:
+                preferred.append(f)
+        if "animated.png" in lower_map:
+            preferred.append(lower_map["animated.png"])
+        img_file = preferred[0]
         url = f"/static/ghosts/{entry}/{img_file}"
         keys = {
             folder.lower(),
             folder.lower().replace("_", ""),
+            folder.lower().replace("-", ""),
         }
         if "_ghost_human" in folder:
             keys.add(folder.replace("_ghost_human", "").lower())
@@ -147,27 +178,56 @@ def _build_ghost_image_index() -> dict[str, str]:
     return index
 
 
-def _ghost_lookup_keys(ghost_id: str) -> list[str]:
+def _clean_ghost_raw(ghost_id: str) -> str:
+    """Убирает ghost-theme:, :selected и префикс Ghost Theme."""
     raw = (ghost_id or "").strip()
     if not raw:
+        return ""
+    raw = re.sub(r":(selected|unselected)$", "", raw, flags=re.IGNORECASE).strip()
+    if ":" in raw:
+        # ghost-theme:Ghost Theme Disco Cat
+        raw = raw.split(":", 1)[-1].strip()
+    raw = re.sub(r"^ghost[\s_-]*theme[\s_-]*", "", raw, flags=re.IGNORECASE).strip()
+    raw = re.sub(r"^ghost[\s_-]+", "", raw, flags=re.IGNORECASE).strip()
+    return raw or (ghost_id or "").strip()
+
+
+def _ghost_lookup_keys(ghost_id: str) -> list[str]:
+    raw = _clean_ghost_raw(ghost_id)
+    if not raw:
         return []
-    snake = re.sub(r"([a-z])([A-Z])", r"\1_\2", raw).lower()
-    keys = [raw.lower(), snake, snake.replace("_", "")]
+    snake = re.sub(r"([a-z])([A-Z])", r"\1_\2", raw)
+    snake = re.sub(r"[\s\-]+", "_", snake).lower().strip("_")
+    compact = snake.replace("_", "")
+    keys = [raw.lower(), snake, compact]
+
     name = raw
-    for prefix in ("MobGhost", "CustomGhost", "GhostHuman", "Ghost", "Mob"):
+    for prefix in ("MobGhost", "CustomGhost", "GhostHuman", "GhostTheme", "Ghost", "Mob"):
         if name.startswith(prefix):
             name = name[len(prefix):]
+            break
     if name != raw:
-        stripped = re.sub(r"([a-z])([A-Z])", r"\1_\2", name).lower()
+        stripped = re.sub(r"([a-z])([A-Z])", r"\1_\2", name)
+        stripped = re.sub(r"[\s\-]+", "_", stripped).lower().strip("_")
         keys.extend([stripped, stripped.replace("_", "")])
+
     if snake.startswith("human"):
         color = snake.replace("human", "").strip("_")
         if color:
             keys.append(color)
             keys.append(f"{color}_ghost_human")
+
+    # "disco_cat" / "silver" из хвоста
     for part in re.split(r"[_\s]+", snake):
-        if part and part not in ("ghost", "human", "mob", "custom"):
+        if part and part not in ("ghost", "human", "mob", "custom", "theme"):
             keys.append(part)
+
+    # Цветные human-призраки: silver -> silver_ghost_human
+    if compact and f"{compact}_ghost_human" not in keys:
+        keys.append(f"{compact}_ghost_human")
+    if snake and f"{snake}_ghost_human" not in keys:
+        keys.append(f"{snake}_ghost_human")
+
     seen: set[str] = set()
     ordered: list[str] = []
     for key in keys:
@@ -188,16 +248,37 @@ def ghost_image_url(ghost_id: str) -> str | None:
     return None
 
 
+def _ghost_dedupe_key(ghost_id: str) -> str:
+    cleaned = _clean_ghost_raw(ghost_id)
+    return re.sub(r"[^a-z0-9]+", "", cleaned.lower())
+
+
 def _ghost_entry(ghost_id: str, name: str | None = None, amount: int | None = None) -> dict:
     gid = str(ghost_id)
+    # Всегда нормализуем отображаемое имя; сырой name из БД часто вида ghost-theme:...
+    display = _format_ghost_name(name) if name else None
+    if not display or _is_raw_ghost_label(display):
+        display = _format_ghost_name(gid)
     entry = {
         "ghost_id": gid,
-        "name": name or _format_ghost_name(gid),
+        "name": display,
         "icon": ghost_image_url(gid),
     }
     if amount is not None and amount > 1:
         entry["amount"] = amount
     return entry
+
+
+def _is_raw_ghost_label(label: str) -> bool:
+    text = (label or "").strip().lower()
+    return (
+        not text
+        or text.startswith("ghost-theme")
+        or text.startswith("ghost theme")
+        or ":selected" in text
+        or text.startswith("mobghost")
+        or text.startswith("customghost")
+    )
 
 
 def _normalize_token_key(token_id: str) -> str:
@@ -294,18 +375,45 @@ def _ticket_info(token_id: str) -> dict:
 
 def _format_ghost_name(ghost_id: str) -> str:
     raw = (ghost_id or "").strip()
-    if raw in GHOST_LABELS:
-        return GHOST_LABELS[raw]
-    lower = raw.lower()
-    for key, label in GHOST_LABELS.items():
-        if key.lower() == lower:
-            return label
-    name = raw
-    for prefix in ("MobGhost", "CustomGhost", "Ghost", "Mob"):
-        if name.startswith(prefix):
-            name = name[len(prefix):]
-    spaced = re.sub(r"([a-z])([A-Z])", r"\1 \2", name)
-    return spaced.replace("_", " ").strip() or raw
+    cleaned = _clean_ghost_raw(raw)
+    candidates = [
+        raw,
+        cleaned,
+        cleaned.lower(),
+        re.sub(r"[\s\-]+", "_", cleaned.lower()),
+        re.sub(r"[\s\-_]+", "", cleaned.lower()),
+    ]
+    # PascalCase / camelCase → snake
+    snake = re.sub(r"([a-z])([A-Z])", r"\1_\2", cleaned)
+    snake = re.sub(r"[\s\-]+", "_", snake).lower().strip("_")
+    candidates.extend([snake, snake.replace("_", ""), cleaned.replace(" ", "").lower()])
+
+    for key in candidates:
+        if not key:
+            continue
+        if key in GHOST_LABELS:
+            return GHOST_LABELS[key]
+        for label_key, label in GHOST_LABELS.items():
+            if label_key.lower() == key.lower():
+                return label
+
+    # Человекочитаемый fallback: "Disco Cat" → "Disco Cat"
+    spaced = re.sub(r"([a-z])([A-Z])", r"\1 \2", cleaned)
+    spaced = spaced.replace("_", " ").replace("-", " ").strip()
+    spaced = re.sub(r"\s+", " ", spaced)
+    return spaced or raw
+
+
+def _dedupe_ghost_entries(ghosts: list[dict]) -> list[dict]:
+    seen: set[str] = set()
+    result: list[dict] = []
+    for g in ghosts:
+        key = _ghost_dedupe_key(g.get("ghost_id") or g.get("name") or "")
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        result.append(g)
+    return result
 
 
 async def _table_exists(conn, table: str) -> bool:
@@ -514,8 +622,8 @@ async def _ghosts_from_catalog(conn, schema: dict, user_uuids: list[str]) -> lis
                 )
                 for r in rows:
                     gid = str(r["ghost_id"])
-                    ghosts.append(_ghost_entry(gid, r["name"] or _format_ghost_name(gid)))
-                return ghosts
+                    ghosts.append(_ghost_entry(gid, r["name"] or None))
+                return _dedupe_ghost_entries(ghosts)
             except asyncpg.PostgresError:
                 pass
 
@@ -531,7 +639,7 @@ async def _ghosts_from_catalog(conn, schema: dict, user_uuids: list[str]) -> lis
     for r in rows:
         gid = str(r["ghost_id"])
         ghosts.append(_ghost_entry(gid))
-    return ghosts
+    return _dedupe_ghost_entries(ghosts)
 
 
 async def _ghosts_from_tokens(conn, user_uuids: list[str]) -> list[dict]:
@@ -560,7 +668,7 @@ async def _ghosts_from_tokens(conn, user_uuids: list[str]) -> list[dict]:
             continue
         seen.add(norm)
         ghosts.append(_ghost_entry(gid, amount=int(r["amount"])))
-    return ghosts
+    return _dedupe_ghost_entries(ghosts)
 
 
 async def get_player_custom_ghosts(user_uuids: list[str]) -> list[dict]:
