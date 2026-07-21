@@ -1,6 +1,6 @@
 const SUPPORT_EMAIL_FALLBACK = 'mini-station-14@yandex.ru';
 
-let adminInboxType = 'active';
+let adminInboxType = 'all';
 let adminInboxItems = [];
 let adminInboxSelectedKey = null;
 
@@ -218,7 +218,7 @@ async function loadAdminInbox() {
     const detail = document.getElementById('adminInboxDetail');
     if (!list) return;
     list.innerHTML = '<p class="empty-state">Загрузка...</p>';
-    const statusFilter = document.getElementById('adminInboxStatus')?.value ?? 'open';
+    const statusFilter = document.getElementById('adminInboxStatus')?.value ?? '';
 
     try {
         const fetches = [];

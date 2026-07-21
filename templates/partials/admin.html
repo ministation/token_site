@@ -33,19 +33,19 @@
         <div class="inbox-toolbar" role="toolbar" aria-label="Фильтры обращений">
             <div class="inbox-type-tabs" role="tablist" aria-label="Тип обращения">
                 <button type="button" class="inbox-type-btn active" role="tab" aria-selected="true"
+                    data-inbox-type="all" onclick="setAdminInboxType('all', this)">Все</button>
+                <button type="button" class="inbox-type-btn" role="tab" aria-selected="false"
                     data-inbox-type="active" onclick="setAdminInboxType('active', this)">Активные</button>
                 <button type="button" class="inbox-type-btn" role="tab" aria-selected="false"
                     data-inbox-type="tickets" onclick="setAdminInboxType('tickets', this)">Тикеты</button>
                 <button type="button" class="inbox-type-btn" role="tab" aria-selected="false"
                     data-inbox-type="appeals" onclick="setAdminInboxType('appeals', this)">Обжалования</button>
-                <button type="button" class="inbox-type-btn" role="tab" aria-selected="false"
-                    data-inbox-type="all" onclick="setAdminInboxType('all', this)">Все</button>
             </div>
             <label class="inbox-status-label" for="adminInboxStatus">Статус</label>
             <select id="adminInboxStatus" onchange="loadAdminInbox()">
-                <option value="open" selected>Открытые</option>
+                <option value="" selected>Любой</option>
+                <option value="open">Открытые</option>
                 <option value="done">Закрытые / решённые</option>
-                <option value="">Любой</option>
             </select>
         </div>
         <div class="inbox-layout">

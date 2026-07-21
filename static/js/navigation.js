@@ -115,6 +115,7 @@ function handleHashRoute() {
         privacy: 'Политика конфиденциальности',
         terms: 'Пользовательское соглашение',
         pricing: 'Цены и тарифы',
+        donate: 'Поддержка проекта',
         support: 'Поддержка',
     };
     document.title = `${titles[section] || 'Страница'} — Мини-станция`;
@@ -125,6 +126,7 @@ function runSectionInit(section, playerId = null) {
         if (typeof loadFeed === 'function') loadFeed();
         if (typeof loadServerStatus === 'function') loadServerStatus();
         if (typeof markAllFeedSeen === 'function') markAllFeedSeen();
+        if (typeof loadHomeDonatePreview === 'function') loadHomeDonatePreview();
     } else if (section === 'chat') {
         if (typeof initGlobalChat === 'function') initGlobalChat();
         if (typeof loadChatUsers === 'function') loadChatUsers('');
@@ -158,6 +160,8 @@ function runSectionInit(section, playerId = null) {
         }
     } else if (section === 'support') {
         if (typeof initSupportSection === 'function') initSupportSection();
+    } else if (section === 'donate') {
+        if (typeof initDonateSection === 'function') initDonateSection();
     }
 }
 

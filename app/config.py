@@ -61,6 +61,14 @@ SUPPORT_DISCORD_USERNAME = os.getenv("SUPPORT_DISCORD_USERNAME", "dotnet_build")
 SUPPORT_TELEGRAM_USERNAME = os.getenv("SUPPORT_TELEGRAM_USERNAME", "mini_station_support")
 BOOSTY_URL = os.getenv("BOOSTY_URL", "https://boosty.to/mini-station/")
 
+SITE_PUBLIC_URL = os.getenv("SITE_PUBLIC_URL", "https://ministation.ru").rstrip("/")
+
+# Platega.io — ключи выдаёт менеджер / ЛК «Настройки»
+PLATEGA_MERCHANT_ID = os.getenv("PLATEGA_MERCHANT_ID", "")
+PLATEGA_SECRET = os.getenv("PLATEGA_SECRET", "")
+PLATEGA_API_BASE = os.getenv("PLATEGA_API_BASE", "https://app.platega.io").rstrip("/")
+PLATEGA_DEFAULT_METHOD = int(os.getenv("PLATEGA_DEFAULT_METHOD", "2"))  # 2 = СБП/QR
+
 # Файлы и загрузки
 SESSIONS_FILE = os.getenv("SESSIONS_FILE", "sessions.json")
 UPLOAD_DIR = os.getenv("UPLOAD_DIR", "static/uploads")

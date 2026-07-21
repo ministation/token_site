@@ -1,22 +1,23 @@
 <div class="card legal-card">
     <h2><i class="fa-solid fa-tags"></i> Цены и тарифы</h2>
     <p class="legal-updated">
-        Оплата спонсорства проходит на
-        <a href="https://boosty.to/mini-station/" target="_blank" rel="noopener">Boosty</a>.
-        Сайт и игра бесплатны; подписка — добровольная поддержка проекта.
+        Оплата спонсорства — на сайте через Platega (СБП / карта) в разделе
+        <a href="#/donate">Поддержка проекта</a>.
+        Сайт и игра бесплатны; подписка — добровольная поддержка.
     </p>
 
     <div class="pricing-note">
-        <p><strong>Что бесплатно:</strong> вход на сервер, сайт, чат, профиль, внутриигровые монетки (заработок/лотерея на сайте).</p>
-        <p><strong>За что платит клиент:</strong> ежемесячная подписка Boosty даёт спонсорский уровень и привилегии ниже. Списание — через Boosty; цена указана за месяц.</p>
+        <p><strong>Что бесплатно:</strong> вход на сервер, сайт, чат, профиль, внутриигровые монетки.</p>
+        <p><strong>За что платит клиент:</strong> ежемесячный спонсорский уровень с привилегиями ниже. Цена в рублях за месяц.</p>
     </div>
 
-    <div class="pricing-grid">
+    <div class="pricing-grid" id="pricingGridStatic">
         <article class="pricing-tier">
             <div class="pricing-tier-head">
+                <img src="/static/icons/буст унати.png" alt="" class="pricing-tier-icon">
                 <span class="pricing-level">1</span>
                 <h3>Унати</h3>
-                <div class="pricing-price">$4 <span>/ мес</span></div>
+                <div class="pricing-price">400 ₽ <span>/ мес</span></div>
             </div>
             <ul>
                 <li>+20 монет в месяц</li>
@@ -25,14 +26,15 @@
                 <li>1 гарантированный вор или агент в день</li>
                 <li>Пропуск на заполненный сервер</li>
             </ul>
-            <a class="pricing-cta" href="https://boosty.to/mini-station/" target="_blank" rel="noopener">Оформить на Boosty</a>
+            <a class="pricing-cta" href="#/donate">Оформить</a>
         </article>
 
         <article class="pricing-tier">
             <div class="pricing-tier-head">
+                <img src="/static/icons/космический унати.png" alt="" class="pricing-tier-icon">
                 <span class="pricing-level">2</span>
                 <h3>Космо-унати</h3>
-                <div class="pricing-price">$9.4 <span>/ мес</span></div>
+                <div class="pricing-price">950 ₽ <span>/ мес</span></div>
             </div>
             <ul>
                 <li>+30 монет в месяц</li>
@@ -42,14 +44,15 @@
                 <li>1 гарантированный ниндзя / дракон / абдуктор / нулевой / ревенант в день</li>
                 <li>Пропуск на заполненный сервер</li>
             </ul>
-            <a class="pricing-cta" href="https://boosty.to/mini-station/" target="_blank" rel="noopener">Оформить на Boosty</a>
+            <a class="pricing-cta" href="#/donate">Оформить</a>
         </article>
 
         <article class="pricing-tier featured">
             <div class="pricing-tier-head">
+                <img src="/static/icons/золотой унати.png" alt="" class="pricing-tier-icon">
                 <span class="pricing-level">3</span>
                 <h3>Золотой унати</h3>
-                <div class="pricing-price">$14.8 <span>/ мес</span></div>
+                <div class="pricing-price">1 500 ₽ <span>/ мес</span></div>
             </div>
             <ul>
                 <li>+40 монет в месяц</li>
@@ -59,31 +62,33 @@
                 <li>Пропуск на заполненный сервер</li>
                 <li>Все привилегии предыдущих уровней</li>
             </ul>
-            <a class="pricing-cta" href="https://boosty.to/mini-station/" target="_blank" rel="noopener">Оформить на Boosty</a>
+            <a class="pricing-cta" href="#/donate">Оформить</a>
         </article>
 
         <article class="pricing-tier">
             <div class="pricing-tier-head">
+                <img src="/static/icons/магический унати.png" alt="" class="pricing-tier-icon">
                 <span class="pricing-level">4</span>
                 <h3>Магический унати</h3>
-                <div class="pricing-price">$21.6 <span>/ мес</span></div>
+                <div class="pricing-price">2 200 ₽ <span>/ мес</span></div>
             </div>
             <ul>
                 <li>+60 монет в месяц</li>
                 <li>Роль в Discord</li>
                 <li>Фиолетовый цвет в ahelp / OOC</li>
-                <li>1 гарантированный крупный антаг в день (блоб, маг, генокрад и др.)</li>
+                <li>1 гарантированный крупный антаг в день</li>
                 <li>Пропуск на заполненный сервер</li>
                 <li>Все привилегии предыдущих уровней</li>
             </ul>
-            <a class="pricing-cta" href="https://boosty.to/mini-station/" target="_blank" rel="noopener">Оформить на Boosty</a>
+            <a class="pricing-cta" href="#/donate">Оформить</a>
         </article>
 
         <article class="pricing-tier">
             <div class="pricing-tier-head">
+                <img src="/static/icons/гига унати.png" alt="" class="pricing-tier-icon">
                 <span class="pricing-level">5</span>
                 <h3>Гига-унати</h3>
-                <div class="pricing-price">$41 <span>/ мес</span></div>
+                <div class="pricing-price">4 100 ₽ <span>/ мес</span></div>
             </div>
             <ul>
                 <li>+100 монет в месяц</li>
@@ -93,13 +98,13 @@
                 <li>Приоритет предложений к разработке</li>
                 <li>Все привилегии предыдущих уровней</li>
             </ul>
-            <a class="pricing-cta" href="https://boosty.to/mini-station/" target="_blank" rel="noopener">Оформить на Boosty</a>
+            <a class="pricing-cta" href="#/donate">Оформить</a>
         </article>
     </div>
 
     <div class="pricing-fineprint legal-prose">
-        <p>Цены указаны как на Boosty (USD / мес). Итоговая сумма в вашей валюте зависит от платёжного метода Boosty.</p>
-        <p>Подписка не освобождает от правил сервера. Роли по подписке выдаются по алгоритмам режимов игры. Возвраты — по <a href="#/terms">Пользовательскому соглашению</a>.</p>
+        <p>Цены указаны в рублях за месяц. Оплата через Platega.io. Альтернатива — <a href="https://boosty.to/mini-station/" target="_blank" rel="noopener">Boosty</a>.</p>
+        <p>Подписка не освобождает от правил сервера. Возвраты — по <a href="#/terms">Пользовательскому соглашению</a>.</p>
         <p>Вопросы по оплате: <a href="#/support">Поддержка</a>.</p>
     </div>
 </div>

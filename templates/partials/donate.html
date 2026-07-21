@@ -1,0 +1,50 @@
+<div class="card donate-page">
+    <div class="donate-hero">
+        <h2><i class="fa-solid fa-heart"></i> Поддержка проекта</h2>
+        <p>Выберите уровень спонсорства и оплатите на сайте через Platega (СБП, карта). Сайт и сервер бесплатны — подписка добровольная.</p>
+    </div>
+
+    <div id="donatePayStatus" class="donate-pay-banner" hidden role="status" aria-live="polite"></div>
+
+    <div class="donate-layout">
+        <div class="donate-tiers" id="donateTiers" aria-label="Тарифы">
+            <p class="empty-state">Загрузка тарифов...</p>
+        </div>
+
+        <aside class="donate-checkout card" id="donateCheckout">
+            <h3>Оформление</h3>
+            <div id="donateSelectedEmpty" class="donate-selected-empty">
+                Выберите тариф слева
+            </div>
+            <div id="donateSelected" class="donate-selected" hidden>
+                <img id="donateSelectedIcon" src="" alt="" class="donate-selected-icon">
+                <div>
+                    <div class="donate-selected-name" id="donateSelectedName">—</div>
+                    <div class="donate-selected-price" id="donateSelectedPrice">—</div>
+                </div>
+            </div>
+
+            <fieldset class="donate-methods" id="donateMethods" hidden>
+                <legend>Способ оплаты</legend>
+                <div id="donateMethodList"></div>
+            </fieldset>
+
+            <label class="donate-contact-label" for="donateContact" id="donateContactWrap" hidden>
+                Контакт (Discord / почта)
+                <input type="text" id="donateContact" maxlength="200" autocomplete="username"
+                    placeholder="ник Discord или email">
+            </label>
+
+            <button type="button" class="donate-pay-btn" id="donatePayBtn" disabled onclick="startDonationCheckout()">
+                <i class="fa-solid fa-credit-card"></i> Перейти к оплате
+            </button>
+            <p class="donate-hint" id="donateHint">Оплата через Platega.io. После оплаты привилегии выдаёт администрация.</p>
+            <div id="donateCheckoutResult" class="result" role="status" aria-live="polite"></div>
+
+            <p class="donate-alt">
+                Альтернатива:
+                <a href="https://boosty.to/mini-station/" target="_blank" rel="noopener">Boosty</a>
+            </p>
+        </aside>
+    </div>
+</div>

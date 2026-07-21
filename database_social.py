@@ -354,6 +354,30 @@ def _migrate_schema():
         CREATE INDEX IF NOT EXISTS idx_support_tickets_status
         ON support_tickets(status, created_at DESC)
     """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS donation_orders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            transaction_id TEXT NOT NULL UNIQUE,
+            tier_id INTEGER NOT NULL,
+            tier_name TEXT NOT NULL,
+            amount_rub INTEGER NOT NULL,
+            currency TEXT DEFAULT 'RUB',
+            payment_method INTEGER,
+            status TEXT DEFAULT 'pending',
+            player_id TEXT,
+            discord_id TEXT,
+            contact TEXT,
+            redirect_url TEXT,
+            payload TEXT,
+            raw_callback TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_donation_orders_status
+        ON donation_orders(status, created_at DESC)
+    """)
     conn.commit()
     conn.close()
 
@@ -1489,6 +1513,77 @@ def update_support_ticket(ticket_id: int, status: str, admin_response: str, revi
         SET status = ?, admin_response = ?, reviewed_by = ?, updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
     """, (status, admin_response, reviewed_by, ticket_id))
+    conn.commit()
+    ok = cursor.rowcount > 0
+    conn.close()
+    return ok
+
+
+def create_donation_order(
+    transaction_id: str,
+    tier_id: int,
+    tier_name: str,
+    amount_rub: int,
+    payment_method: int | None = None,
+    player_id: str | None = None,
+    discord_id: str | None = None,
+    contact: str | None = None,
+    redirect_url: str | None = None,
+    payload: str | None = None,
+) -> Dict:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO donation_orders (
+            transaction_id, tier_id, tier_name, amount_rub, payment_method,
+            player_id, discord_id, contact, redirect_url, payload, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+    """, (
+        transaction_id, tier_id, tier_name, amount_rub, payment_method,
+        player_id, discord_id, contact, redirect_url, payload,
+    ))
+    conn.commit()
+    order_id = cursor.lastrowid
+    cursor.execute("SELECT * FROM donation_orders WHERE id = ?", (order_id,))
+    row = dict(cursor.fetchone())
+    conn.close()
+    return row
+
+
+def get_donation_order_by_tx(transaction_id: str) -> Optional[Dict]:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM donation_orders WHERE transaction_id = ?", (transaction_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def update_donation_order(
+    transaction_id: str,
+    *,
+    status: str | None = None,
+    redirect_url: str | None = None,
+    raw_callback: str | None = None,
+) -> bool:
+    conn = get_db()
+    cursor = conn.cursor()
+    sets = ["updated_at = CURRENT_TIMESTAMP"]
+    params: list = []
+    if status is not None:
+        sets.append("status = ?")
+        params.append(status)
+    if redirect_url is not None:
+        sets.append("redirect_url = ?")
+        params.append(redirect_url)
+    if raw_callback is not None:
+        sets.append("raw_callback = ?")
+        params.append(raw_callback)
+    params.append(transaction_id)
+    cursor.execute(
+        f"UPDATE donation_orders SET {', '.join(sets)} WHERE transaction_id = ?",
+        params,
+    )
     conn.commit()
     ok = cursor.rowcount > 0
     conn.close()

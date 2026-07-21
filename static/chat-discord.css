@@ -43,9 +43,9 @@
     display: grid !important;
     grid-template-columns: 248px minmax(0, 1fr) !important;
     gap: 0 !important;
-    flex: 1 1 auto;
+    flex: 1 1 0 !important;
     min-height: 0 !important;
-    height: auto;
+    height: 0; /* force flex child to take remaining shell height */
     overflow: hidden;
 }
 
@@ -147,22 +147,22 @@
     box-shadow: none;
 }
 
-/* Messages scroller — bounded by shell, not growing forever */
+/* Messages scroller — block flow so rows don't flex-shrink/overlap */
 .dc-messages.global-chat-messages,
 .dc-messages.pm-messages {
-    flex: 1 1 auto;
+    flex: 1 1 0 !important;
     min-height: 0 !important;
     max-height: none !important;
+    height: auto;
     margin: 0 !important;
     padding: 8px 0 16px !important;
     overflow-x: hidden !important;
     overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
     background: var(--panel) !important;
     border: none !important;
     border-radius: 0 !important;
-    display: flex;
-    flex-direction: column;
-    gap: 0;
+    display: block !important;
     width: 100%;
     box-sizing: border-box;
 }
@@ -173,19 +173,23 @@
 .dc-messages .dc-msg.pm-message {
     display: grid !important;
     grid-template-columns: 56px minmax(0, 1fr) !important;
-    gap: 0 !important;
-    padding: 2px 16px 2px 8px !important;
-    margin: 0 !important;
+    gap: 0 12px !important;
+    padding: 4px 16px 4px 8px !important;
+    margin: 0 0 2px !important;
     max-width: 100% !important;
     width: 100%;
     box-sizing: border-box;
-    align-self: stretch !important;
+    align-self: auto !important;
     align-items: flex-start;
+    position: relative;
+    flex: none !important;
+    flex-shrink: 0 !important;
     border: none !important;
     border-radius: 0 !important;
     background: transparent !important;
     box-shadow: none !important;
-    overflow: hidden;
+    overflow: visible;
+    float: none !important;
     transition: background 0.1s ease;
 }
 
@@ -199,17 +203,17 @@
     max-width: 100% !important;
     margin-left: 0 !important;
     margin-right: 0 !important;
-    align-self: stretch !important;
+    align-self: auto !important;
 }
 
 .dc-msg + .dc-msg:not(.dc-msg-compact) {
-    margin-top: 12px !important;
+    margin-top: 14px !important;
 }
 
 .dc-msg-compact {
     margin-top: 0 !important;
-    padding-top: 0 !important;
-    padding-bottom: 0 !important;
+    padding-top: 2px !important;
+    padding-bottom: 2px !important;
 }
 
 .dc-avatar-col {
@@ -246,6 +250,8 @@
     padding: 2px 0;
     display: block !important;
     float: none !important;
+    position: relative;
+    overflow: visible;
 }
 
 .dc-header {
@@ -371,11 +377,12 @@ button.dc-name:hover {
 .dc-messages .pm-bubble,
 .dc-msg .global-chat-bubble,
 .dc-msg .pm-bubble {
-    display: contents;
+    display: block;
     background: none;
     border: none;
     padding: 0;
     box-shadow: none;
+    max-width: none;
 }
 
 .dc-messages .global-chat-bubble-meta,
@@ -521,6 +528,7 @@ button.dc-name:hover {
     border-top: 1px solid var(--border);
     align-items: center;
     gap: 8px;
+    flex-shrink: 0;
 }
 
 .dc-composer .chat-tool-btn,
@@ -600,8 +608,9 @@ button.dc-name:hover {
     display: grid;
     grid-template-columns: 260px minmax(0, 1fr);
     gap: 0;
-    flex: 1 1 auto;
+    flex: 1 1 0 !important;
     min-height: 0 !important;
+    height: 0;
     overflow: hidden;
 }
 
@@ -709,6 +718,7 @@ button.dc-name:hover {
     .dc-layout.chat-with-users-layout {
         grid-template-columns: 1fr !important;
         grid-template-rows: minmax(120px, 30%) minmax(0, 1fr);
+        height: 0;
     }
 
     .dc-members.chat-users-sidebar {
@@ -730,6 +740,7 @@ button.dc-name:hover {
     .messages-page.dc-shell .messages-layout {
         grid-template-columns: 1fr;
         grid-template-rows: minmax(120px, 30%) minmax(0, 1fr);
+        height: 0;
     }
 }
 
