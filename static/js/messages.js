@@ -118,35 +118,44 @@ function pmIsRead(value) {
 function pmStatusHtml(own, read) {
     if (!own) return '';
     const isRead = pmIsRead(read);
-    const cls = isRead ? 'pm-status pm-status-read' : 'pm-status pm-status-sent';
-    const icon = isRead ? 'fa-check-double' : 'fa-check';
+    const cls = isRead ? 'dc-status dc-status-read' : 'dc-status dc-status-sent';
+    // Не галочки: самолётик = отправлено, глаз = прочитано
+    const icon = isRead ? 'fa-eye' : 'fa-paper-plane';
     const title = isRead ? 'Прочитано' : 'Отправлено';
     return `<span class="${cls}" title="${title}"><i class="fa-solid ${icon}"></i></span>`;
 }
 
-function renderPmMessage(m, myId) {
+function renderPmMessage(m, myId, opts = {}) {
     const own = m.is_own === true || (myId && m.sender_id === myId);
     const text = m.content ?? m.message ?? m.text ?? '';
     const time = formatPmTime(m.created_at);
     const imageHtml = m.image_url ? renderChatImage(m.image_url, 'pm-msg-image') : '';
-    const textHtml = text ? `<span class="pm-bubble-text">${formatMessageContent(text)}</span>` : '';
-    const meta = `<span class="pm-bubble-meta">${pmStatusHtml(own, m.read)}<span class="pm-time-inline">${time}</span></span>`;
-    const avatarHtml = !own
-        ? chatAvatarHtml(m.sender_avatar, 'pm-msg-avatar')
-        : '';
+    const textHtml = text ? `<div class="dc-content">${formatMessageContent(text)}</div>` : '';
+    const compact = !!opts.compact;
+    const avatarHtml = compact
+        ? '<div class="dc-avatar-spacer" aria-hidden="true"></div>'
+        : (own
+            ? chatAvatarHtml(currentUser?.avatar, 'pm-msg-avatar dc-avatar')
+            : chatAvatarHtml(m.sender_avatar, 'pm-msg-avatar dc-avatar'));
+    const name = own
+        ? (currentUser?.display_name || currentUser?.username || 'Вы')
+        : (m.sender_nickname || m.sender_name || 'Игрок');
+    const nameHtml = own
+        ? `<span class="dc-name dc-name-own">${escapeHtml(name)}</span>`
+        : (typeof profileLink === 'function' && m.sender_id
+            ? profileLink(m.sender_id, name, 'dc-name')
+            : `<span class="dc-name">${escapeHtml(name)}</span>`);
     const badgesHtml = !own ? renderChatBadgesHtml(m.sender_badges) : '';
 
     if (!textHtml && !imageHtml) return '';
 
-    const bubbleInner = imageHtml && !textHtml
-        ? `<div class="pm-bubble-media">${imageHtml}</div><div class="pm-bubble-row pm-bubble-row-tail">${meta}</div>`
-        : `${imageHtml ? `<div class="pm-bubble-media">${imageHtml}</div>` : ''}<div class="pm-bubble-row">${textHtml}${meta}</div>`;
-
-    return `<div class="pm-message ${own ? 'own' : ''}">
+    return `<div class="dc-msg pm-message ${own ? 'own' : ''} ${compact ? 'dc-msg-compact' : ''}">
         ${avatarHtml}
-        <div class="pm-message-col">
-            ${badgesHtml ? `<div class="pm-msg-author-badges">${badgesHtml}</div>` : ''}
-            <div class="pm-bubble">${bubbleInner}</div>
+        <div class="dc-body">
+            ${compact ? '' : `<div class="dc-header">${nameHtml}${badgesHtml}<span class="dc-timestamp">${time}</span>${pmStatusHtml(own, m.read)}</div>`}
+            ${compact ? `<div class="dc-compact-meta">${pmStatusHtml(own, m.read)}<span class="dc-timestamp">${time}</span></div>` : ''}
+            ${textHtml}
+            ${imageHtml ? `<div class="dc-attach">${imageHtml}</div>` : ''}
         </div>
     </div>`;
 }
@@ -177,7 +186,17 @@ async function loadConversation(partnerId) {
         }
         const myId = currentUser.social_id;
         const wasAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 48;
-        container.innerHTML = messages.reverse().map(m => renderPmMessage(m, myId)).join('');
+        const ordered = messages.reverse();
+        container.innerHTML = ordered.map((m, i) => {
+            const prev = i > 0 ? ordered[i - 1] : null;
+            const sameAuthor = prev && (
+                (prev.sender_id && prev.sender_id === m.sender_id)
+                || (prev.is_own && m.is_own)
+            );
+            const gapMs = prev ? Math.abs(new Date(m.created_at) - new Date(prev.created_at)) : Infinity;
+            const compact = sameAuthor && gapMs < 7 * 60 * 1000;
+            return renderPmMessage(m, myId, { compact });
+        }).join('');
         if (wasAtBottom) container.scrollTop = container.scrollHeight;
     } catch (e) {
         container.innerHTML = '<p class="error">Ошибка загрузки</p>';

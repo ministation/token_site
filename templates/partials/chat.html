@@ -1,23 +1,13 @@
-<div class="card global-chat-card">
-    <div class="global-chat-header">
-        <h2><i class="fa-solid fa-comments"></i> Общий чат</h2>
-        <p class="chat-hint-inline">Общение, эмодзи и картинки — список участников справа</p>
+<div class="card global-chat-card dc-shell">
+    <div class="global-chat-header dc-channel-header">
+        <h2><i class="fa-solid fa-hashtag"></i> общий-чат</h2>
+        <p class="chat-hint-inline">Участники справа · эмодзи и картинки</p>
     </div>
 
-    <div class="chat-with-users-layout" id="chatLayout">
-        <aside class="chat-users-sidebar" id="chatUsersSidebar">
-            <div class="pm-search-box">
-                <i class="fa-solid fa-magnifying-glass"></i>
-                <input type="text" id="chatUserSearch" placeholder="Игроки на сайте..." autocomplete="off">
-            </div>
-            <div id="chatUsersList" class="chat-users-list">
-                <p class="empty-state">Войдите, чтобы видеть игроков</p>
-            </div>
-        </aside>
-
-        <div class="chat-main-area">
-            <div id="globalChatMessages" class="global-chat-messages chat-bubbles"></div>
-            <div class="global-chat-input chat-composer" id="globalChatInputArea" style="display:none;">
+    <div class="chat-with-users-layout dc-layout" id="chatLayout">
+        <div class="chat-main-area dc-main">
+            <div id="globalChatMessages" class="global-chat-messages dc-messages"></div>
+            <div class="global-chat-input chat-composer dc-composer" id="globalChatInputArea" style="display:none;">
                 <div class="chat-composer-tools">
                     <button type="button" class="chat-tool-btn" id="globalChatEmojiBtn" title="Эмодзи">
                         <i class="fa-regular fa-face-smile"></i>
@@ -28,7 +18,7 @@
                     </label>
                 </div>
                 <div class="chat-composer-main">
-                    <input type="text" id="globalChatInput" placeholder="Сообщение..."
+                    <input type="text" id="globalChatInput" placeholder="Написать в #общий-чат"
                         maxlength="500"
                         onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendGlobalChatMessage();}">
                     <div id="globalChatImagePreview" class="chat-image-preview" hidden></div>
@@ -42,5 +32,16 @@
                 <a href="#" onclick="login(); return false;">Войдите через Discord</a>, чтобы писать в чат
             </p>
         </div>
+
+        <aside class="chat-users-sidebar dc-members" id="chatUsersSidebar">
+            <div class="dc-members-title">На сайте — онлайн</div>
+            <div class="pm-search-box">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="chatUserSearch" placeholder="Поиск..." autocomplete="off">
+            </div>
+            <div id="chatUsersList" class="chat-users-list">
+                <p class="empty-state">Войдите, чтобы видеть игроков</p>
+            </div>
+        </aside>
     </div>
 </div>

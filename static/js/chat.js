@@ -128,7 +128,13 @@ async function loadGlobalChat(fullReload) {
             return;
         }
         if (fullReload || !globalChatLastId) {
-            container.innerHTML = messages.map(renderGlobalChatMessage).join('');
+            container.innerHTML = messages.map((m, i) => {
+                const prev = i > 0 ? messages[i - 1] : null;
+                const sameAuthor = prev && prev.author_id === m.author_id;
+                const gapMs = prev ? Math.abs(new Date(m.created_at) - new Date(prev.created_at)) : Infinity;
+                const compact = sameAuthor && gapMs < 7 * 60 * 1000;
+                return renderGlobalChatMessage(m, { compact });
+            }).join('');
         } else {
             const empty = container.querySelector('.empty-state');
             if (empty) empty.remove();
@@ -154,9 +160,12 @@ function formatChatTime(iso) {
     });
 }
 
-function renderGlobalChatMessage(m) {
+function renderGlobalChatMessage(m, opts = {}) {
     const isOwn = !!(currentUser?.social_id && m.author_id === currentUser.social_id);
-    const avatar = chatAvatarHtml(m.author_avatar);
+    const compact = !!opts.compact;
+    const avatar = compact
+        ? '<div class="dc-avatar-spacer" aria-hidden="true"></div>'
+        : chatAvatarHtml(m.author_avatar, 'chat-avatar dc-avatar');
     const time = formatChatTime(m.created_at);
     const badgesHtml = renderChatBadgesHtml(m.author_badges || (
         typeof renderRoleBadge === 'function' && m.author_role
@@ -164,31 +173,22 @@ function renderGlobalChatMessage(m) {
             : []
     ));
     const authorBtn = typeof profileLink === 'function'
-        ? profileLink(m.author_id, m.author_nickname, 'global-chat-author')
-        : `<span class="global-chat-author">${escapeHtml(m.author_nickname)}</span>`;
-    const textHtml = m.content ? `<span class="global-chat-text">${formatMessageContent(m.content)}</span>` : '';
+        ? profileLink(m.author_id, m.author_nickname, 'dc-name')
+        : `<span class="dc-name">${escapeHtml(m.author_nickname)}</span>`;
+    const textHtml = m.content ? `<div class="dc-content">${formatMessageContent(m.content)}</div>` : '';
     const imageHtml = m.image_url ? renderChatImage(m.image_url) : '';
     const statusHtml = isOwn
-        ? '<span class="pm-status pm-status-sent" title="Отправлено"><i class="fa-solid fa-check"></i></span>'
+        ? '<span class="dc-status dc-status-sent" title="Отправлено"><i class="fa-solid fa-paper-plane"></i></span>'
         : '';
-    const meta = `<span class="global-chat-bubble-meta">${statusHtml}<span class="global-chat-time">${time}</span></span>`;
-    const bodyParts = [];
-    if (imageHtml) bodyParts.push(`<div class="global-chat-media">${imageHtml}</div>`);
-    if (textHtml) {
-        bodyParts.push(`<div class="global-chat-bubble-row">${textHtml}${meta}</div>`);
-    } else if (imageHtml) {
-        bodyParts.push(`<div class="global-chat-bubble-row global-chat-bubble-row-tail">${meta}</div>`);
-    }
+
     return `
-        <div class="global-chat-message ${isOwn ? 'own' : ''}" data-id="${m.id}">
+        <div class="dc-msg global-chat-message ${isOwn ? 'own' : ''} ${compact ? 'dc-msg-compact' : ''}" data-id="${m.id}" data-author-id="${escapeHtml(String(m.author_id || ''))}">
             ${avatar}
-            <div class="global-chat-content">
-                <div class="global-chat-meta">
-                    ${authorBtn}${badgesHtml}
-                </div>
-                <div class="global-chat-bubble">
-                    ${bodyParts.join('')}
-                </div>
+            <div class="dc-body">
+                ${compact ? '' : `<div class="dc-header">${authorBtn}${badgesHtml}<span class="dc-timestamp">${time}</span>${statusHtml}</div>`}
+                ${compact ? `<div class="dc-compact-meta">${statusHtml}<span class="dc-timestamp">${time}</span></div>` : ''}
+                ${textHtml}
+                ${imageHtml ? `<div class="dc-attach">${imageHtml}</div>` : ''}
             </div>
         </div>
     `;
