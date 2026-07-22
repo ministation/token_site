@@ -256,6 +256,15 @@ async function loadAdminInbox() {
         }
 
         list.innerHTML = items.map(item => renderInboxListItem(item)).join('');
+        if (!list.dataset.boundClick) {
+            list.dataset.boundClick = '1';
+            list.addEventListener('click', (e) => {
+                const btn = e.target.closest('.inbox-list-item');
+                if (!btn || !list.contains(btn)) return;
+                const key = btn.dataset.key;
+                if (key) selectAdminInboxItem(key);
+            });
+        }
         const keep = items.find(i => i.key === adminInboxSelectedKey) || items[0];
         selectAdminInboxItem(keep.key);
     } catch (e) {
@@ -272,8 +281,7 @@ function renderInboxListItem(item) {
     return `
         <button type="button" class="inbox-list-item${active}" role="option"
             aria-selected="${active ? 'true' : 'false'}"
-            data-key="${escapeHtml(item.key)}"
-            onclick="selectAdminInboxItem(${JSON.stringify(item.key)})">
+            data-key="${escapeHtml(item.key)}">
             <div class="inbox-list-item-top">
                 <span class="inbox-kind-chip">
                     <i class="fa-solid ${kindIcon}" aria-hidden="true"></i>

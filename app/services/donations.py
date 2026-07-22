@@ -24,7 +24,7 @@ DONATION_TIERS: dict[int, dict[str, Any]] = {
         "id": 1,
         "name": "Унати",
         "price_rub": 290,
-        "icon": "буст унати.png",
+        "icon": "унати.png",
         "coins": 20,
         "perks": [
             "Особая роль в сообществе Discord",

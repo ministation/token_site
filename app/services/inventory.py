@@ -12,7 +12,7 @@ GHOSTS_STATIC_DIR = os.path.abspath(
 )
 
 SPONSOR_TIERS = {
-    1: {"name": "Унати", "icon": "буст унати.png"},
+    1: {"name": "Унати", "icon": "унати.png"},
     2: {"name": "Космо унати", "icon": "космический унати.png"},
     3: {"name": "Золотой унати", "icon": "золотой унати.png"},
     4: {"name": "Магический унати", "icon": "магический унати.png"},
