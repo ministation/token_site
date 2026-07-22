@@ -210,56 +210,56 @@ html[data-theme="dark"] body::before {
     border-radius: 50%;
     pointer-events: none;
     will-change: transform, opacity;
-    box-shadow: 0 0 10px rgba(255, 180, 60, 0.35);
+    box-shadow: 0 0 10px rgba(255, 180, 60, 0.28);
     animation:
-        dustParticleFloat var(--dur, 36s) ease-in-out infinite,
-        dustTwinkle var(--twinkle, 4s) ease-in-out infinite;
-    animation-delay: var(--delay, 0s), calc(var(--delay, 0s) * 0.4);
+        dustParticleFloat var(--dur, 56s) linear infinite,
+        dustTwinkle var(--twinkle, 14s) ease-in-out infinite;
+    animation-delay: var(--delay, 0s), var(--twinkle-delay, 0s);
 }
 .dust-particle--far {
-    box-shadow: 0 0 4px rgba(255, 220, 140, 0.25);
+    box-shadow: 0 0 4px rgba(255, 220, 140, 0.2);
     filter: blur(0.2px);
 }
 .dust-particle--mid {
-    box-shadow: 0 0 8px rgba(255, 180, 60, 0.4);
+    box-shadow: 0 0 8px rgba(255, 180, 60, 0.32);
 }
 .dust-particle--near {
     box-shadow:
-        0 0 12px rgba(255, 200, 80, 0.55),
-        0 0 2px rgba(255, 255, 220, 0.9);
+        0 0 10px rgba(255, 200, 80, 0.4),
+        0 0 2px rgba(255, 255, 220, 0.7);
 }
 .dust-particle--near::after {
     content: '';
     position: absolute;
     inset: -40%;
     background:
-        linear-gradient(90deg, transparent 46%, rgba(255, 240, 180, 0.55) 50%, transparent 54%),
-        linear-gradient(0deg, transparent 46%, rgba(255, 240, 180, 0.45) 50%, transparent 54%);
-    opacity: 0.55;
+        linear-gradient(90deg, transparent 46%, rgba(255, 240, 180, 0.4) 50%, transparent 54%),
+        linear-gradient(0deg, transparent 46%, rgba(255, 240, 180, 0.32) 50%, transparent 54%);
+    opacity: 0.4;
     pointer-events: none;
 }
 
 html[data-theme="dark"] .bg-glow--1 { background: rgba(255, 176, 32, 0.20); opacity: 0.7; }
 html[data-theme="dark"] .bg-glow--2 { background: rgba(255, 140, 40, 0.16); }
 html[data-theme="dark"] .dust-particle {
-    box-shadow: 0 0 8px rgba(255, 200, 80, 0.3);
+    box-shadow: 0 0 8px rgba(255, 200, 80, 0.24);
 }
 html[data-theme="dark"] .dust-particle--near {
     box-shadow:
-        0 0 14px rgba(255, 200, 80, 0.45),
-        0 0 2px rgba(255, 255, 230, 0.85);
+        0 0 12px rgba(255, 200, 80, 0.35),
+        0 0 2px rgba(255, 255, 230, 0.7);
 }
 
 @keyframes dustParticleFloat {
     0% { transform: translate3d(0, 0, 0); opacity: 0; }
-    10% { opacity: var(--op, 0.45); }
-    90% { opacity: var(--op, 0.45); }
+    12% { opacity: var(--op, 0.4); }
+    88% { opacity: var(--op, 0.4); }
     100% { transform: translate3d(var(--tx), var(--ty), 0); opacity: 0; }
 }
 
 @keyframes dustTwinkle {
-    0%, 100% { filter: brightness(0.85); }
-    50% { filter: brightness(1.35); }
+    0%, 100% { filter: brightness(0.92); }
+    50% { filter: brightness(1.12); }
 }
 
 @keyframes glowDrift1 {
@@ -3760,6 +3760,10 @@ label.chat-tool-btn input[type="file"] {
     line-height: 1.2;
 }
 .profile-bio-block { padding: 16px 20px; }
+.profile-posts-card { margin-top: 12px; padding: 0 !important; overflow: hidden; }
+.profile-posts-card .profile-posts-section {
+    border-top: none;
+}
 .profile-bio-empty { margin: 0; }
 .profile-posts-section {
     padding: 16px 20px 20px;

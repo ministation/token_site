@@ -23,13 +23,12 @@ async function loadProfile(playerId) {
     try {
         const p = await apiCall('GET', `/api/social/profile/${encodeURIComponent(playerId)}`);
         const avatarUrl = p.discord_avatar || '/static/default_avatar.png';
-        const isOwn = !!p.is_own;
         const myId = currentUser?.social_id || currentPlayerId;
-        const showInventory = isOwn || myId === p.player_id;
+        const isOwn = !!(p.is_own || (myId && myId === p.player_id));
+        const showInventory = isOwn;
 
         const panels = document.getElementById('inventoryPanels');
         const avatarSection = document.getElementById('avatarSection');
-        if (panels) panels.hidden = !showInventory;
         if (avatarSection) avatarSection.style.display = showInventory ? '' : 'none';
         if (showInventory && typeof loadInventory === 'function') loadInventory();
 
@@ -102,11 +101,39 @@ async function loadProfile(playerId) {
                     ? `<div class="profile-bio">${formatMessageContent(p.bio)}</div>`
                     : `<p class="empty-state profile-bio-empty">${isOwn ? 'Расскажите о себе — нажмите «Изменить био»' : 'Биография пуста'}</p>`}
             </div>
-            <section class="profile-posts-section">
-                <h3><i class="fa-solid fa-newspaper"></i> Записи</h3>
-                <div id="profilePostsList"><p class="empty-state">Загрузка...</p></div>
-            </section>
         `;
+
+        const sectionRoot = document.getElementById('inventorySection') || container.parentElement;
+        let postsCard = document.getElementById('profilePostsCard');
+        if (!postsCard && sectionRoot) {
+            postsCard = document.createElement('div');
+            postsCard.id = 'profilePostsCard';
+            postsCard.className = 'card profile-posts-card';
+            sectionRoot.appendChild(postsCard);
+        }
+        if (postsCard) {
+            postsCard.innerHTML = `
+                <section class="profile-posts-section">
+                    <h3><i class="fa-solid fa-newspaper"></i> Записи</h3>
+                    <div id="profilePostsList"><p class="empty-state">Загрузка...</p></div>
+                </section>
+            `;
+            postsCard.hidden = false;
+        }
+
+        if (panels && sectionRoot) {
+            // Order: profile → inventory → posts
+            sectionRoot.appendChild(container);
+            if (showInventory) {
+                panels.hidden = false;
+                sectionRoot.appendChild(panels);
+            } else {
+                panels.hidden = true;
+                sectionRoot.appendChild(panels);
+            }
+            if (postsCard) sectionRoot.appendChild(postsCard);
+        }
+
         loadProfilePosts(playerId);
     } catch (e) {
         container.innerHTML = `<p class="error">${escapeHtml(e.message || 'Профиль не найден')}</p>`;

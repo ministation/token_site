@@ -1,6 +1,7 @@
 (function () {
     const ambient = document.querySelector('.bg-ambient');
-    if (!ambient) return;
+    if (!ambient || ambient.dataset.ambientReady === '1') return;
+    ambient.dataset.ambientReady = '1';
 
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     let dustField = ambient.querySelector('.bg-dust-field');
@@ -11,7 +12,6 @@
         ambient.appendChild(dustField);
     }
 
-    // Extra depth layers for parallax (near stars / mid dust)
     let starsFar = ambient.querySelector('.bg-stars-far');
     if (!starsFar) {
         starsFar = document.createElement('div');
@@ -27,20 +27,25 @@
         ambient.appendChild(starsNear);
     }
 
+    // Avoid stacking particles if script reloads
+    for (const layer of [starsFar, dustField, starsNear]) {
+        layer.querySelectorAll('.dust-particle').forEach((el) => el.remove());
+    }
+
     const parallaxLayers = [...ambient.querySelectorAll('.bg-parallax-layer')];
     const isMobile = window.innerWidth < 768;
     const COUNTS = {
-        far: isMobile ? 18 : 36,
-        mid: isMobile ? 14 : 28,
-        near: isMobile ? 8 : 14,
+        far: isMobile ? 12 : 22,
+        mid: isMobile ? 10 : 16,
+        near: isMobile ? 5 : 8,
     };
 
     const COLORS = [
-        'rgba(255, 220, 120, 0.85)',
-        'rgba(255, 200, 46, 0.7)',
-        'rgba(255, 170, 40, 0.55)',
-        'rgba(255, 255, 240, 0.9)',
-        'rgba(240, 140, 30, 0.5)',
+        'rgba(255, 220, 120, 0.7)',
+        'rgba(255, 200, 46, 0.55)',
+        'rgba(255, 170, 40, 0.45)',
+        'rgba(255, 255, 240, 0.75)',
+        'rgba(240, 140, 30, 0.4)',
     ];
 
     function rand(min, max) {
@@ -52,31 +57,29 @@
         for (let i = 0; i < count; i++) {
             const p = document.createElement('span');
             p.className = className;
-            resetParticle(p, sizeRange, driftScale);
-            p.addEventListener('animationiteration', () => resetParticle(p, sizeRange, driftScale));
+            const size = rand(sizeRange[0], sizeRange[1]);
+            p.style.width = `${size}px`;
+            p.style.height = `${size}px`;
+            p.style.left = `${rand(0, 100)}%`;
+            p.style.top = `${rand(0, 100)}%`;
+            p.style.background = COLORS[Math.floor(Math.random() * COLORS.length)];
+            // Set animation params once — changing them later restarts CSS animations
+            // and causes the “accelerating blink” effect over time.
+            p.style.setProperty('--op', rand(0.18, 0.55).toFixed(2));
+            p.style.setProperty('--tx', `${rand(-140, 140) * driftScale}px`);
+            p.style.setProperty('--ty', `${rand(-120, 120) * driftScale}px`);
+            p.style.setProperty('--dur', `${rand(42, 78)}s`);
+            p.style.setProperty('--delay', `${-rand(0, 60)}s`);
+            p.style.setProperty('--twinkle', `${rand(10, 22)}s`);
+            p.style.setProperty('--twinkle-delay', `${-rand(0, 18)}s`);
             container.appendChild(p);
         }
     }
 
-    function resetParticle(el, sizeRange, driftScale) {
-        const size = rand(sizeRange[0], sizeRange[1]);
-        el.style.width = `${size}px`;
-        el.style.height = `${size}px`;
-        el.style.left = `${rand(0, 100)}%`;
-        el.style.top = `${rand(0, 100)}%`;
-        el.style.background = COLORS[Math.floor(Math.random() * COLORS.length)];
-        el.style.setProperty('--op', rand(0.2, 0.75).toFixed(2));
-        el.style.setProperty('--tx', `${rand(-180, 180) * driftScale}px`);
-        el.style.setProperty('--ty', `${rand(-160, 160) * driftScale}px`);
-        el.style.setProperty('--dur', `${rand(18, 48)}s`);
-        el.style.setProperty('--delay', `${rand(0, 20)}s`);
-        el.style.setProperty('--twinkle', `${rand(2.5, 6.5)}s`);
-    }
-
     if (!reducedMotion) {
-        spawn(starsFar, 'dust-particle dust-particle--far', COUNTS.far, [1.5, 3.5], 0.55);
-        spawn(dustField, 'dust-particle dust-particle--mid', COUNTS.mid, [3, 7], 1);
-        spawn(starsNear, 'dust-particle dust-particle--near', COUNTS.near, [5, 11], 1.35);
+        spawn(starsFar, 'dust-particle dust-particle--far', COUNTS.far, [1.5, 3], 0.45);
+        spawn(dustField, 'dust-particle dust-particle--mid', COUNTS.mid, [2.5, 5.5], 0.85);
+        spawn(starsNear, 'dust-particle dust-particle--near', COUNTS.near, [4, 8], 1.1);
     }
 
     if (reducedMotion || !parallaxLayers.length) return;
@@ -94,13 +97,12 @@
     }
 
     function tick() {
-        currentX += (targetX - currentX) * 0.08;
-        currentY += (targetY - currentY) * 0.08;
+        currentX += (targetX - currentX) * 0.06;
+        currentY += (targetY - currentY) * 0.06;
 
         for (const layer of parallaxLayers) {
             const depth = Number(layer.dataset.depth) || 24;
-            // Small delta (skill: keep parallax subtle, 5–15 feel)
-            layer.style.transform = `translate3d(${currentX * depth}px, ${currentY * depth * 0.85}px, 0)`;
+            layer.style.transform = `translate3d(${currentX * depth * 0.55}px, ${currentY * depth * 0.45}px, 0)`;
         }
 
         const settled = Math.abs(targetX - currentX) < 0.002 && Math.abs(targetY - currentY) < 0.002;
