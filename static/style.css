@@ -5770,6 +5770,39 @@ label.chat-tool-btn input[type="file"] {
     width: min(158px, 50vw);
     max-height: 178px;
 }
+.donate-pack-toolbox-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: min(128px, 42vw);
+    height: min(128px, 42vw);
+    max-height: 148px;
+}
+.donate-pack-toolbox {
+    display: block;
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    background-image: url("/static/icons/toolbox_animated.png");
+    background-repeat: no-repeat;
+    background-size: 160px 128px;
+    background-position: 0 0;
+    image-rendering: pixelated;
+    transform: scale(3.6);
+    transform-origin: center center;
+    filter: drop-shadow(0 6px 10px color-mix(in srgb, var(--ink) 18%, transparent));
+    transition: transform 0.2s ease;
+}
+.donate-pack-card:hover .donate-pack-toolbox,
+.donate-pack-card.active .donate-pack-toolbox {
+    transform: scale(3.85);
+}
+#donateSelectedToolbox.donate-pack-toolbox {
+    width: 32px;
+    height: 32px;
+    transform: scale(2.25);
+    margin: 4px;
+}
 .donate-pack-card:hover .donate-pack-crate,
 .donate-pack-card.active .donate-pack-crate {
     transform: translateY(-2px) scale(1.03);

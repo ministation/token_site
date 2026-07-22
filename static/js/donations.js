@@ -53,6 +53,7 @@ async function loadDonateCatalog() {
             packsBox.innerHTML = packs.length
                 ? packs.map(p => renderDonatePackCard(p)).join('')
                 : '<p class="empty-state">Пакеты недоступны</p>';
+            startToolboxAnimations(packsBox);
         }
         renderDonateMethods();
         switchDonateTab(donateActiveTab);
@@ -90,7 +91,6 @@ function renderDonateTierCard(t) {
 }
 
 function packPileCount(coins) {
-    if (coins >= 80) return 3;
     if (coins >= 40) return 2;
     return 1;
 }
@@ -103,29 +103,59 @@ function renderPackCoinPile(coins) {
     return `<div class="donate-pack-pile donate-pack-pile--${n}" aria-hidden="true">${imgs}</div>`;
 }
 
-/** Спрайты: 100 = рюкзак, 200 = ящик, 300 = синди-ящик. */
-function packCrateIcon(coins) {
-    if (coins >= 250) return { src: '/static/icons/syndie-coins-self-made.png', size: 'lg' };
-    if (coins >= 150) return { src: '/static/icons/coins-self-made.png', size: 'md' };
-    if (coins >= 80) return { src: '/static/icons/backpack-coins-self-made.png', size: 'md' };
+/** Визуал бандла по id: 2 рюкзак, 3 тулбокс (анимация), 4 ящик, 5 синди. */
+function packVisual(p) {
+    if (p.id === 5) return { kind: 'img', src: '/static/icons/syndie-coins-self-made.png', size: 'lg', alt: 'Ящик синдиката' };
+    if (p.id === 4) return { kind: 'img', src: '/static/icons/coins-self-made.png', size: 'md', alt: 'Ящик с монетами' };
+    if (p.id === 3) return { kind: 'toolbox', size: 'md', alt: 'Тулбокс' };
+    if (p.id === 2) return { kind: 'img', src: '/static/icons/backpack-coins-self-made.png', size: 'md', alt: 'Рюкзак монет' };
     return null;
+}
+
+function renderPackVisual(p) {
+    const v = packVisual(p);
+    if (!v) return renderPackCoinPile(p.coins);
+    if (v.kind === 'toolbox') {
+        return `<span class="donate-pack-toolbox-wrap donate-pack-crate--${v.size}" aria-hidden="true">
+            <span class="donate-pack-toolbox" role="img" aria-label="${escapeHtml(v.alt)}"></span>
+        </span>`;
+    }
+    return `<img src="${v.src}" alt="${escapeHtml(v.alt)}" class="donate-pack-crate donate-pack-crate--${v.size}" width="32" height="32">`;
+}
+
+function startToolboxAnimations(root) {
+    const nodes = (root || document).querySelectorAll('.donate-pack-toolbox');
+    nodes.forEach(el => {
+        if (el.dataset.animating === '1') return;
+        el.dataset.animating = '1';
+        const cols = 5;
+        const total = 18;
+        const fw = 32;
+        const fh = 32;
+        let frame = 0;
+        const tick = () => {
+            if (!el.isConnected) return;
+            const col = frame % cols;
+            const row = Math.floor(frame / cols);
+            el.style.backgroundPosition = `-${col * fw}px -${row * fh}px`;
+            frame = (frame + 1) % total;
+            el._toolboxTimer = setTimeout(tick, 110);
+        };
+        tick();
+    });
 }
 
 function renderDonatePackCard(p) {
     const active = selectedDonatePackId === p.id ? ' active' : '';
     const featured = p.featured ? ' featured' : '';
     const badge = p.badge ? `<span class="donate-tier-badge">${escapeHtml(p.badge)}</span>` : '';
-    const crate = packCrateIcon(p.coins);
-    const visual = crate
-        ? `<img src="${crate.src}" alt="" class="donate-pack-crate donate-pack-crate--${crate.size}" width="32" height="32"
-                style="image-rendering:pixelated">`
-        : renderPackCoinPile(p.coins);
+    const visualMeta = packVisual(p);
     return `
         <article class="donate-pack-card${active}${featured}" data-pack="${p.id}">
             ${badge}
             <button type="button" class="donate-pack-select" onclick="selectDonatePack(${p.id})" aria-pressed="${active ? 'true' : 'false'}">
-                <div class="donate-pack-visual${crate ? ' has-crate' : ''}">
-                    ${visual}
+                <div class="donate-pack-visual${visualMeta ? ' has-crate' : ''}">
+                    ${renderPackVisual(p)}
                 </div>
                 <div class="donate-pack-body">
                     <div class="donate-pack-name">${escapeHtml(p.name)}</div>
@@ -223,9 +253,12 @@ function updateDonateCheckoutUI() {
         if (contactWrap) contactWrap.hidden = true;
         if (payBtn) payBtn.disabled = true;
         if (icon) {
+            icon.hidden = false;
             icon.removeAttribute('src');
             icon.alt = '';
         }
+        const toolboxEl = document.getElementById('donateSelectedToolbox');
+        if (toolboxEl) toolboxEl.hidden = true;
         return;
     }
 
@@ -236,6 +269,8 @@ function updateDonateCheckoutUI() {
     if (payBtn) payBtn.disabled = false;
 
     if (tier) {
+        const toolboxEl = document.getElementById('donateSelectedToolbox');
+        if (toolboxEl) toolboxEl.hidden = true;
         if (icon) {
             icon.hidden = false;
             icon.src = tier.icon;
@@ -245,10 +280,26 @@ function updateDonateCheckoutUI() {
         if (price) price.textContent = `${tier.price_label} / мес`;
     } else if (pack) {
         if (icon) {
-            icon.hidden = false;
-            const crate = packCrateIcon(pack.coins);
-            icon.src = crate ? crate.src : '/static/coin.png';
-            icon.alt = crate ? (pack.coins >= 80 && pack.coins < 150 ? 'Рюкзак монет' : 'Ящик с монетами') : 'Монетки';
+            const visual = packVisual(pack);
+            let toolboxEl = document.getElementById('donateSelectedToolbox');
+            if (visual?.kind === 'toolbox') {
+                icon.hidden = true;
+                if (!toolboxEl) {
+                    toolboxEl = document.createElement('span');
+                    toolboxEl.id = 'donateSelectedToolbox';
+                    toolboxEl.className = 'donate-selected-icon donate-pack-toolbox';
+                    toolboxEl.setAttribute('role', 'img');
+                    icon.insertAdjacentElement('afterend', toolboxEl);
+                }
+                toolboxEl.hidden = false;
+                toolboxEl.setAttribute('aria-label', visual.alt);
+                startToolboxAnimations(toolboxEl.parentElement);
+            } else {
+                if (toolboxEl) toolboxEl.hidden = true;
+                icon.hidden = false;
+                icon.src = visual ? visual.src : '/static/coin.png';
+                icon.alt = visual ? visual.alt : 'Монетки';
+            }
         }
         if (name) name.textContent = `${pack.name}: ${pack.coins}`;
         if (price) price.textContent = pack.price_label;
