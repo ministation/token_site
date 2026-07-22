@@ -3701,6 +3701,24 @@ label.chat-tool-btn input[type="file"] {
     height: 110px;
     flex-shrink: 0;
 }
+.profile-banned-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin: 0 20px 0;
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    border: 1px solid color-mix(in srgb, var(--danger) 45%, var(--border));
+    background: color-mix(in srgb, var(--danger) 12%, var(--panel));
+    color: var(--ink);
+    font-size: 0.88rem;
+}
+.profile-banned-banner i { color: var(--danger); margin-top: 2px; }
+.profile-ban-btn {
+    background: color-mix(in srgb, var(--danger) 88%, #000) !important;
+    border-color: var(--danger-deep) !important;
+    color: #fff !important;
+}
 .profile-page-info { flex: 1; min-width: 0; }
 .profile-page-name-row {
     display: flex;
@@ -3717,13 +3735,30 @@ label.chat-tool-btn input[type="file"] {
 }
 .profile-joined i { margin-right: 6px; }
 .profile-stat-btn {
+    display: flex !important;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    white-space: normal;
     background: none;
     border: none;
     padding: 0;
     cursor: pointer;
     box-shadow: none;
+    min-width: 72px;
 }
 .profile-stat-btn:hover { opacity: 0.85; transform: none; }
+.profile-stat-btn .profile-stat-value,
+.profile-stat-btn .profile-stat-label {
+    width: 100%;
+    text-align: center;
+    margin: 0;
+}
+.profile-stat-btn .profile-stat-label {
+    margin-top: 0;
+    line-height: 1.2;
+}
 .profile-bio-block { padding: 16px 20px; }
 .profile-bio-empty { margin: 0; }
 .profile-posts-section {

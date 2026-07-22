@@ -3,8 +3,8 @@ import secrets
 import aiohttp
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import RedirectResponse
-from app.config import DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, DISCORD_REDIRECT_URI
-from app.services.roles import apply_roles, ROLE_ADMIN, ROLE_MODERATOR
+from app.config import ADMIN_DISCORD_IDS, DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, DISCORD_REDIRECT_URI
+from app.services.roles import apply_roles, ROLE_ADMIN
 from app.services.game_staff import sync_game_moderator_site_role
 from app.services.discord_badges import sync_member_badges
 from app.core.sessions import (
@@ -13,6 +13,7 @@ from app.core.sessions import (
 from app.services.bank import find_player_by_discord
 from app.services.social import get_or_create_social_user
 from app.services.avatars import sync_discord_avatar_for_user, resolve_avatar_url
+from app.services.site_bans import get_active_ban
 import database_social as social_db
 
 
@@ -25,13 +26,12 @@ async def _sync_roles_from_game(session_data: dict) -> None:
 
 
 def _apply_staff_flags(session_data: dict) -> dict:
+    """Назначает флаги роли. В site_admins пишем только доверенные Discord ID из env."""
     apply_roles(session_data)
     discord_id = session_data.get("discord_id")
     username = session_data.get("username", "")
-    if discord_id and session_data.get("is_admin"):
+    if discord_id and str(discord_id) in ADMIN_DISCORD_IDS:
         social_db.add_site_staff(discord_id, username, "config", ROLE_ADMIN)
-    elif discord_id and session_data.get("is_moderator"):
-        social_db.add_site_staff(discord_id, username, "config", ROLE_MODERATOR)
     return session_data
 
 
@@ -115,6 +115,13 @@ async def callback(code: str, state: str):
 
     await _sync_roles_from_game(session_data)
     _apply_staff_flags(session_data)
+
+    ban = get_active_ban(discord_id)
+    if ban:
+        response = RedirectResponse("/?site_banned=1")
+        user_sessions.pop(state, None)
+        return response
+
     set_session(session_token, session_data)
 
     response = RedirectResponse("/")
@@ -122,6 +129,7 @@ async def callback(code: str, state: str):
         key="session_token",
         value=session_token,
         httponly=True,
+        samesite="lax",
         max_age=30 * 24 * 3600
     )
     user_sessions.pop(state, None)
@@ -206,8 +214,18 @@ async def api_me(request: Request):
         result["presence"] = "offline"
     await _sync_roles_from_game(session)
     apply_roles(result)
-    if result.get("is_admin"):
-        social_db.add_site_staff(session["discord_id"], session.get("username", ""), "config", ROLE_ADMIN)
-    elif result.get("is_moderator"):
-        social_db.add_site_staff(session["discord_id"], session.get("username", ""), "config", ROLE_MODERATOR)
+    # Постоянный staff в БД только по ADMIN_DISCORD_IDS (не по совпадению ника)
+    if session.get("discord_id") and str(session["discord_id"]) in ADMIN_DISCORD_IDS:
+        social_db.add_site_staff(
+            session["discord_id"], session.get("username", ""), "config", ROLE_ADMIN
+        )
+
+    ban = get_active_ban(session.get("discord_id"))
+    if ban:
+        delete_session(session_token)
+        return {
+            "authenticated": False,
+            "site_banned": True,
+            "ban_reason": ban.get("reason") or "Нарушение правил",
+        }
     return result

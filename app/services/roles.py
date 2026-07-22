@@ -1,6 +1,6 @@
 """Роли staff на сайте: admin (полный доступ) и moderator (админ-панель + обжалования)."""
 import database_social as social_db
-from app.config import ADMIN_USERNAMES, MODERATOR_USERNAMES
+from app.config import ADMIN_DISCORD_IDS, ADMIN_USERNAMES, MODERATOR_USERNAMES
 
 ROLE_ADMIN = "admin"
 ROLE_MODERATOR = "moderator"
@@ -9,6 +9,8 @@ ROLE_CONTENT_MAKER = "content_maker"
 
 def get_staff_role(username: str = "", discord_id: str | None = None) -> str | None:
     """Возвращает основную staff-роль: 'admin', 'moderator' или None."""
+    if discord_id and str(discord_id) in ADMIN_DISCORD_IDS:
+        return ROLE_ADMIN
     if discord_id:
         db_role = social_db.get_site_staff_role(discord_id)
         if db_role == ROLE_ADMIN:

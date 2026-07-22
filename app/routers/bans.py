@@ -73,6 +73,13 @@ async def api_submit_appeal(req: BanAppealRequest, request: Request):
         if linked:
             user_uuid = linked.get("user_uuid")
             ckey = linked.get("last_seen_user_name")
+    if not user_uuid and not ckey:
+        raise HTTPException(status_code=403, detail="Привяжите Discord к игровому аккаунту")
+
+    own_bans = await get_player_bans(user_uuid, ckey)
+    if not any(int(b["ban_id"]) == int(req.ban_id) for b in own_bans):
+        raise HTTPException(status_code=403, detail="Можно обжаловать только свои наказания")
+
     try:
         appeal_id = submit_appeal(
             req.ban_id, user["social_id"], user_uuid, ckey, req.appeal_text

@@ -16,6 +16,7 @@ from app.services.avatars import resolve_avatar_url
 from app.services.social import get_feed_posts
 from app.services.admin_rating import list_admin_help_ratings, delete_admin_help_rating, get_admin_rating_leaderboard
 from app.services.compensation import get_admin_compensation_status, start_compensation_giveaway
+from app.services import site_bans as site_bans_svc
 import database_social as social_db
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -54,6 +55,18 @@ class CreateRoleBanRequest(BaseModel):
 class StartCompensationRequest(BaseModel):
     amount: int
     duration_minutes: int
+
+
+class SiteBanRequest(BaseModel):
+    player_id: str | None = None
+    discord_id: str | None = None
+    reason: str
+    expires_at: str | None = None
+
+
+class SiteUnbanRequest(BaseModel):
+    discord_id: str | None = None
+    ban_id: int | None = None
 
 
 def _admin_game_uuid(admin: dict) -> str | None:
@@ -136,6 +149,7 @@ async def admin_users(request: Request, q: str = "", limit: int = 50, offset: in
                 "is_moderator": social_db.is_site_moderator(u.get("discord_id", "")),
                 "staff_role": social_db.get_site_staff_role(u.get("discord_id", "")),
                 "presence": status_from_last_seen(u.get("last_seen_at")),
+                "site_banned": bool(site_bans_svc.get_active_ban(u.get("discord_id"))),
             }
             for u in users
         ],
@@ -471,4 +485,58 @@ async def admin_review_support_ticket(ticket_id: int, req: ReviewTicketRequest, 
         raise HTTPException(status_code=400, detail=str(e))
     if not ok:
         raise HTTPException(status_code=404, detail="Тикет не найден")
+    return {"success": True}
+
+
+@router.get("/site-bans")
+async def admin_list_site_bans(
+    request: Request,
+    active_only: bool = True,
+    limit: int = 50,
+    offset: int = 0,
+):
+    await get_current_admin(request)
+    return site_bans_svc.list_bans(active_only=active_only, limit=min(limit, 100), offset=offset)
+
+
+@router.post("/site-bans")
+async def admin_create_site_ban(req: SiteBanRequest, request: Request):
+    admin = await get_current_admin(request)
+    discord_id = (req.discord_id or "").strip() or None
+    player_id = (req.player_id or "").strip() or None
+    if not discord_id and player_id:
+        user = social_db.get_social_user_by_player_id(player_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="Пользователь не найден")
+        discord_id = user.get("discord_id")
+        player_id = user.get("player_id")
+    if not discord_id:
+        raise HTTPException(status_code=400, detail="Укажите player_id или discord_id")
+    try:
+        ban = site_bans_svc.ban_user(
+            target_discord_id=discord_id,
+            target_player_id=player_id,
+            reason=req.reason,
+            admin_discord_id=admin.get("discord_id"),
+            admin_username=admin.get("username"),
+            expires_at=req.expires_at,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"success": True, "ban": ban}
+
+
+@router.post("/site-bans/unban")
+async def admin_lift_site_ban(req: SiteUnbanRequest, request: Request):
+    admin = await get_current_admin(request)
+    lifted_by = admin.get("username") or admin.get("discord_id") or "admin"
+    ok = False
+    if req.ban_id:
+        ok = site_bans_svc.unban_by_id(req.ban_id, lifted_by=lifted_by)
+    elif req.discord_id:
+        ok = site_bans_svc.unban_user(req.discord_id, lifted_by=lifted_by)
+    else:
+        raise HTTPException(status_code=400, detail="Укажите ban_id или discord_id")
+    if not ok:
+        raise HTTPException(status_code=404, detail="Активный бан не найден")
     return {"success": True}

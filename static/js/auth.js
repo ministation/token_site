@@ -9,9 +9,22 @@ function staffBadgeHtml(user) {
 
 async function checkAuth() {
     try {
+        if (new URLSearchParams(location.search).get('site_banned') === '1') {
+            history.replaceState({}, '', location.pathname + location.hash);
+            alert('Доступ к сайту заблокирован. Обратитесь к администрации.');
+        }
         const res = await fetch(`${API_BASE}/api/me`);
         const data = await res.json();
         currentUser = data;
+
+        if (data.site_banned) {
+            document.getElementById('loginBtn').style.display = '';
+            document.getElementById('userPanel').style.display = 'none';
+            updateAuthUI();
+            const reason = data.ban_reason || 'Нарушение правил';
+            alert(`Доступ к сайту заблокирован.\n${reason}`);
+            return;
+        }
 
         if (data.authenticated) {
             document.getElementById('loginBtn').style.display = 'none';

@@ -22,7 +22,8 @@ async def api_my_balance(request: Request):
 
 
 @router.get("/balance/{nickname}")
-async def api_balance(nickname: str):
+async def api_balance(nickname: str, request: Request):
+    await get_current_user(request)
     player = await find_player_by_nick(nickname)
     if not player:
         raise HTTPException(status_code=404, detail="Игрок не найден")

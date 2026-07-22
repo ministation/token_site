@@ -435,6 +435,25 @@ def _migrate_schema():
         cursor.execute("ALTER TABLE donation_orders ADD COLUMN game_user_uuid TEXT")
     if "fulfilled" not in don_cols:
         cursor.execute("ALTER TABLE donation_orders ADD COLUMN fulfilled INTEGER DEFAULT 0")
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS site_bans (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            discord_id TEXT NOT NULL,
+            player_id TEXT,
+            reason TEXT NOT NULL,
+            banned_by_discord_id TEXT,
+            banned_by_username TEXT,
+            active INTEGER DEFAULT 1,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            expires_at TIMESTAMP,
+            lifted_at TIMESTAMP,
+            lifted_by TEXT
+        )
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_site_bans_discord_active
+        ON site_bans(discord_id, active)
+    """)
     conn.commit()
     conn.close()
 
@@ -1874,6 +1893,128 @@ def delete_session_from_db(session_token: str):
     cursor.execute("DELETE FROM sessions WHERE session_token = ?", (session_token,))
     conn.commit()
     conn.close()
+
+
+def delete_sessions_for_discord_id(discord_id: str) -> int:
+    """Удаляет все сессии пользователя по discord_id. Возвращает число удалённых."""
+    if not discord_id:
+        return 0
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT session_token, user_data FROM sessions")
+    to_delete = []
+    for row in cursor.fetchall():
+        try:
+            data = json.loads(row["user_data"] or "{}")
+        except Exception:
+            continue
+        if str(data.get("discord_id") or "") == str(discord_id):
+            to_delete.append(row["session_token"])
+    for token in to_delete:
+        cursor.execute("DELETE FROM sessions WHERE session_token = ?", (token,))
+    conn.commit()
+    conn.close()
+    return len(to_delete)
+
+
+def get_active_site_ban(discord_id: str) -> dict | None:
+    if not discord_id:
+        return None
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT * FROM site_bans
+        WHERE discord_id = ? AND active = 1
+          AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)
+        ORDER BY created_at DESC
+        LIMIT 1
+    """, (str(discord_id),))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def create_site_ban(
+    discord_id: str,
+    player_id: str | None,
+    reason: str,
+    banned_by_discord_id: str | None,
+    banned_by_username: str | None,
+    expires_at: str | None = None,
+) -> int:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE site_bans SET active = 0, lifted_at = CURRENT_TIMESTAMP, lifted_by = ?
+        WHERE discord_id = ? AND active = 1
+    """, (banned_by_username or "system", str(discord_id)))
+    cursor.execute("""
+        INSERT INTO site_bans
+            (discord_id, player_id, reason, banned_by_discord_id, banned_by_username, expires_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (
+        str(discord_id),
+        player_id,
+        reason.strip(),
+        banned_by_discord_id,
+        banned_by_username,
+        expires_at,
+    ))
+    ban_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return ban_id
+
+
+def lift_site_ban(discord_id: str, lifted_by: str | None = None) -> bool:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE site_bans
+        SET active = 0, lifted_at = CURRENT_TIMESTAMP, lifted_by = ?
+        WHERE discord_id = ? AND active = 1
+    """, (lifted_by or "admin", str(discord_id)))
+    changed = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return changed
+
+
+def lift_site_ban_by_id(ban_id: int, lifted_by: str | None = None) -> bool:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE site_bans
+        SET active = 0, lifted_at = CURRENT_TIMESTAMP, lifted_by = ?
+        WHERE id = ? AND active = 1
+    """, (lifted_by or "admin", ban_id))
+    changed = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return changed
+
+
+def list_site_bans(active_only: bool = True, limit: int = 50, offset: int = 0) -> list[dict]:
+    conn = get_db()
+    cursor = conn.cursor()
+    if active_only:
+        cursor.execute("""
+            SELECT * FROM site_bans
+            WHERE active = 1
+              AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)
+            ORDER BY created_at DESC
+            LIMIT ? OFFSET ?
+        """, (limit, offset))
+    else:
+        cursor.execute("""
+            SELECT * FROM site_bans
+            ORDER BY created_at DESC
+            LIMIT ? OFFSET ?
+        """, (limit, offset))
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return rows
+
 
 def cleanup_expired_sessions(max_age_days: int = 30):
     """Удаляет сессии старше указанного количества дней."""

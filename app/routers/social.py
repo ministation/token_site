@@ -18,6 +18,7 @@ from app.services.bank import get_balance_by_player_id
 from app.services.media_upload import save_upload
 from app.services.badges import get_member_badges
 from app.services.presence import status_from_last_seen, statuses_for
+from app.services.site_bans import get_active_ban
 
 router = APIRouter(prefix="/api/social", tags=["social"])
 
@@ -82,11 +83,17 @@ def serialize_post(p: dict, *, anonymize: bool = False) -> dict:
 
 @router.get("/profile/{player_id}")
 async def api_get_profile(request: Request, player_id: str):
-    my_player_id = None
+    my_social_id = None
+    viewer_is_admin = False
     try:
-        current_user = await get_current_user(request)
-        my_player_id = current_user.get('player', {}).get('player_id')
-    except:
+        from app.dependencies import get_optional_user
+        current_user = await get_optional_user(request)
+        if current_user:
+            viewer_is_admin = bool(current_user.get("is_admin"))
+            social = social_db.get_social_user_by_discord_id(current_user["discord_id"])
+            if social:
+                my_social_id = social["player_id"]
+    except Exception:
         pass
 
     profile = get_social_user_by_player_id(player_id)
@@ -97,8 +104,10 @@ async def api_get_profile(request: Request, player_id: str):
 
     counts = get_follow_counts(player_id)
     following = False
-    if my_player_id:
-        following = is_following(my_player_id, player_id)
+    if my_social_id:
+        following = is_following(my_social_id, player_id)
+
+    site_ban = get_active_ban(profile.get("discord_id")) if viewer_is_admin else None
 
     return {
         "player_id": profile["player_id"],
@@ -110,7 +119,7 @@ async def api_get_profile(request: Request, player_id: str):
         "following_count": counts["following"],
         "followers_count": counts["followers"],
         "is_following": following,
-        "is_own": my_player_id == profile["player_id"],
+        "is_own": bool(my_social_id and my_social_id == profile["player_id"]),
         "created_at": profile["created_at"],
         "badges": get_member_badges(
             profile.get("discord_username", ""),
@@ -118,6 +127,8 @@ async def api_get_profile(request: Request, player_id: str):
             profile.get("created_at"),
         ),
         "presence": status_from_last_seen(profile.get("last_seen_at")),
+        "site_banned": bool(site_ban),
+        "site_ban_reason": (site_ban or {}).get("reason") if site_ban else None,
     }
 
 
@@ -347,31 +358,39 @@ async def api_get_following(player_id: str, limit: int = 20):
 # ==================== ПОИСК ====================
 
 @router.get("/search")
-async def api_social_search(q: str = "", limit: int = 50):
+async def api_social_search(request: Request, q: str = "", limit: int = 50):
     """Поиск только среди пользователей соцсети."""
     try:
         if len(q) >= 2:
             results = search_social_users(q, limit)
         else:
             results = search_social_users("", limit)
-        
+
+        from app.dependencies import get_optional_user
+        viewer = await get_optional_user(request)
+        show_balance = bool(viewer)
+
         from app.services.bank import get_balance_by_player_id
-        
+
         enriched = []
         for r in results:
-            try:
-                balance = await get_balance_by_player_id(r["player_id"])
-            except:
-                balance = 0
-            enriched.append({
+            balance = 0
+            if show_balance:
+                try:
+                    balance = await get_balance_by_player_id(r["player_id"])
+                except Exception:
+                    balance = 0
+            row = {
                 "player_id": r["player_id"],
                 "game_nickname": r.get("game_nickname", "Unknown"),
                 "nickname": r.get("game_nickname", "Unknown"),
                 "discord_username": r.get("discord_username"),
                 "discord_avatar": profile_avatar(r),
-                "balance": balance,
                 "presence": status_from_last_seen(r.get("last_seen_at")),
-            })
+            }
+            if show_balance:
+                row["balance"] = balance
+            enriched.append(row)
         presence_map = statuses_for([e["player_id"] for e in enriched])
         for e in enriched:
             e["presence"] = presence_map.get(e["player_id"], e.get("presence") or "offline")

@@ -9,6 +9,7 @@
         <button type="button" class="tab" data-admin-only onclick="showAdminTab('compensation', this)">Компенсация</button>
         <button type="button" class="tab" data-admin-only data-mod-ok onclick="showAdminTab('game', this)">Админ панель</button>
         <button type="button" class="tab" data-staff-only onclick="showAdminTab('playtime', this)">Время</button>
+        <button type="button" class="tab" data-admin-only onclick="showAdminTab('sitebans', this)">Баны сайта</button>
         <button type="button" class="tab" data-admin-only onclick="showAdminTab('admins', this)">Staff</button>
     </div>
 
@@ -274,6 +275,22 @@
 
         <div id="playtimeRolesTable" class="playtime-roles-table-wrap"></div>
         <div id="playtimeTransferResult" class="result"></div>
+    </div>
+
+    <div id="adminSiteBansTab" class="admin-tab-content" style="display:none;">
+        <p class="admin-hint">Бан на сайте: блокирует вход, чат, ЛС и публикации. Игровые баны SS14 — во вкладке «Админ панель».</p>
+        <div class="admin-inline-form">
+            <input type="text" id="adminSiteBanPlayerId" placeholder="player_id или Discord ID">
+            <input type="text" id="adminSiteBanReason" placeholder="Причина" maxlength="500">
+            <button type="button" class="profile-ban-btn" onclick="adminCreateSiteBan()">
+                <i class="fa-solid fa-ban"></i> Забанить
+            </button>
+            <button type="button" class="btn-sm" onclick="loadAdminSiteBans()">
+                <i class="fa-solid fa-rotate"></i> Обновить
+            </button>
+        </div>
+        <div id="adminSiteBanResult" class="result"></div>
+        <div id="adminSiteBansList"><p class="empty-state">Загрузка...</p></div>
     </div>
 
     <div id="adminAdminsTab" class="admin-tab-content" style="display:none;">

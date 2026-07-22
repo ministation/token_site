@@ -22,6 +22,11 @@ ADMIN_USERNAMES = [
     for x in os.getenv("ADMIN_USERNAMES", "dotnet_build").split(",")
     if x.strip()
 ]
+ADMIN_DISCORD_IDS = [
+    x.strip()
+    for x in os.getenv("ADMIN_DISCORD_IDS", "").split(",")
+    if x.strip()
+]
 MODERATOR_USERNAMES = [
     x.strip().lower()
     for x in os.getenv("MODERATOR_USERNAMES", "").split(",")

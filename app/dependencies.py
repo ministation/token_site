@@ -2,8 +2,20 @@ from fastapi import Request, HTTPException
 from app.core.sessions import get_session
 from app.db.database import get_pg_pool
 from app.services.roles import apply_roles
+from app.services.site_bans import get_active_ban
 from asyncpg import Pool
 import database_social as social_db
+
+
+def _raise_if_site_banned(user: dict) -> None:
+    ban = get_active_ban(user.get("discord_id"))
+    if not ban:
+        return
+    reason = ban.get("reason") or "Нарушение правил"
+    raise HTTPException(
+        status_code=403,
+        detail=f"Доступ к сайту заблокирован: {reason}",
+    )
 
 
 async def get_current_user(request: Request) -> dict:
@@ -13,7 +25,9 @@ async def get_current_user(request: Request) -> dict:
     session = get_session(session_token)
     if session is None:
         raise HTTPException(status_code=401, detail="Сессия недействительна")
-    return apply_roles(session)
+    user = apply_roles(session)
+    _raise_if_site_banned(user)
+    return user
 
 
 async def get_current_player(request: Request) -> dict:
@@ -43,9 +57,12 @@ async def get_optional_user(request: Request) -> dict | None:
     if not session_token:
         return None
     session = get_session(session_token)
-    if session:
-        return apply_roles(session)
-    return None
+    if not session:
+        return None
+    user = apply_roles(session)
+    if get_active_ban(user.get("discord_id")):
+        return None
+    return user
 
 
 async def get_current_social_user(request: Request) -> dict:
