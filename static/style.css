@@ -1,14 +1,29 @@
 /* ============================================================
    Мини-станция — презентабельная тема в духе Space Station 14.
    Светлая тема по умолчанию + тёмная «космическая», переключение
-   кнопкой в шапке. Пиксельный шрифт для заголовков и элементов
-   управления, чистая типографика для текста.
+   кнопкой в шапке. Шрифт Cozette для всего интерфейса.
    ============================================================ */
+
+@font-face {
+    font-family: 'Cozette';
+    src: url('/static/fonts/CozetteVector.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Cozette';
+    src: url('/static/fonts/CozetteVectorBold.woff2') format('woff2');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
 
 /* === Design tokens === */
 :root {
-    --font-pixel: 'Press Start 2P', 'Courier New', monospace;
-    --font-body: 'Exo 2', 'Segoe UI', system-ui, sans-serif;
+    --font-pixel: 'Cozette', 'Courier New', monospace;
+    --font-body: 'Cozette', 'Courier New', monospace;
+    --font-mono: 'Cozette', 'Courier New', monospace;
 
     --radius: 10px;
     --radius-sm: 6px;
@@ -131,6 +146,7 @@ body {
     color: var(--ink);
     min-height: 100vh;
     line-height: 1.55;
+    font-size: 16px;
     -webkit-font-smoothing: antialiased;
     transition: background-color 0.25s ease, color 0.25s ease;
 }
@@ -531,14 +547,14 @@ body.nav-open { overflow: hidden; }
 
 .side-group-title {
     color: var(--muted);
-    font-size: 0.56rem;
+    font-size: 0.78rem;
     text-transform: uppercase;
     padding: 4px 6px 10px;
     display: flex;
     align-items: center;
     gap: 7px;
 }
-.side-group-title i { color: var(--muted); font-size: 0.7rem; }
+.side-group-title i { color: var(--muted); font-size: 0.85rem; }
 
 .sidebar .nav-btn,
 .sidebar .side-link {
@@ -606,7 +622,7 @@ body.nav-open { overflow: hidden; }
     border: 2px solid var(--border);
     border-radius: var(--radius-sm);
     padding: 10px 14px;
-    font-size: 0.6rem;
+    font-size: 0.85rem;
     cursor: pointer;
     gap: 8px;
     align-items: center;
@@ -648,15 +664,16 @@ body.nav-open { overflow: hidden; }
 }
 
 .card h2 {
-    color: var(--ink);
-    font-size: 0.68rem;
-    font-weight: 400;
+    color: var(--muted);
+    font-size: 1.05rem;
+    font-weight: 700;
     margin-bottom: 16px;
     padding-bottom: 12px;
     display: flex;
     align-items: center;
     gap: 10px;
-    text-transform: uppercase;
+    text-transform: none;
+    letter-spacing: 0.01em;
     position: relative;
     border-bottom: 2px solid var(--border);
 }
@@ -673,9 +690,9 @@ body.nav-open { overflow: hidden; }
 }
 .card:hover h2::after { width: 96px; opacity: 1; }
 
-.card h2 i { color: var(--muted); font-size: 0.85rem; }
+.card h2 i { color: var(--dim); font-size: 1rem; }
 
-.card h3 { color: var(--ink); font-size: 0.95rem; }
+.card h3 { color: var(--muted); font-size: 1rem; font-weight: 700; }
 
 /* === Hero / home === */
 .hero-card {
@@ -903,7 +920,7 @@ input[type="button"],
     border-radius: var(--radius-sm);
     padding: 10px 16px;
     font-family: var(--font-pixel);
-    font-size: 0.6rem;
+    font-size: 0.85rem;
     cursor: pointer;
     text-decoration: none;
     outline: none;
@@ -1133,7 +1150,7 @@ input[type="button"]:disabled {
     100% { transform: translateY(-4px); }
 }
 .lottery-center { text-align: center; max-width: 460px; margin-left: auto; margin-right: auto; }
-#slotResult { font-family: var(--font-pixel); font-size: 0.65rem; color: var(--muted); }
+#slotResult { font-family: var(--font-pixel); font-size: 0.9rem; color: var(--muted); }
 
 /* === Chat === */
 .chat-messages {
@@ -1193,7 +1210,7 @@ input[type="button"]:disabled {
     border-radius: var(--radius-sm);
     cursor: pointer;
     font-family: var(--font-pixel);
-    font-size: 0.6rem;
+    font-size: 0.85rem;
     border: 2px solid var(--border-strong);
     box-shadow: var(--shadow-btn);
     transition: background var(--transition), transform var(--transition);
@@ -1351,9 +1368,10 @@ html[data-theme="dark"] .status-meta {
 
 .playtime-compact h3 {
     font-family: var(--font-pixel);
-    font-size: 0.6rem;
+    font-size: 0.95rem;
+    font-weight: 700;
     margin-bottom: 0.6rem;
-    color: var(--ink);
+    color: var(--muted);
 }
 .playtime-compact h3 i { color: var(--muted); }
 
@@ -1637,9 +1655,9 @@ html[data-theme="dark"] .status-meta {
 .ss14-copyable-ckey:hover { color: var(--link); }
 .ss14-copyable-ckey.ss14-copy-ok { color: var(--success); border-bottom-color: transparent; }
 .ss14-player-hit-uuid {
-    font-size: 0.68rem;
+    font-size: 0.85rem;
     color: var(--dim);
-    font-family: ui-monospace, monospace;
+    font-family: var(--font-mono);
     flex-shrink: 0;
 }
 .ss14-copy-chip {
@@ -4636,20 +4654,29 @@ label.chat-tool-btn input[type="file"] {
 .legal-card { max-width: 920px; }
 .legal-updated {
     color: var(--muted);
-    font-size: 0.88rem;
+    font-size: 0.95rem;
     margin: -4px 0 16px;
 }
 .legal-prose {
     font-family: var(--font-body);
-    font-size: 0.95rem;
-    line-height: 1.55;
+    font-size: 1rem;
+    line-height: 1.65;
     color: var(--ink);
 }
 .legal-prose h3 {
-    font-family: var(--font-pixel);
-    font-size: 0.52rem;
-    margin: 18px 0 8px;
-    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin: 22px 0 10px;
+    color: var(--muted);
+    letter-spacing: 0.01em;
+    text-transform: none;
+}
+.legal-card > h2 {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: none;
 }
 .legal-prose p { margin: 0 0 10px; }
 .legal-prose ul {
