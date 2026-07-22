@@ -103,10 +103,11 @@ function renderPackCoinPile(coins) {
     return `<div class="donate-pack-pile donate-pack-pile--${n}" aria-hidden="true">${imgs}</div>`;
 }
 
-/** Ящики только у бандлов 4–5 — селф-мейд спрайты. */
+/** Спрайты: 100 = рюкзак, 200 = ящик, 300 = синди-ящик. */
 function packCrateIcon(coins) {
     if (coins >= 250) return { src: '/static/icons/syndie-coins-self-made.png', size: 'lg' };
     if (coins >= 150) return { src: '/static/icons/coins-self-made.png', size: 'md' };
+    if (coins >= 80) return { src: '/static/icons/backpack-coins-self-made.png', size: 'md' };
     return null;
 }
 
@@ -247,7 +248,7 @@ function updateDonateCheckoutUI() {
             icon.hidden = false;
             const crate = packCrateIcon(pack.coins);
             icon.src = crate ? crate.src : '/static/coin.png';
-            icon.alt = crate ? 'Ящик с монетами' : 'Монетки';
+            icon.alt = crate ? (pack.coins >= 80 && pack.coins < 150 ? 'Рюкзак монет' : 'Ящик с монетами') : 'Монетки';
         }
         if (name) name.textContent = `${pack.name}: ${pack.coins}`;
         if (price) price.textContent = pack.price_label;

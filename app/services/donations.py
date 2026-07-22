@@ -99,9 +99,9 @@ DONATION_TIERS: dict[int, dict[str, Any]] = {
 COIN_PACKS: dict[int, dict[str, Any]] = {
     1: {"id": 1, "name": "Горсть", "coins": 20, "price_rub": 240, "badge": None},
     2: {"id": 2, "name": "Мешок", "coins": 50, "price_rub": 560, "badge": None},
-    3: {"id": 3, "name": "Ящик", "coins": 100, "price_rub": 1050, "badge": "Выгодно", "featured": True},
-    4: {"id": 4, "name": "Кейс", "coins": 200, "price_rub": 1980, "badge": "−18%"},
-    5: {"id": 5, "name": "Сундук", "coins": 300, "price_rub": 2790, "badge": "−23%"},
+    3: {"id": 3, "name": "Рюкзак монет", "coins": 100, "price_rub": 1050, "badge": "Выгодно", "featured": True},
+    4: {"id": 4, "name": "Ящик", "coins": 200, "price_rub": 1980, "badge": "−18%"},
+    5: {"id": 5, "name": "Ящик суперприпасов синдиката", "coins": 300, "price_rub": 2790, "badge": "−23%"},
 }
 
 _COIN_BASE_RATE = 12.0
