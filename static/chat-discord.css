@@ -612,7 +612,8 @@ button.dc-name:hover {
 /* Composer — одна полоса как в Discord */
 .dc-composer.chat-composer,
 .dc-main .chat-composer,
-.pm-chat-area .chat-composer {
+.pm-chat-area .chat-composer,
+.forum-comment-composer.chat-composer {
     display: flex !important;
     flex-direction: row;
     align-items: center;
@@ -668,7 +669,8 @@ button.dc-name:hover {
 }
 
 .dc-composer .chat-composer-main,
-.pm-chat-area .chat-composer-main {
+.pm-chat-area .chat-composer-main,
+.forum-comment-composer .chat-composer-main {
     flex: 1 1 auto;
     min-width: 0;
     display: flex;
@@ -680,7 +682,8 @@ button.dc-name:hover {
 .dc-composer .chat-composer-main input,
 .dc-composer .chat-composer-main textarea,
 .pm-chat-area .chat-composer-main input,
-.pm-chat-area .chat-composer-main textarea {
+.pm-chat-area .chat-composer-main textarea,
+.forum-comment-composer .chat-composer-main input {
     border: none !important;
     background: transparent !important;
     box-shadow: none !important;
@@ -711,7 +714,8 @@ button.dc-name:hover {
 }
 
 .dc-composer .chat-send-btn,
-.pm-chat-area .chat-send-btn {
+.pm-chat-area .chat-send-btn,
+.forum-comment-composer .chat-send-btn {
     width: 32px !important;
     height: 32px !important;
     min-width: 32px !important;
