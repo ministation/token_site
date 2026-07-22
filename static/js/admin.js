@@ -15,7 +15,6 @@ function showAdminTab(tab, btn) {
         appeals: 'adminInboxTab', tickets: 'adminInboxTab',
         compensation: 'adminCompensationTab',
         game: 'adminGameTab', playtime: 'adminPlaytimeTab',
-        sitebans: 'adminSiteBansTab',
         admins: 'adminAdminsTab'
     };
     const target = document.getElementById(map[tab]);
@@ -30,7 +29,6 @@ function showAdminTab(tab, btn) {
     if (tab === 'compensation') loadAdminCompensation();
     if (tab === 'game') initGameModerationTab();
     if (tab === 'playtime' && typeof initPlaytimeTransfer === 'function') initPlaytimeTransfer();
-    if (tab === 'sitebans') loadAdminSiteBans();
     if (tab === 'admins') loadAdminList();
 }
 
@@ -390,9 +388,6 @@ async function loadAdminUsers(append) {
                     <div class="admin-user-sub">@${escapeHtml(u.discord_username || '')} · ${escapeHtml(u.player_id?.slice(0, 8) || '')}…</div>
                 </div>
                 ${u.is_admin ? '<span class="admin-badge">ADMIN</span>' : (u.is_moderator ? '<span class="mod-badge">MOD</span>' : '')}
-                ${u.site_banned
-                    ? `<button type="button" class="btn-sm" onclick='adminUnbanSiteUser(${JSON.stringify(u.discord_id)})' title="Разбанить"><i class="fa-solid fa-unlock"></i></button>`
-                    : `<button type="button" class="btn-sm profile-ban-btn" onclick='adminBanSiteUser(${JSON.stringify(u.player_id)}, ${JSON.stringify(u.discord_id)}, ${JSON.stringify(u.game_nickname || u.discord_username || "")})' title="Бан на сайте"><i class="fa-solid fa-ban"></i></button>`}
                 <button type="button" class="btn-sm" onclick='messageUserFromChat(${JSON.stringify(u.player_id)}, ${JSON.stringify(u.game_nickname || u.discord_username)})'>
                     <i class="fa-solid fa-envelope"></i>
                 </button>
@@ -1050,99 +1045,6 @@ async function revokeAdmin(discordId) {
     try {
         await apiCall('DELETE', '/api/admin/admins/' + discordId);
         loadAdminList();
-    } catch (e) {
-        alert(e.message);
-    }
-}
-
-async function loadAdminSiteBans() {
-    const container = document.getElementById('adminSiteBansList');
-    if (!container) return;
-    container.innerHTML = '<p class="empty-state">Загрузка...</p>';
-    try {
-        const bans = await apiCall('GET', '/api/admin/site-bans?active_only=true&limit=100');
-        if (!bans.length) {
-            container.innerHTML = '<p class="empty-state">Активных банов сайта нет</p>';
-            return;
-        }
-        container.innerHTML = bans.map(b => `
-            <div class="admin-user-row">
-                <div class="admin-user-info">
-                    <div class="admin-user-name">#${b.id} · ${escapeHtml(b.discord_id || '')}</div>
-                    <div class="admin-user-sub">
-                        ${escapeHtml(b.reason || '')}
-                        · ${b.created_at ? new Date(b.created_at).toLocaleString('ru-RU') : ''}
-                        ${b.banned_by_username ? ` · by ${escapeHtml(b.banned_by_username)}` : ''}
-                    </div>
-                </div>
-                <button type="button" class="btn-sm" onclick='adminUnbanSiteUser(${JSON.stringify(b.discord_id)}, ${b.id})'>
-                    <i class="fa-solid fa-unlock"></i> Снять
-                </button>
-            </div>
-        `).join('');
-    } catch (e) {
-        container.innerHTML = `<p class="error">${escapeHtml(e.message)}</p>`;
-    }
-}
-
-async function adminCreateSiteBan() {
-    const input = document.getElementById('adminSiteBanPlayerId');
-    const reasonEl = document.getElementById('adminSiteBanReason');
-    const res = document.getElementById('adminSiteBanResult');
-    const raw = (input?.value || '').trim();
-    const reason = (reasonEl?.value || '').trim();
-    if (!raw) {
-        alert('Укажите player_id или Discord ID');
-        return;
-    }
-    if (reason.length < 3) {
-        alert('Укажите причину (минимум 3 символа)');
-        return;
-    }
-    const payload = /^\d{15,20}$/.test(raw)
-        ? { discord_id: raw, reason }
-        : { player_id: raw, reason };
-    try {
-        await apiCall('POST', '/api/admin/site-bans', payload);
-        if (input) input.value = '';
-        if (reasonEl) reasonEl.value = '';
-        if (res) res.innerHTML = '<p class="success">Бан выдан, сессии сброшены</p>';
-        loadAdminSiteBans();
-    } catch (e) {
-        if (res) res.innerHTML = `<p class="error">${escapeHtml(e.message)}</p>`;
-    }
-}
-
-async function adminBanSiteUser(playerId, discordId, displayName) {
-    const reason = prompt(`Причина бана на сайте для ${displayName || 'игрока'}:`, 'Нарушение правил');
-    if (reason === null) return;
-    const trimmed = reason.trim();
-    if (trimmed.length < 3) {
-        alert('Укажите причину (минимум 3 символа)');
-        return;
-    }
-    try {
-        await apiCall('POST', '/api/admin/site-bans', {
-            player_id: playerId,
-            discord_id: discordId,
-            reason: trimmed,
-        });
-        if (typeof loadAdminUsers === 'function') loadAdminUsers(false);
-        if (document.getElementById('adminSiteBansTab')?.style.display !== 'none') {
-            loadAdminSiteBans();
-        }
-    } catch (e) {
-        alert(e.message);
-    }
-}
-
-async function adminUnbanSiteUser(discordId, banId = null) {
-    if (!confirm('Снять бан с сайта?')) return;
-    try {
-        const body = banId ? { ban_id: banId, discord_id: discordId } : { discord_id: discordId };
-        await apiCall('POST', '/api/admin/site-bans/unban', body);
-        if (typeof loadAdminUsers === 'function') loadAdminUsers(false);
-        loadAdminSiteBans();
     } catch (e) {
         alert(e.message);
     }
