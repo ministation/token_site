@@ -82,6 +82,11 @@ function parseHashRoute() {
 
 function handleHashRoute() {
     const { section, playerId } = parseHashRoute();
+    if (section === 'donate') {
+        const q = (location.hash.split('?')[1] || '');
+        location.replace('/donate' + (q ? `?${q}` : ''));
+        return;
+    }
     if (!canAccessSection(section, { playerId })) {
         location.hash = '#/home';
         return;
@@ -116,7 +121,6 @@ function handleHashRoute() {
         privacy: 'Политика конфиденциальности',
         terms: 'Пользовательское соглашение',
         pricing: 'Цены и тарифы',
-        donate: 'Поддержка',
         support: 'Обращения',
     };
     document.title = `${titles[section] || 'Страница'} — Мини-станция`;
@@ -160,8 +164,6 @@ function runSectionInit(section, playerId = null) {
         }
     } else if (section === 'support') {
         if (typeof initSupportSection === 'function') initSupportSection();
-    } else if (section === 'donate') {
-        if (typeof initDonateSection === 'function') initDonateSection();
     }
 }
 

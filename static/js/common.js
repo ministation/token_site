@@ -95,7 +95,11 @@ async function apiCall(method, url, body = null) {
         let detail = 'Ошибка запроса';
         try {
             const err = await res.json();
-            if (err && err.detail) detail = err.detail;
+            if (err && err.detail) {
+                detail = Array.isArray(err.detail)
+                    ? (err.detail[0]?.msg || JSON.stringify(err.detail))
+                    : err.detail;
+            }
         } catch (e) { /* ответ не в формате JSON (например, страница ошибки) */ }
         throw new Error(detail);
     }

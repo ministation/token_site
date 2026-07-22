@@ -1,38 +1,75 @@
 let donateCatalog = null;
 let selectedDonateTierId = null;
+let selectedDonatePackId = null;
 let selectedDonateMethod = 2;
+let donateActiveTab = 'tiers';
+
+const COIN_IMG = '<img src="/static/coin.png" class="coin-icon-result donate-coin-inline" alt="">';
 
 async function initDonateSection() {
     selectedDonateTierId = null;
+    selectedDonatePackId = null;
+    donateActiveTab = 'tiers';
     await loadDonateCatalog();
     handleDonateReturnQuery();
 }
 
+function switchDonateTab(tab) {
+    donateActiveTab = tab === 'coins' ? 'coins' : 'tiers';
+    document.querySelectorAll('.donate-tab').forEach(btn => {
+        const on = btn.dataset.tab === donateActiveTab;
+        btn.classList.toggle('active', on);
+        btn.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    const tiers = document.getElementById('donateTiers');
+    const packs = document.getElementById('donateCoinPacks');
+    if (tiers) tiers.hidden = donateActiveTab !== 'tiers';
+    if (packs) packs.hidden = donateActiveTab !== 'coins';
+    selectedDonateTierId = null;
+    selectedDonatePackId = null;
+    document.querySelectorAll('.donate-tier-card, .donate-pack-card').forEach(el => {
+        el.classList.remove('active');
+        const btn = el.querySelector('button');
+        if (btn) btn.setAttribute('aria-pressed', 'false');
+    });
+    updateDonateCheckoutUI();
+}
+
 async function loadDonateCatalog() {
     const box = document.getElementById('donateTiers');
-    if (!box) return;
+    const packsBox = document.getElementById('donateCoinPacks');
+    if (!box && !packsBox) return;
     try {
         donateCatalog = await apiCall('GET', '/api/donations/catalog');
-        const tiers = donateCatalog.tiers || [];
         selectedDonateMethod = donateCatalog.default_method || 2;
-        if (!tiers.length) {
-            box.innerHTML = '<p class="empty-state">Тарифы недоступны</p>';
-            return;
+        const tiers = donateCatalog.tiers || [];
+        const packs = donateCatalog.coin_packs || [];
+        if (box) {
+            box.innerHTML = tiers.length
+                ? tiers.map(t => renderDonateTierCard(t)).join('')
+                : '<p class="empty-state">Тарифы недоступны</p>';
         }
-        box.innerHTML = tiers.map(t => renderDonateTierCard(t)).join('');
+        if (packsBox) {
+            packsBox.innerHTML = packs.length
+                ? packs.map(p => renderDonatePackCard(p)).join('')
+                : '<p class="empty-state">Пакеты недоступны</p>';
+        }
         renderDonateMethods();
         const hint = document.getElementById('donateHint');
         if (hint && !donateCatalog.configured) {
-            hint.textContent = 'Ключи Platega ещё не заданы на сервере (PLATEGA_MERCHANT_ID / PLATEGA_SECRET). Интерфейс готов — после выдачи ключей оплата заработает.';
+            hint.textContent = 'Оплата через Platega. Ключи на сервере ещё не заданы — интерфейс готов, платежи заработают после настройки.';
         }
-        if (selectedDonateTierId) selectDonateTier(selectedDonateTierId);
-        else selectDonateTier(null);
+        switchDonateTab(donateActiveTab);
+        updateDonateCheckoutUI();
     } catch (e) {
-        box.innerHTML = `<p class="error">${escapeHtml(e.message || 'Ошибка загрузки')}</p>`;
+        if (box) box.innerHTML = `<p class="error">${escapeHtml(e.message || 'Ошибка загрузки')}</p>`;
     }
 }
 
 function renderDonateTierCard(t) {
+    const coinLine = t.coins
+        ? `<li class="donate-perk-coins"><span>+${t.coins}</span> ${COIN_IMG} <span class="donate-perk-period">в месяц</span></li>`
+        : '';
     const perks = (t.perks || []).map(p => `<li><span>${escapeHtml(p)}</span></li>`).join('');
     const active = selectedDonateTierId === t.id ? ' active' : '';
     const featured = t.featured ? ' featured' : '';
@@ -50,8 +87,27 @@ function renderDonateTierCard(t) {
                         <h3>${escapeHtml(t.name)}</h3>
                     </div>
                     <div class="donate-tier-price">${escapeHtml(t.price_label)} <span>/ мес</span></div>
-                    <ul class="donate-tier-perks">${perks}</ul>
+                    <ul class="donate-tier-perks">${coinLine}${perks}</ul>
                 </div>
+            </button>
+        </article>`;
+}
+
+function renderDonatePackCard(p) {
+    const active = selectedDonatePackId === p.id ? ' active' : '';
+    const featured = p.featured ? ' featured' : '';
+    const badge = p.badge ? `<span class="donate-tier-badge">${escapeHtml(p.badge)}</span>` : '';
+    return `
+        <article class="donate-pack-card${active}${featured}" data-pack="${p.id}">
+            ${badge}
+            <button type="button" class="donate-pack-select" onclick="selectDonatePack(${p.id})" aria-pressed="${active ? 'true' : 'false'}">
+                <div class="donate-pack-amount">
+                    <span class="donate-pack-coins">+${p.coins}</span>
+                    ${COIN_IMG}
+                </div>
+                <div class="donate-pack-name">${escapeHtml(p.name)}</div>
+                <div class="donate-pack-price">${escapeHtml(p.price_label)}</div>
+                <div class="donate-pack-unit">${escapeHtml(p.unit_label)}</div>
             </button>
         </article>`;
 }
@@ -64,9 +120,11 @@ function renderDonateMethods() {
         <label class="donate-method-option${Number(m.id) === Number(selectedDonateMethod) ? ' is-active' : ''}">
             <input type="radio" name="donateMethod" value="${m.id}"
                 ${Number(m.id) === Number(selectedDonateMethod) ? 'checked' : ''}
-                onchange="selectedDonateMethod = Number(this.value); document.querySelectorAll('.donate-method-option').forEach(el => el.classList.toggle('is-active', el.querySelector('input')?.checked));">
-            <img class="donate-method-icon" src="${escapeHtml(m.icon || '')}" alt=""
-                onerror="this.style.display='none'">
+                onchange="onDonateMethodChange(this)">
+            <span class="donate-method-icon-wrap">
+                <img class="donate-method-icon" src="${escapeHtml(m.icon || '')}" alt=""
+                    onerror="this.style.display='none'">
+            </span>
             <span class="donate-method-text">
                 <strong>${escapeHtml(m.label)}</strong>
                 <small>${escapeHtml(m.hint || '')}</small>
@@ -75,41 +133,102 @@ function renderDonateMethods() {
     `).join('');
 }
 
+function onDonateMethodChange(input) {
+    selectedDonateMethod = Number(input.value);
+    document.querySelectorAll('.donate-method-option').forEach(el => {
+        el.classList.toggle('is-active', !!el.querySelector('input')?.checked);
+    });
+}
+
 function selectDonateTier(tierId) {
-    selectedDonateTierId = tierId == null || tierId === '' ? null : Number(tierId);
+    donateActiveTab = 'tiers';
+    selectedDonateTierId = Number(tierId);
+    selectedDonatePackId = null;
     document.querySelectorAll('.donate-tier-card').forEach(el => {
-        const on = selectedDonateTierId != null && Number(el.dataset.tier) === selectedDonateTierId;
+        const on = Number(el.dataset.tier) === selectedDonateTierId;
         el.classList.toggle('active', on);
         const btn = el.querySelector('.donate-tier-select');
         if (btn) btn.setAttribute('aria-pressed', on ? 'true' : 'false');
     });
-    const tier = (donateCatalog?.tiers || []).find(t => t.id === selectedDonateTierId);
+    document.querySelectorAll('.donate-pack-card').forEach(el => {
+        el.classList.remove('active');
+        const btn = el.querySelector('.donate-pack-select');
+        if (btn) btn.setAttribute('aria-pressed', 'false');
+    });
+    updateDonateCheckoutUI();
+}
+
+function selectDonatePack(packId) {
+    donateActiveTab = 'coins';
+    selectedDonatePackId = Number(packId);
+    selectedDonateTierId = null;
+    document.querySelectorAll('.donate-pack-card').forEach(el => {
+        const on = Number(el.dataset.pack) === selectedDonatePackId;
+        el.classList.toggle('active', on);
+        const btn = el.querySelector('.donate-pack-select');
+        if (btn) btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+    document.querySelectorAll('.donate-tier-card').forEach(el => {
+        el.classList.remove('active');
+        const btn = el.querySelector('.donate-tier-select');
+        if (btn) btn.setAttribute('aria-pressed', 'false');
+    });
+    updateDonateCheckoutUI();
+}
+
+function updateDonateCheckoutUI() {
     const empty = document.getElementById('donateSelectedEmpty');
     const selected = document.getElementById('donateSelected');
     const methods = document.getElementById('donateMethods');
     const contactWrap = document.getElementById('donateContactWrap');
     const payBtn = document.getElementById('donatePayBtn');
-    if (!tier) {
+    const icon = document.getElementById('donateSelectedIcon');
+    const name = document.getElementById('donateSelectedName');
+    const price = document.getElementById('donateSelectedPrice');
+
+    const tier = (donateCatalog?.tiers || []).find(t => t.id === selectedDonateTierId);
+    const pack = (donateCatalog?.coin_packs || []).find(p => p.id === selectedDonatePackId);
+    const item = tier || pack;
+
+    if (!item) {
         if (empty) empty.hidden = false;
         if (selected) selected.hidden = true;
         if (methods) methods.hidden = true;
         if (contactWrap) contactWrap.hidden = true;
         if (payBtn) payBtn.disabled = true;
+        if (icon) {
+            icon.removeAttribute('src');
+            icon.alt = '';
+        }
         return;
     }
+
     if (empty) empty.hidden = true;
     if (selected) selected.hidden = false;
-    const icon = document.getElementById('donateSelectedIcon');
-    const name = document.getElementById('donateSelectedName');
-    const price = document.getElementById('donateSelectedPrice');
-    if (icon) icon.src = tier.icon;
-    if (name) name.textContent = tier.name;
-    if (price) price.textContent = `${tier.price_label} / мес`;
     if (methods) methods.hidden = false;
     if (contactWrap) contactWrap.hidden = false;
+    if (payBtn) payBtn.disabled = false;
+
+    if (tier) {
+        if (icon) {
+            icon.hidden = false;
+            icon.src = tier.icon;
+            icon.alt = tier.name;
+        }
+        if (name) name.textContent = tier.name;
+        if (price) price.textContent = `${tier.price_label} / мес`;
+    } else if (pack) {
+        if (icon) {
+            icon.hidden = false;
+            icon.src = '/static/coin.png';
+            icon.alt = 'Монетки';
+        }
+        if (name) name.textContent = `${pack.name} · +${pack.coins}`;
+        if (price) price.textContent = `${pack.price_label} · ${pack.unit_label}`;
+    }
+
     const contact = document.getElementById('donateContact');
     if (contact && !contact.value && currentUser?.username) contact.value = currentUser.username;
-    if (payBtn) payBtn.disabled = false;
 
     if (window.matchMedia('(max-width: 900px)').matches) {
         document.getElementById('donateCheckout')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -119,10 +238,12 @@ function selectDonateTier(tierId) {
 async function startDonationCheckout() {
     const result = document.getElementById('donateCheckoutResult');
     const btn = document.getElementById('donatePayBtn');
-    if (!selectedDonateTierId) {
+    const isCoins = !!selectedDonatePackId;
+    const isTier = !!selectedDonateTierId;
+    if (!isCoins && !isTier) {
         if (result) {
             result.className = 'result error';
-            result.textContent = 'Выберите тариф';
+            result.textContent = 'Выберите товар';
         }
         return;
     }
@@ -133,10 +254,21 @@ async function startDonationCheckout() {
         }
         return;
     }
+    if (isCoins && !currentUser?.authenticated) {
+        if (result) {
+            result.className = 'result error';
+            result.textContent = 'Для покупки монет войдите через Discord';
+        }
+        return;
+    }
+
     const formData = new FormData();
-    formData.append('tier_id', String(selectedDonateTierId));
+    formData.append('product_type', isCoins ? 'coins' : 'tier');
+    formData.append('tier_id', String(selectedDonateTierId || 0));
+    formData.append('pack_id', String(selectedDonatePackId || 0));
     formData.append('payment_method', String(selectedDonateMethod || 2));
     formData.append('contact', document.getElementById('donateContact')?.value.trim() || '');
+
     if (btn) {
         btn.disabled = true;
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Создание платежа…';
@@ -159,19 +291,21 @@ async function startDonationCheckout() {
         }
     } finally {
         if (btn) {
-            btn.disabled = !selectedDonateTierId;
+            btn.disabled = !(selectedDonateTierId || selectedDonatePackId);
             btn.innerHTML = '<i class="fa-solid fa-credit-card"></i> Перейти к оплате';
         }
     }
 }
 
 async function handleDonateReturnQuery() {
-    const hash = location.hash || '';
-    const q = hash.includes('?') ? hash.split('?')[1] : '';
-    if (!q) return;
-    const params = new URLSearchParams(q);
-    const order = params.get('order');
-    const result = params.get('result');
+    const params = new URLSearchParams(window.location.search || '');
+    let order = params.get('order');
+    let result = params.get('result');
+    if (!order && location.hash.includes('?')) {
+        const hq = new URLSearchParams(location.hash.split('?')[1] || '');
+        order = hq.get('order');
+        result = hq.get('result');
+    }
     const banner = document.getElementById('donatePayStatus');
     if (!banner || !order) return;
     banner.hidden = false;
@@ -182,10 +316,16 @@ async function handleDonateReturnQuery() {
         const st = data.status || '';
         if (st === 'confirmed' || result === 'success') {
             banner.classList.add('ok');
-            banner.textContent = `Оплата получена: ${data.tier_name || 'тариф'} · ${data.amount_rub || ''} ₽. Спасибо! Привилегии выдаст администрация.`;
+            if ((data.product_type || '') === 'coins') {
+                banner.textContent = data.fulfilled
+                    ? `Оплата получена: +${data.coins_amount || ''} монет зачислено. Спасибо!`
+                    : `Оплата получена: ${data.tier_name || 'монетки'} · ${data.amount_rub || ''} ₽. Зачисление уточняется.`;
+            } else {
+                banner.textContent = `Оплата получена: ${data.tier_name || 'тариф'} · ${data.amount_rub || ''} ₽. Спасибо! Привилегии выдаст администрация.`;
+            }
         } else if (st === 'canceled' || result === 'fail') {
             banner.classList.add('fail');
-            banner.textContent = 'Оплата не завершена. Можно выбрать тариф и попробовать снова.';
+            banner.textContent = 'Оплата не завершена. Можно выбрать товар и попробовать снова.';
         } else {
             banner.textContent = `Платёж в обработке (${st || 'pending'}). Обновите страницу через минуту.`;
         }

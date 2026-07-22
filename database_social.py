@@ -370,6 +370,10 @@ def _migrate_schema():
             redirect_url TEXT,
             payload TEXT,
             raw_callback TEXT,
+            product_type TEXT DEFAULT 'tier',
+            coins_amount INTEGER DEFAULT 0,
+            game_user_uuid TEXT,
+            fulfilled INTEGER DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
@@ -378,6 +382,15 @@ def _migrate_schema():
         CREATE INDEX IF NOT EXISTS idx_donation_orders_status
         ON donation_orders(status, created_at DESC)
     """)
+    don_cols = _table_columns(cursor, "donation_orders")
+    if "product_type" not in don_cols:
+        cursor.execute("ALTER TABLE donation_orders ADD COLUMN product_type TEXT DEFAULT 'tier'")
+    if "coins_amount" not in don_cols:
+        cursor.execute("ALTER TABLE donation_orders ADD COLUMN coins_amount INTEGER DEFAULT 0")
+    if "game_user_uuid" not in don_cols:
+        cursor.execute("ALTER TABLE donation_orders ADD COLUMN game_user_uuid TEXT")
+    if "fulfilled" not in don_cols:
+        cursor.execute("ALTER TABLE donation_orders ADD COLUMN fulfilled INTEGER DEFAULT 0")
     conn.commit()
     conn.close()
 
@@ -1530,17 +1543,22 @@ def create_donation_order(
     contact: str | None = None,
     redirect_url: str | None = None,
     payload: str | None = None,
+    product_type: str = "tier",
+    coins_amount: int = 0,
+    game_user_uuid: str | None = None,
 ) -> Dict:
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("""
         INSERT INTO donation_orders (
             transaction_id, tier_id, tier_name, amount_rub, payment_method,
-            player_id, discord_id, contact, redirect_url, payload, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+            player_id, discord_id, contact, redirect_url, payload, status,
+            product_type, coins_amount, game_user_uuid, fulfilled
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, 0)
     """, (
         transaction_id, tier_id, tier_name, amount_rub, payment_method,
         player_id, discord_id, contact, redirect_url, payload,
+        product_type or "tier", int(coins_amount or 0), game_user_uuid,
     ))
     conn.commit()
     order_id = cursor.lastrowid
@@ -1559,12 +1577,28 @@ def get_donation_order_by_tx(transaction_id: str) -> Optional[Dict]:
     return dict(row) if row else None
 
 
+def mark_donation_fulfilled(transaction_id: str) -> bool:
+    """Атомарно ставит fulfilled=1 только если ещё не выдано. True = мы захватили заказ."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE donation_orders
+        SET fulfilled = 1, updated_at = CURRENT_TIMESTAMP
+        WHERE transaction_id = ? AND COALESCE(fulfilled, 0) = 0 AND status = 'confirmed'
+    """, (transaction_id,))
+    conn.commit()
+    ok = cursor.rowcount > 0
+    conn.close()
+    return ok
+
+
 def update_donation_order(
     transaction_id: str,
     *,
     status: str | None = None,
     redirect_url: str | None = None,
     raw_callback: str | None = None,
+    fulfilled: int | None = None,
 ) -> bool:
     conn = get_db()
     cursor = conn.cursor()
@@ -1579,6 +1613,9 @@ def update_donation_order(
     if raw_callback is not None:
         sets.append("raw_callback = ?")
         params.append(raw_callback)
+    if fulfilled is not None:
+        sets.append("fulfilled = ?")
+        params.append(int(fulfilled))
     params.append(transaction_id)
     cursor.execute(
         f"UPDATE donation_orders SET {', '.join(sets)} WHERE transaction_id = ?",

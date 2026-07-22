@@ -38,7 +38,7 @@ def _should_track_visit(request: Request) -> bool:
     path = request.url.path
     if path.startswith("/static") or path.startswith("/api"):
         return False
-    return path == "/" or path.startswith("/profile/")
+    return path == "/" or path.startswith("/profile/") or path == "/donate"
 
 
 @app.middleware("http")

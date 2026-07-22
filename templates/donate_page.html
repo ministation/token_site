@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Поддержка — Мини-станция</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Exo+2:wght@400;600;700&display=swap">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="/static/js/theme.js"></script>
+    <script src="/static/js/ambient.js" defer></script>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="icon" type="image/png" href="/static/coin.png">
+</head>
+<body class="donate-standalone">
+    <div class="bg-ambient" aria-hidden="true">
+        <div class="bg-parallax-layer" data-depth="22">
+            <div class="bg-glow bg-glow--1"></div>
+            <div class="bg-glow bg-glow--2"></div>
+        </div>
+        <div class="bg-parallax-layer bg-dust-field" data-depth="34"></div>
+    </div>
+    <header class="topbar">
+        <div class="topbar-inner">
+            <a class="logo" href="/" style="text-decoration:none;color:inherit;">
+                <img src="/static/logo.png" alt="Логотип" onerror="this.src='/static/coin.png'">
+                <h1>Мини<span>-</span>станция</h1>
+            </a>
+            <div id="userInfo">
+                <button type="button" class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Сменить тему">
+                    <i class="fa-solid fa-moon"></i>
+                </button>
+                <button id="loginBtn" onclick="window.location.href='/login?next=/donate'">
+                    <i class="fa-brands fa-discord"></i>
+                    Войти через Discord
+                </button>
+                <div id="userPanel" style="display:none;"></div>
+            </div>
+        </div>
+    </header>
+
+    <div class="layout donate-standalone-layout">
+        <aside class="sidebar">
+            <div class="side-group">
+                <div class="side-group-title"><i class="fa-solid fa-compass"></i> Навигация</div>
+                <a class="side-link" href="/"><i class="fa-solid fa-house"></i> На главную</a>
+                <a class="side-link" href="/#/pricing"><i class="fa-solid fa-tags"></i> Цены</a>
+                <a class="side-link" href="/#/support"><i class="fa-solid fa-life-ring"></i> Обращения</a>
+            </div>
+            <div class="side-group">
+                <div class="side-group-title"><i class="fa-solid fa-link"></i> Ссылки</div>
+                <a class="side-link" href="http://cdn.ministation.ru/" target="_blank" rel="noopener"><i class="fa-solid fa-cloud"></i> CDN</a>
+                <a class="side-link" href="https://wiki.ministation.ru" target="_blank" rel="noopener"><i class="fa-solid fa-book"></i> Вики</a>
+                <a class="side-link" href="https://discord.gg/mini-station" target="_blank" rel="noopener"><i class="fa-brands fa-discord"></i> Discord</a>
+                <a class="side-link" href="https://t.me/mini_station" target="_blank" rel="noopener"><i class="fa-brands fa-telegram"></i> Telegram</a>
+            </div>
+        </aside>
+
+        <main class="content">
+            {% include 'partials/donate.html' %}
+        </main>
+    </div>
+
+    <footer class="site-footer">
+        <div class="site-footer-inner">
+            <div class="site-footer-brand">
+                <strong>Мини-станция</strong>
+                <span>SS14 · некоммерческий проект</span>
+            </div>
+            <nav class="site-footer-nav" aria-label="Правовая информация">
+                <a href="/#/privacy">Политика конфиденциальности</a>
+                <a href="/#/terms">Пользовательское соглашение</a>
+                <a href="/donate">Поддержка</a>
+                <a href="/#/pricing">Цены и тарифы</a>
+                <a href="/#/support">Обращения</a>
+            </nav>
+        </div>
+    </footer>
+
+    <script src="/static/js/common.js"></script>
+    <script src="/static/js/donations.js"></script>
+    <script>
+        async function checkDonateAuth() {
+            try {
+                const res = await fetch('/api/me');
+                const data = await res.json();
+                currentUser = data;
+                if (data.authenticated) {
+                    document.getElementById('loginBtn').style.display = 'none';
+                    const panel = document.getElementById('userPanel');
+                    panel.style.display = 'flex';
+                    panel.innerHTML = `
+                        ${data.avatar ? `<img src="${escapeHtml(data.avatar)}" alt="" onerror="this.style.display='none'">` : ''}
+                        <span>${escapeHtml(data.display_name || data.username || '')}</span>
+                        <button type="button" onclick="window.location.href='/logout'">Выйти</button>
+                    `;
+                }
+            } catch (e) {}
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await checkDonateAuth();
+            if (typeof initDonateSection === 'function') initDonateSection();
+        });
+    </script>
+</body>
+</html>

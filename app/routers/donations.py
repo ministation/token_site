@@ -22,10 +22,13 @@ async def donation_order(transaction_id: str):
         raise HTTPException(status_code=404, detail="Заказ не найден")
     return {
         "transaction_id": order["transaction_id"],
+        "product_type": order.get("product_type") or "tier",
         "tier_id": order["tier_id"],
         "tier_name": order["tier_name"],
+        "coins_amount": order.get("coins_amount") or 0,
         "amount_rub": order["amount_rub"],
         "status": order["status"],
+        "fulfilled": bool(order.get("fulfilled")),
         "created_at": order["created_at"],
     }
 
@@ -33,17 +36,23 @@ async def donation_order(transaction_id: str):
 @router.post("/checkout")
 async def donation_checkout(
     request: Request,
-    tier_id: int = Form(...),
+    product_type: str = Form("tier"),
+    tier_id: int = Form(0),
+    pack_id: int = Form(0),
     payment_method: int = Form(2),
     contact: str = Form(""),
 ):
     user = await get_optional_social_user(request)
+    game_uuid = donations_svc._resolve_game_uuid(user)
     try:
         result = await donations_svc.create_payment(
-            tier_id=tier_id,
+            product_type=product_type,
+            tier_id=tier_id or None,
+            pack_id=pack_id or None,
             payment_method=payment_method,
             player_id=user["social_id"] if user else None,
             discord_id=user.get("discord_id") if user else None,
+            game_user_uuid=game_uuid,
             contact=(contact or "").strip() or (user.get("username") if user else None),
         )
     except ValueError as e:
@@ -71,11 +80,19 @@ async def donation_status(transaction_id: str):
                 order = social_db.get_donation_order_by_tx(transaction_id)
         except Exception:
             remote = None
+    if order.get("status") == "confirmed":
+        try:
+            order = await donations_svc.fulfill_order_if_needed(order) or order
+        except Exception:
+            pass
     return {
         "transaction_id": order["transaction_id"],
         "status": order["status"],
+        "product_type": order.get("product_type") or "tier",
         "tier_name": order["tier_name"],
+        "coins_amount": order.get("coins_amount") or 0,
         "amount_rub": order["amount_rub"],
+        "fulfilled": bool(order.get("fulfilled")),
         "remote": remote,
     }
 
@@ -94,7 +111,7 @@ async def platega_callback(request: Request):
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid JSON")
     try:
-        result = donations_svc.apply_callback(payload if isinstance(payload, dict) else {})
+        result = await donations_svc.apply_callback(payload if isinstance(payload, dict) else {})
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     return JSONResponse({"ok": True, **{k: result[k] for k in ("transaction_id", "status") if k in result}})

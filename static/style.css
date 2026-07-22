@@ -5171,6 +5171,17 @@ label.chat-tool-btn input[type="file"] {
 }
 
 /* === Donate / project support === */
+.donate-page [hidden],
+.donate-checkout [hidden],
+.donate-selected[hidden],
+.donate-methods[hidden],
+.donate-selected-empty[hidden],
+.donate-contact-label[hidden],
+.donate-coin-packs[hidden],
+.donate-tiers[hidden] {
+    display: none !important;
+}
+
 .pricing-tier-icon {
     width: 96px;
     height: 96px;
@@ -5191,48 +5202,16 @@ label.chat-tool-btn input[type="file"] {
     overflow-wrap: anywhere;
     word-break: break-word;
 }
-
-.home-donate-cta-card {
-    margin-top: 16px;
+.pricing-coin-line {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 16px;
+    gap: 4px;
     flex-wrap: wrap;
-    text-decoration: none !important;
-    color: inherit;
-    cursor: pointer;
-    transition: border-color 0.2s ease;
-}
-.home-donate-cta-card:hover { border-color: var(--accent); }
-.home-donate-cta-copy h2 { margin: 0 0 6px; }
-.home-donate-cta-copy p {
-    margin: 0;
-    color: var(--muted);
-    max-width: 56ch;
-    line-height: 1.45;
-}
-.home-donate-cta {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    min-height: 44px;
-    padding: 10px 16px;
-    border-radius: 10px;
-    background: var(--accent);
-    color: #fff !important;
-    font-weight: 700;
-    white-space: nowrap;
-}
-.home-donate-cta-card:hover .home-donate-cta { background: var(--accent-deep); }
-
-#donateSection.section.active {
-    display: block;
-    min-width: 0;
-    max-width: 100%;
 }
 
+.donate-standalone-layout {
+    max-width: 1280px;
+}
 .donate-page {
     display: flex;
     flex-direction: column;
@@ -5281,6 +5260,29 @@ label.chat-tool-btn input[type="file"] {
     color: var(--danger);
 }
 
+.donate-tabs {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.donate-tab {
+    min-height: 44px;
+    padding: 10px 18px;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    background: var(--panel);
+    color: var(--ink);
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: none;
+}
+.donate-tab:hover { transform: none; border-color: var(--accent); }
+.donate-tab.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+}
+
 .donate-shell {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 320px);
@@ -5290,13 +5292,15 @@ label.chat-tool-btn input[type="file"] {
     width: 100%;
 }
 .donate-catalog { min-width: 0; }
-.donate-tiers {
+.donate-tiers,
+.donate-coin-packs {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
     gap: 14px;
     min-width: 0;
 }
-.donate-tier-card {
+.donate-tier-card,
+.donate-pack-card {
     position: relative;
     min-width: 0;
     max-width: 100%;
@@ -5307,8 +5311,10 @@ label.chat-tool-btn input[type="file"] {
     overflow: hidden;
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
-.donate-tier-card.featured { border-color: var(--accent); }
-.donate-tier-card.active {
+.donate-tier-card.featured,
+.donate-pack-card.featured { border-color: var(--accent); }
+.donate-tier-card.active,
+.donate-pack-card.active {
     border-color: var(--accent);
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent);
 }
@@ -5324,7 +5330,8 @@ label.chat-tool-btn input[type="file"] {
     font-size: 0.72rem;
     font-weight: 700;
 }
-.donate-tier-select {
+.donate-tier-select,
+.donate-pack-select {
     display: flex;
     flex-direction: column;
     width: 100%;
@@ -5339,7 +5346,8 @@ label.chat-tool-btn input[type="file"] {
     font-family: var(--font-body);
     min-height: 44px;
 }
-.donate-tier-select:hover {
+.donate-tier-select:hover,
+.donate-pack-select:hover {
     transform: none;
     background: color-mix(in srgb, var(--ink) 3%, transparent);
 }
@@ -5363,6 +5371,7 @@ label.chat-tool-btn input[type="file"] {
 .donate-tier-copy {
     min-width: 0;
     padding: 8px 14px 16px;
+    overflow: hidden;
 }
 .donate-tier-top {
     display: flex;
@@ -5423,6 +5432,58 @@ label.chat-tool-btn input[type="file"] {
     min-width: 0;
     overflow-wrap: anywhere;
     word-break: break-word;
+}
+.donate-perk-coins {
+    grid-template-columns: 8px auto !important;
+    align-items: center !important;
+}
+.donate-perk-coins::before { margin-top: 0; }
+.donate-perk-coins {
+    display: flex !important;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    padding-left: 0;
+}
+.donate-perk-coins::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    flex-shrink: 0;
+}
+.donate-coin-inline {
+    width: 18px !important;
+    height: 18px !important;
+    vertical-align: middle;
+}
+.donate-perk-period { color: var(--muted); font-weight: 500; }
+
+.donate-pack-select { padding: 18px 14px; align-items: center; text-align: center; gap: 8px; }
+.donate-pack-amount {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+.donate-pack-coins {
+    font-size: 1.8rem;
+    font-weight: 800;
+}
+.donate-pack-amount .donate-coin-inline {
+    width: 28px !important;
+    height: 28px !important;
+}
+.donate-pack-name { font-weight: 700; font-size: 1rem; }
+.donate-pack-price {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--accent-deep);
+}
+.donate-pack-unit {
+    font-size: 0.82rem;
+    color: var(--muted);
 }
 
 .donate-checkout {
@@ -5497,7 +5558,7 @@ label.chat-tool-btn input[type="file"] {
 }
 .donate-method-option {
     display: grid;
-    grid-template-columns: 18px minmax(52px, 72px) minmax(0, 1fr);
+    grid-template-columns: 18px minmax(56px, 72px) minmax(0, 1fr);
     gap: 10px;
     align-items: center;
     padding: 10px 12px;
@@ -5519,13 +5580,18 @@ label.chat-tool-btn input[type="file"] {
     width: 18px;
     height: 18px;
 }
+.donate-method-icon-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 32px;
+}
 .donate-method-icon {
     width: 72px;
     max-width: 100%;
     height: 32px;
     object-fit: contain;
-    object-position: left center;
-    border-radius: 0;
+    object-position: center;
     background: transparent;
 }
 .donate-method-text {
@@ -5592,5 +5658,5 @@ label.chat-tool-btn input[type="file"] {
 
 @media (prefers-reduced-motion: reduce) {
     .donate-tier-card,
-    .home-donate-cta-card { transition: none; }
+    .donate-pack-card { transition: none; }
 }

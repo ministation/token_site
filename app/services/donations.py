@@ -1,4 +1,4 @@
-"""Спонсорские тарифы и оплата через Platega.io."""
+"""Спонсорские тарифы, пакеты монет и оплата через Platega.io."""
 from __future__ import annotations
 
 import json
@@ -16,8 +16,9 @@ from app.config import (
     PLATEGA_SECRET,
     SITE_PUBLIC_URL,
 )
+from app.services.bank import add_tokens
 
-# Цены в рублях (месяц) — как на Boosty. Иконки — /static/icons/
+# Цены в рублях (месяц). Иконки — /static/icons/
 DONATION_TIERS: dict[int, dict[str, Any]] = {
     1: {
         "id": 1,
@@ -26,7 +27,6 @@ DONATION_TIERS: dict[int, dict[str, Any]] = {
         "icon": "буст унати.png",
         "coins": 20,
         "perks": [
-            "+20 монет в месяц",
             "Особая роль в сообществе Discord",
             "Зелёный цвет в ахелпе и ООС",
             "1 гарантированный вор или агент — 1 раз каждый день",
@@ -40,7 +40,6 @@ DONATION_TIERS: dict[int, dict[str, Any]] = {
         "icon": "космический унати.png",
         "coins": 30,
         "perks": [
-            "+30 монет в месяц",
             "Особая роль в сообществе Discord",
             "Серебряный цвет в ахелпе и ООС",
             "Повышенный шанс ниндзя, дракона, абдукторов, нулевого заражённого или ревенанта",
@@ -56,7 +55,6 @@ DONATION_TIERS: dict[int, dict[str, Any]] = {
         "coins": 40,
         "featured": True,
         "perks": [
-            "+40 монет в месяц",
             "Особая роль в сообществе Discord",
             "Жёлтый цвет в ахелпе и ООС",
             "Повышенный шанс ядерного оперативника, главы революции, космического культиста, дьявола или абдуктора",
@@ -72,7 +70,6 @@ DONATION_TIERS: dict[int, dict[str, Any]] = {
         "icon": "магический унати.png",
         "coins": 60,
         "perks": [
-            "+60 монет в месяц",
             "Особая роль в сообществе Discord",
             "Фиолетовый цвет в ахелпе и ООС",
             "Повышенный шанс блоба, шедоулинга, мага, генокрада, еретика, фантома, демона резни, мясника и других крупных антагонистов",
@@ -88,7 +85,6 @@ DONATION_TIERS: dict[int, dict[str, Any]] = {
         "icon": "гига унати.png",
         "coins": 100,
         "perks": [
-            "+100 монет в месяц",
             "Для спонсоров и меценатов проекта",
             "Особая роль в сообществе Discord",
             "Оранжевый цвет в ахелпе и ООС",
@@ -98,6 +94,17 @@ DONATION_TIERS: dict[int, dict[str, Any]] = {
         ],
     },
 }
+
+# Пакеты монет: база ~12₽/шт, скидка за объём до 300.
+COIN_PACKS: dict[int, dict[str, Any]] = {
+    1: {"id": 1, "name": "Мини", "coins": 20, "price_rub": 240, "badge": None},
+    2: {"id": 2, "name": "Старт", "coins": 50, "price_rub": 560, "badge": None},
+    3: {"id": 3, "name": "Плюс", "coins": 100, "price_rub": 1050, "badge": "Выгодно", "featured": True},
+    4: {"id": 4, "name": "Набор", "coins": 200, "price_rub": 1980, "badge": "−18%"},
+    5: {"id": 5, "name": "Макси", "coins": 300, "price_rub": 2790, "badge": "−23%"},
+}
+
+_COIN_BASE_RATE = 12.0
 
 PAYMENT_METHODS = [
     {
@@ -129,12 +136,16 @@ def icon_url(filename: str) -> str:
     return f"/static/icons/{quote(filename)}"
 
 
+def _rub_label(amount: int) -> str:
+    return f"{amount:,} ₽".replace(",", " ")
+
+
 def serialize_tier(tier: dict) -> dict:
     return {
         "id": tier["id"],
         "name": tier["name"],
         "price_rub": tier["price_rub"],
-        "price_label": f"{tier['price_rub']:,} ₽".replace(",", " "),
+        "price_label": _rub_label(tier["price_rub"]),
         "period": "мес",
         "icon": icon_url(tier["icon"]),
         "coins": tier.get("coins"),
@@ -143,13 +154,41 @@ def serialize_tier(tier: dict) -> dict:
     }
 
 
+def serialize_coin_pack(pack: dict) -> dict:
+    coins = int(pack["coins"])
+    price = int(pack["price_rub"])
+    per = price / coins if coins else 0
+    discount = max(0, int(round((1 - per / _COIN_BASE_RATE) * 100))) if _COIN_BASE_RATE else 0
+    return {
+        "id": pack["id"],
+        "name": pack["name"],
+        "coins": coins,
+        "price_rub": price,
+        "price_label": _rub_label(price),
+        "unit_price": round(per, 2),
+        "unit_label": f"{per:.2f} ₽/шт".replace(".", ","),
+        "discount_pct": discount,
+        "badge": pack.get("badge"),
+        "featured": bool(pack.get("featured")),
+    }
+
+
 def list_tiers() -> list[dict]:
     return [serialize_tier(DONATION_TIERS[i]) for i in sorted(DONATION_TIERS)]
+
+
+def list_coin_packs() -> list[dict]:
+    return [serialize_coin_pack(COIN_PACKS[i]) for i in sorted(COIN_PACKS)]
 
 
 def get_tier(tier_id: int) -> dict | None:
     tier = DONATION_TIERS.get(int(tier_id))
     return serialize_tier(tier) if tier else None
+
+
+def get_coin_pack(pack_id: int) -> dict | None:
+    pack = COIN_PACKS.get(int(pack_id))
+    return serialize_coin_pack(pack) if pack else None
 
 
 def _platega_headers() -> dict[str, str]:
@@ -160,50 +199,99 @@ def _platega_headers() -> dict[str, str]:
     }
 
 
+def _resolve_game_uuid(user: dict | None) -> str | None:
+    if not user:
+        return None
+    player = user.get("player") or {}
+    uuid_val = player.get("user_uuid") or (user.get("social") or {}).get("user_uuid")
+    if uuid_val and not str(uuid_val).startswith("discord_"):
+        return str(uuid_val)
+    return None
+
+
 async def create_payment(
     *,
-    tier_id: int,
+    product_type: str = "tier",
+    tier_id: int | None = None,
+    pack_id: int | None = None,
     payment_method: int | None = None,
     player_id: str | None = None,
     discord_id: str | None = None,
+    game_user_uuid: str | None = None,
     contact: str | None = None,
 ) -> dict:
     if not platega_configured():
         raise ValueError("Платежи пока не подключены: укажите PLATEGA_MERCHANT_ID и PLATEGA_SECRET")
 
-    raw = DONATION_TIERS.get(int(tier_id))
-    if not raw:
-        raise ValueError("Неизвестный тариф")
-
     method = int(payment_method or PLATEGA_DEFAULT_METHOD)
     if method not in {m["id"] for m in PAYMENT_METHODS}:
         raise ValueError("Недоступный способ оплаты")
 
+    product_type = (product_type or "tier").strip().lower()
+    coins_amount = 0
+    if product_type == "coins":
+        raw_pack = COIN_PACKS.get(int(pack_id or 0))
+        if not raw_pack:
+            raise ValueError("Неизвестный пакет монет")
+        if not game_user_uuid:
+            raise ValueError("Для покупки монет войдите через Discord с привязанным игровым аккаунтом")
+        amount_rub = raw_pack["price_rub"]
+        tier_db_id = int(raw_pack["id"])
+        tier_name = f"Монетки · {raw_pack['coins']}"
+        coins_amount = int(raw_pack["coins"])
+        description = f"Мини-станция · {raw_pack['coins']} монет"
+        serialized = serialize_coin_pack(raw_pack)
+    elif product_type == "tier":
+        raw = DONATION_TIERS.get(int(tier_id or 0))
+        if not raw:
+            raise ValueError("Неизвестный тариф")
+        amount_rub = raw["price_rub"]
+        tier_db_id = int(raw["id"])
+        tier_name = raw["name"]
+        coins_amount = int(raw.get("coins") or 0)
+        description = f"Мини-станция · {raw['name']} (мес.)"
+        serialized = serialize_tier(raw)
+    else:
+        raise ValueError("Неизвестный тип товара")
+
     tx_id = str(uuid.uuid4())
-    return_url = f"{SITE_PUBLIC_URL}/#/donate?order={tx_id}&result=success"
-    fail_url = f"{SITE_PUBLIC_URL}/#/donate?order={tx_id}&result=fail"
-    payload = json.dumps({"tier_id": raw["id"], "player_id": player_id or ""}, ensure_ascii=False)
+    return_url = f"{SITE_PUBLIC_URL}/donate?order={tx_id}&result=success"
+    fail_url = f"{SITE_PUBLIC_URL}/donate?order={tx_id}&result=fail"
+    payload = json.dumps(
+        {
+            "product_type": product_type,
+            "tier_id": tier_id,
+            "pack_id": pack_id,
+            "player_id": player_id or "",
+            "game_user_uuid": game_user_uuid or "",
+            "coins_amount": coins_amount,
+        },
+        ensure_ascii=False,
+    )
 
     social_db.create_donation_order(
         transaction_id=tx_id,
-        tier_id=raw["id"],
-        tier_name=raw["name"],
-        amount_rub=raw["price_rub"],
+        tier_id=tier_db_id,
+        tier_name=tier_name,
+        amount_rub=amount_rub,
         payment_method=method,
         player_id=player_id,
         discord_id=discord_id,
         contact=contact,
         payload=payload,
+        product_type=product_type,
+        coins_amount=coins_amount,
+        game_user_uuid=game_user_uuid,
     )
 
     body = {
         "paymentMethod": method,
         "id": tx_id,
         "paymentDetails": {
-            "amount": raw["price_rub"],
+            "amount": amount_rub,
             "currency": "RUB",
         },
-        "description": f"Мини-станция · {raw['name']} (мес.)",
+        "description": description,
         "return": return_url,
         "failedUrl": fail_url,
         "payload": payload,
@@ -216,7 +304,9 @@ async def create_payment(
             data = await resp.json(content_type=None)
             if resp.status >= 400:
                 msg = data.get("message") if isinstance(data, dict) else None
-                social_db.update_donation_order(tx_id, status="failed", raw_callback=json.dumps(data, ensure_ascii=False))
+                social_db.update_donation_order(
+                    tx_id, status="failed", raw_callback=json.dumps(data, ensure_ascii=False)
+                )
                 raise ValueError(msg or f"Ошибка Platega ({resp.status})")
 
     redirect = (data or {}).get("redirect")
@@ -227,8 +317,9 @@ async def create_payment(
         "redirect": redirect,
         "status": (data or {}).get("status") or "PENDING",
         "expires_in": (data or {}).get("expiresIn"),
-        "tier": serialize_tier(raw),
-        "amount_rub": raw["price_rub"],
+        "product_type": product_type,
+        "item": serialized,
+        "amount_rub": amount_rub,
     }
 
 
@@ -245,7 +336,43 @@ async def fetch_payment_status(transaction_id: str) -> dict:
             return data if isinstance(data, dict) else {"raw": data}
 
 
-def apply_callback(payload: dict) -> dict:
+async def fulfill_order_if_needed(order: dict | None) -> dict | None:
+    """Идемпотентно начисляет монеты за confirmed coin-заказ."""
+    if not order:
+        return order
+    if order.get("status") != "confirmed":
+        return order
+    if order.get("fulfilled"):
+        return order
+    if (order.get("product_type") or "tier") != "coins":
+        return order
+
+    coins = int(order.get("coins_amount") or 0)
+    game_uuid = order.get("game_user_uuid") or ""
+    if not game_uuid and order.get("payload"):
+        try:
+            meta = json.loads(order["payload"])
+            game_uuid = meta.get("game_user_uuid") or ""
+            coins = coins or int(meta.get("coins_amount") or 0)
+        except Exception:
+            pass
+
+    if not game_uuid or str(game_uuid).startswith("discord_") or coins <= 0:
+        return order
+
+    # атомарно захватываем fulfilled
+    if not social_db.mark_donation_fulfilled(order["transaction_id"]):
+        return social_db.get_donation_order_by_tx(order["transaction_id"])
+
+    try:
+        await add_tokens(str(game_uuid), coins)
+    except Exception:
+        social_db.update_donation_order(order["transaction_id"], fulfilled=0)
+        raise
+    return social_db.get_donation_order_by_tx(order["transaction_id"])
+
+
+async def apply_callback(payload: dict) -> dict:
     tx_id = str(payload.get("id") or "")
     status_raw = str(payload.get("status") or "").upper()
     if not tx_id:
@@ -265,6 +392,8 @@ def apply_callback(payload: dict) -> dict:
         raw_callback=json.dumps(payload, ensure_ascii=False),
     )
     order = social_db.get_donation_order_by_tx(tx_id)
+    if status == "confirmed":
+        order = await fulfill_order_if_needed(order)
     return {"ok": True, "transaction_id": tx_id, "status": status, "order": order}
 
 
@@ -273,6 +402,7 @@ def catalog_payload() -> dict:
         "configured": platega_configured(),
         "currency": "RUB",
         "tiers": list_tiers(),
+        "coin_packs": list_coin_packs(),
         "methods": PAYMENT_METHODS,
         "default_method": PLATEGA_DEFAULT_METHOD,
     }

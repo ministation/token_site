@@ -6,6 +6,13 @@ from app.services.social import get_social_user_by_player_id
 router = APIRouter(tags=["pages"])
 
 
+@router.get("/donate")
+async def donate_page(request: Request):
+    env = request.app.state.templates_env
+    template = env.get_template("donate_page.html")
+    return HTMLResponse(template.render({"request": request}))
+
+
 @router.get("/profile/{player_id}")
 async def profile_page(player_id: str):
     profile = get_social_user_by_player_id(player_id)
