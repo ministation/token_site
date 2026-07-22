@@ -119,9 +119,12 @@ async def api_admin_give(request: Request, req: AdminGiveRequest):
     return {"success": True, "new_balance": new_balance}
 
 @router.get("/players/search")
-async def api_players_search(q: str = "", limit: int = 20):
+async def api_players_search(request: Request, q: str = "", limit: int = 20):
+    from app.core.ratelimit import enforce_rate
     if len(q) < 2:
         return []
+    enforce_rate(request, "bank_search", limit=30, window=60.0, detail="Слишком частый поиск.")
+    limit = min(max(limit, 1), 30)
     return await search_all_players(q, limit)
 
 

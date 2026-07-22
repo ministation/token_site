@@ -152,7 +152,7 @@ function messageUserFromChat(playerId, nickname) {
 
 function startGlobalChatPolling() {
     stopGlobalChatPolling();
-    globalChatPollInterval = setInterval(() => loadGlobalChat(false), 3000);
+    globalChatPollInterval = setInterval(() => loadGlobalChat(false), 5000);
 }
 
 function stopGlobalChatPolling() {

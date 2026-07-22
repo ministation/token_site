@@ -19,12 +19,17 @@ from app.services.media_upload import save_upload
 from app.services.badges import get_member_badges
 from app.services.presence import status_from_last_seen, statuses_for
 from app.services.site_bans import get_active_ban
+from app.core.ratelimit import client_ip, enforce_cooldown, enforce_rate
+from app.config import (
+    COOLDOWN_COMMENT_SEC, COOLDOWN_LIKE_SEC, COOLDOWN_POST_SEC, COOLDOWN_SEARCH_SEC,
+)
 
 router = APIRouter(prefix="/api/social", tags=["social"])
 
 
 @router.get("/feed-updates")
-async def feed_updates():
+async def feed_updates(request: Request):
+    enforce_rate(request, "feed_updates", limit=20, window=60.0)
     return social_db.get_feed_latest_by_category()
 
 
@@ -160,6 +165,14 @@ async def api_create_post(
     video: UploadFile | None = File(None),
 ):
     user = await get_current_social_user(request)
+    enforce_rate(
+        request, "post_create", limit=8, window=60.0,
+        user_key=user["social_id"], detail="Слишком много публикаций.",
+    )
+    enforce_cooldown(
+        f"post:{user['social_id']}", COOLDOWN_POST_SEC,
+        detail="Подождите перед следующей публикацией.",
+    )
     category = (category or "forum").strip().lower()
     if category not in social_db.VALID_CATEGORIES:
         category = "forum"
@@ -259,6 +272,10 @@ async def api_upload_avatar(request: Request, image: UploadFile = File(...)):
 @router.post("/posts/{post_id}/like")
 async def api_toggle_like(request: Request, post_id: int):
     user = await get_current_social_user(request)
+    enforce_cooldown(
+        f"like:{user['social_id']}", COOLDOWN_LIKE_SEC,
+        detail="Слишком частые лайки.",
+    )
     action = toggle_like(post_id, user['social_id'])
     like_count = get_like_count(post_id)
     return {"action": action, "like_count": like_count}
@@ -269,7 +286,20 @@ async def api_toggle_like(request: Request, post_id: int):
 @router.post("/posts/{post_id}/comments")
 async def api_add_comment(request: Request, post_id: int, comment: CommentCreate):
     user = await get_current_social_user(request)
-    comment_id = add_comment(post_id, user['social_id'], comment.content)
+    enforce_rate(
+        request, "comment_write", limit=20, window=60.0,
+        user_key=user["social_id"], detail="Слишком много комментариев.",
+    )
+    enforce_cooldown(
+        f"comment:{user['social_id']}", COOLDOWN_COMMENT_SEC,
+        detail="Подождите перед следующим комментарием.",
+    )
+    content = (comment.content or "").strip()
+    if len(content) < 1:
+        raise HTTPException(status_code=400, detail="Пустой комментарий")
+    if len(content) > 2000:
+        raise HTTPException(status_code=400, detail="Комментарий слишком длинный")
+    comment_id = add_comment(post_id, user['social_id'], content)
     return {"success": True, "comment_id": comment_id}
 
 
@@ -360,7 +390,10 @@ async def api_get_following(player_id: str, limit: int = 20):
 @router.get("/search")
 async def api_social_search(request: Request, q: str = "", limit: int = 50):
     """Поиск только среди пользователей соцсети."""
+    enforce_rate(request, "social_search", limit=30, window=60.0, detail="Слишком частый поиск.")
+    enforce_cooldown(f"search:{client_ip(request)}", COOLDOWN_SEARCH_SEC, detail="Поиск слишком частый.")
     try:
+        limit = min(max(int(limit or 50), 1), 50)
         if len(q) >= 2:
             results = search_social_users(q, limit)
         else:

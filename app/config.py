@@ -80,3 +80,19 @@ UPLOAD_DIR = os.getenv("UPLOAD_DIR", "static/uploads")
 AVATAR_DIR = os.getenv("AVATAR_DIR", "static/avatars")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(AVATAR_DIR, exist_ok=True)
+
+# Защита от абуза / нагрузки
+MAX_BODY_BYTES = int(os.getenv("MAX_BODY_BYTES", str(1 * 1024 * 1024)))  # 1 MB
+MAX_BODY_UPLOAD_BYTES = int(os.getenv("MAX_BODY_UPLOAD_BYTES", str(55 * 1024 * 1024)))  # 55 MB
+ANTIBOT_SECRET = os.getenv("ANTIBOT_SECRET") or os.getenv("DISCORD_CLIENT_SECRET") or "change-me-antibot"
+ANTIBOT_DIFFICULTY = int(os.getenv("ANTIBOT_DIFFICULTY", "3"))  # leading hex zeros in sha256
+
+# Кулдауны записи (секунды)
+COOLDOWN_CHAT_SEC = float(os.getenv("COOLDOWN_CHAT_SEC", "2"))
+COOLDOWN_PM_SEC = float(os.getenv("COOLDOWN_PM_SEC", "2"))
+COOLDOWN_COMMENT_SEC = float(os.getenv("COOLDOWN_COMMENT_SEC", "3"))
+COOLDOWN_POST_SEC = float(os.getenv("COOLDOWN_POST_SEC", "30"))
+COOLDOWN_TICKET_SEC = float(os.getenv("COOLDOWN_TICKET_SEC", "60"))
+COOLDOWN_TICKET_MSG_SEC = float(os.getenv("COOLDOWN_TICKET_MSG_SEC", "5"))
+COOLDOWN_LIKE_SEC = float(os.getenv("COOLDOWN_LIKE_SEC", "1"))
+COOLDOWN_SEARCH_SEC = float(os.getenv("COOLDOWN_SEARCH_SEC", "0.4"))

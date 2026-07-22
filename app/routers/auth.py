@@ -39,7 +39,21 @@ router = APIRouter(tags=["auth"])
 
 
 @router.get("/login")
-async def login():
+async def login(
+    request: Request,
+    n: str = "",
+    e: str = "",
+    d: str = "",
+    s: str = "",
+    c: str = "",
+):
+    from app.core.ratelimit import enforce_rate, verify_pow_challenge
+    enforce_rate(request, "login", limit=8, window=60.0, detail="Слишком много попыток входа.")
+    if not verify_pow_challenge(n, e, d, s, c):
+        raise HTTPException(
+            status_code=400,
+            detail="Проверка антибота не пройдена. Обновите страницу и войдите снова.",
+        )
     state = secrets.token_urlsafe(16)
     user_sessions[state] = {"created": datetime.datetime.now().isoformat()}
     discord_auth_url = (
@@ -51,8 +65,17 @@ async def login():
     return RedirectResponse(discord_auth_url)
 
 
+@router.get("/api/auth/challenge")
+async def auth_challenge(request: Request):
+    from app.core.ratelimit import enforce_rate, issue_pow_challenge
+    enforce_rate(request, "auth_challenge", limit=15, window=60.0)
+    return issue_pow_challenge()
+
+
 @router.get("/callback")
-async def callback(code: str, state: str):
+async def callback(request: Request, code: str, state: str):
+    from app.core.ratelimit import enforce_rate
+    enforce_rate(request, "oauth_callback", limit=15, window=60.0)
     if state not in user_sessions:
         raise HTTPException(status_code=400, detail="Invalid state")
 

@@ -85,5 +85,42 @@ function updateAuthUI() {
     if (profileNav) profileNav.style.display = currentUser?.authenticated ? '' : 'none';
 }
 
-function login() { window.location.href = `${API_BASE}/login`; }
+async function solvePowChallenge(challenge) {
+    const nonce = String(challenge.nonce || '');
+    const difficulty = Number(challenge.difficulty) || 3;
+    const prefix = '0'.repeat(difficulty);
+    // sha256 via SubtleCrypto
+    for (let counter = 0; counter < 5_000_000; counter++) {
+        const raw = `${nonce}:${counter}`;
+        const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(raw));
+        const hex = [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+        if (hex.startsWith(prefix)) return String(counter);
+        if (counter > 0 && counter % 25000 === 0) {
+            await new Promise(r => setTimeout(r, 0));
+        }
+    }
+    throw new Error('Не удалось пройти антибот-проверку');
+}
+
+async function login() {
+    try {
+        const chRes = await fetch(`${API_BASE}/api/auth/challenge`);
+        if (!chRes.ok) {
+            const err = await chRes.json().catch(() => ({}));
+            throw new Error(err.detail || 'Антибот недоступен');
+        }
+        const challenge = await chRes.json();
+        const counter = await solvePowChallenge(challenge);
+        const params = new URLSearchParams({
+            n: challenge.nonce,
+            e: String(challenge.exp),
+            d: String(challenge.difficulty),
+            s: challenge.sig,
+            c: counter,
+        });
+        window.location.href = `${API_BASE}/login?${params.toString()}`;
+    } catch (e) {
+        alert(e.message || 'Не удалось войти');
+    }
+}
 function logout() { window.location.href = `${API_BASE}/logout`; }

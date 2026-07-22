@@ -42,6 +42,16 @@ def _should_track_visit(request: Request) -> bool:
 
 
 @app.middleware("http")
+async def security_guards(request: Request, call_next):
+    from app.core.ratelimit import body_limit_middleware, rate_limit_middleware
+
+    async def after_body(req):
+        return await rate_limit_middleware(req, call_next)
+
+    return await body_limit_middleware(request, after_body)
+
+
+@app.middleware("http")
 async def track_page_visits(request: Request, call_next):
     response = await call_next(request)
     if response.status_code < 400 and _should_track_visit(request):

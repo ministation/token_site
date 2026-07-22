@@ -1,9 +1,13 @@
 from fastapi import APIRouter, Request, HTTPException, Form, File, UploadFile
 
-from app.config import SUPPORT_EMAIL, SUPPORT_DISCORD_USERNAME, SUPPORT_TELEGRAM_USERNAME, BOOSTY_URL
+from app.config import (
+    SUPPORT_EMAIL, SUPPORT_DISCORD_USERNAME, SUPPORT_TELEGRAM_USERNAME, BOOSTY_URL,
+    COOLDOWN_TICKET_MSG_SEC, COOLDOWN_TICKET_SEC,
+)
 from app.dependencies import get_current_social_user, get_optional_social_user
 from app.services import support as support_svc
 from app.services.media_upload import save_upload
+from app.core.ratelimit import client_ip, enforce_cooldown, enforce_rate
 
 router = APIRouter(prefix="/api/support", tags=["support"])
 
@@ -27,6 +31,15 @@ async def create_ticket(
 ):
     user = await get_optional_social_user(request)
     player_id = user["social_id"] if user else None
+    key = player_id or f"ip:{client_ip(request)}"
+    enforce_rate(
+        request, "ticket_create", limit=5, window=300.0,
+        user_key=player_id, detail="Слишком много тикетов.",
+    )
+    enforce_cooldown(
+        f"ticket:{key}", COOLDOWN_TICKET_SEC,
+        detail="Подождите минуту перед новым тикетом.",
+    )
     try:
         ticket_id = support_svc.create_ticket(contact, subject, body, player_id)
     except ValueError as e:
@@ -60,6 +73,14 @@ async def post_my_ticket_message(
     image: UploadFile | None = File(None),
 ):
     user = await get_current_social_user(request)
+    enforce_rate(
+        request, "ticket_msg", limit=20, window=60.0,
+        user_key=user["social_id"], detail="Слишком много сообщений в тикет.",
+    )
+    enforce_cooldown(
+        f"ticketmsg:{user['social_id']}", COOLDOWN_TICKET_MSG_SEC,
+        detail="Подождите перед следующим сообщением в тикет.",
+    )
     image_url = None
     if image and image.filename:
         try:
