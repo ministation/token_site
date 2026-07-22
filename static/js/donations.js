@@ -103,12 +103,13 @@ function renderPackCoinPile(coins) {
     return `<div class="donate-pack-pile donate-pack-pile--${n}" aria-hidden="true">${imgs}</div>`;
 }
 
-/** Визуал бандла по id: 2 рюкзак, 3 тулбокс (анимация), 4 ящик, 5 синди. */
+/** 1 рюкзак, 2 тулбокс, 3 ящик, 4 сейф, 5 суперприпасы. */
 function packVisual(p) {
-    if (p.id === 5) return { kind: 'img', src: '/static/icons/syndie-coins-self-made.png', size: 'lg', alt: 'Ящик синдиката' };
-    if (p.id === 4) return { kind: 'img', src: '/static/icons/coins-self-made.png', size: 'md', alt: 'Ящик с монетами' };
-    if (p.id === 3) return { kind: 'toolbox', size: 'md', alt: 'Тулбокс' };
-    if (p.id === 2) return { kind: 'img', src: '/static/icons/backpack-coins-self-made.png', size: 'md', alt: 'Рюкзак монет' };
+    if (p.id === 1) return { kind: 'img', src: '/static/icons/backpack-coins-self-made.png', size: 'md', alt: 'Рюкзак монет' };
+    if (p.id === 2) return { kind: 'toolbox', size: 'md', alt: 'Тулбокс монет' };
+    if (p.id === 3) return { kind: 'img', src: '/static/icons/coins-self-made.png', size: 'md', alt: 'Ящик монет' };
+    if (p.id === 4) return { kind: 'img', src: '/static/icons/case.png', size: 'md', alt: 'Сейф монет' };
+    if (p.id === 5) return { kind: 'img', src: '/static/icons/syndie-coins-self-made.png', size: 'lg', alt: 'Ящик суперприпасов монет' };
     return null;
 }
 
