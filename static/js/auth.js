@@ -51,13 +51,17 @@ async function checkAuth() {
 
 function updateAuthUI() {
     const postCard = document.getElementById('createPostCard');
-    if (postCard) {
-        const canPostHere = currentUser?.authenticated
-            && (typeof currentForumCategory === 'undefined'
-                || currentForumCategory !== 'news'
-                || currentUser?.is_admin);
-        postCard.style.display = canPostHere ? 'block' : 'none';
+    const toolbar = document.getElementById('feedToolbar');
+    const canPostHere = currentUser?.authenticated
+        && (typeof currentForumCategory === 'undefined'
+            || currentForumCategory !== 'news'
+            || currentUser?.is_admin);
+    if (toolbar) toolbar.hidden = !canPostHere;
+    if (postCard && !canPostHere) {
+        postCard.hidden = true;
+        postCard.style.display = 'none';
     }
+    if (typeof updateFeedCreateBtn === 'function') updateFeedCreateBtn();
     if (typeof updateForumStaffOptions === 'function') updateForumStaffOptions();
     if (typeof syncPostFormWithForum === 'function') syncPostFormWithForum();
     const chatInput = document.getElementById('globalChatInputArea');

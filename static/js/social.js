@@ -66,6 +66,44 @@ function updateForumStaffOptions() {
     }
 }
 
+function updateFeedCreateBtn() {
+    const btn = document.getElementById('feedCreateBtn');
+    if (!btn) return;
+    const section = currentForumCategory || 'news';
+    btn.dataset.section = section;
+    const labels = {
+        news: 'Создать новость',
+        forum: 'Создать публикацию',
+        discussion: 'Создать обсуждение',
+    };
+    btn.innerHTML = `<i class="fa-solid fa-pen"></i> ${labels[section] || 'Создать публикацию'}`;
+}
+
+function openCreatePost() {
+    if (!currentUser?.authenticated) {
+        alert('Войдите через Discord, чтобы публиковать');
+        return;
+    }
+    if (currentForumCategory === 'news' && !currentUser?.is_admin) {
+        alert('Новости может публиковать только администрация');
+        return;
+    }
+    const card = document.getElementById('createPostCard');
+    if (!card) return;
+    syncPostFormWithForum();
+    card.hidden = false;
+    card.style.display = 'block';
+    card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    document.getElementById('postContent')?.focus();
+}
+
+function closeCreatePost() {
+    const card = document.getElementById('createPostCard');
+    if (!card) return;
+    card.hidden = true;
+    card.style.display = 'none';
+}
+
 function switchForumSection(category, btn) {
     currentForumCategory = category;
     currentForumTopic = '';
@@ -78,7 +116,9 @@ function switchForumSection(category, btn) {
     if (topicTabs) topicTabs.hidden = category !== 'discussion';
     const hint = document.getElementById('forumSectionHint');
     if (hint) hint.textContent = FORUM_HINTS[category] || '';
+    closeCreatePost();
     syncPostFormWithForum();
+    updateFeedCreateBtn();
     if (typeof updateAuthUI === 'function') updateAuthUI();
     loadFeed().then(() => {
         if (typeof markFeedCategorySeen === 'function') markFeedCategorySeen(category);
@@ -122,6 +162,7 @@ async function createPost() {
         imageInput.value = '';
         videoInput.value = '';
         document.getElementById('imagePreview').innerHTML = '';
+        closeCreatePost();
         if (category !== currentForumCategory) {
             const tab = document.querySelector(`.forum-tab[data-forum="${category}"]`);
             switchForumSection(category, tab);
@@ -210,14 +251,14 @@ function renderPost(post) {
         : escapeHtml(post.author_discord_username || 'Неизвестный');
     const likeBtn = canInteract
         ? `<button onclick="toggleLike(${post.id})" class="post-action-btn ${likedClass}">
-                <i class="fa-solid fa-heart"></i> <span id="like-count-${post.id}">${post.like_count}</span>
+                <i class="fa-solid fa-heart"></i><span id="like-count-${post.id}">${post.like_count}</span>
            </button>`
-        : `<span class="post-action-btn disabled"><i class="fa-solid fa-heart"></i> ${post.like_count}</span>`;
+        : `<span class="post-action-btn disabled"><i class="fa-solid fa-heart"></i><span>${post.like_count}</span></span>`;
     const commentBtn = canInteract
         ? `<button onclick="toggleComments(${post.id})" class="post-action-btn">
-                <i class="fa-solid fa-comment"></i> <span id="comment-count-${post.id}">${post.comment_count}</span>
+                <i class="fa-solid fa-comment"></i><span id="comment-count-${post.id}">${post.comment_count}</span>
            </button>`
-        : `<span class="post-action-btn disabled"><i class="fa-solid fa-comment"></i> ${post.comment_count}</span>`;
+        : `<span class="post-action-btn disabled"><i class="fa-solid fa-comment"></i><span>${post.comment_count}</span></span>`;
     const canDelete = currentUser?.is_admin || (canInteract && post.author_player_id === currentUser?.social_id);
     const deleteBtn = canDelete
         ? `<button onclick="deletePost(${post.id})" class="post-action-btn post-delete-btn" title="Удалить">
@@ -266,14 +307,14 @@ function renderNewsPost(post) {
     });
     const likeBtn = canInteract
         ? `<button onclick="toggleLike(${post.id})" class="post-action-btn ${post.liked_by_me ? 'liked' : ''}">
-                <i class="fa-solid fa-heart"></i> <span id="like-count-${post.id}">${post.like_count}</span>
+                <i class="fa-solid fa-heart"></i><span id="like-count-${post.id}">${post.like_count}</span>
            </button>`
-        : `<span class="post-action-btn disabled"><i class="fa-solid fa-heart"></i> ${post.like_count}</span>`;
+        : `<span class="post-action-btn disabled"><i class="fa-solid fa-heart"></i><span>${post.like_count}</span></span>`;
     const commentBtn = canInteract
         ? `<button onclick="toggleComments(${post.id})" class="post-action-btn">
-                <i class="fa-solid fa-comment"></i> <span id="comment-count-${post.id}">${post.comment_count}</span>
+                <i class="fa-solid fa-comment"></i><span id="comment-count-${post.id}">${post.comment_count}</span>
            </button>`
-        : `<span class="post-action-btn disabled"><i class="fa-solid fa-comment"></i> ${post.comment_count}</span>`;
+        : `<span class="post-action-btn disabled"><i class="fa-solid fa-comment"></i><span>${post.comment_count}</span></span>`;
     const deleteBtn = currentUser?.is_admin
         ? `<button onclick="deletePost(${post.id})" class="post-action-btn post-delete-btn" title="Удалить">
                 <i class="fa-solid fa-trash"></i></button>`

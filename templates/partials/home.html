@@ -122,10 +122,19 @@
         <button type="button" class="forum-topic-tab" data-topic="other" onclick="switchForumTopic('other', this)">Прочее</button>
     </div>
 </div>
-<div id="feedContainer"></div>
+<div class="feed-toolbar" id="feedToolbar" hidden>
+    <button type="button" class="feed-create-btn" id="feedCreateBtn" data-section="news" onclick="openCreatePost()">
+        <i class="fa-solid fa-pen"></i> Создать публикацию
+    </button>
+</div>
 
-<div class="card create-post-card" id="createPostCard" style="display:none;">
-    <h2><i class="fa-solid fa-pen"></i> Новая запись</h2>
+<div class="card create-post-card" id="createPostCard" hidden>
+    <div class="create-post-card-head">
+        <h2><i class="fa-solid fa-pen"></i> Новая запись</h2>
+        <button type="button" class="create-post-close" onclick="closeCreatePost()" title="Закрыть" aria-label="Закрыть">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>
     <div class="post-form">
         <div class="forum-form-row">
             <label class="forum-form-label" for="postCategory">Раздел</label>
@@ -162,3 +171,5 @@
         <div id="imagePreview" class="image-preview"></div>
     </div>
 </div>
+
+<div id="feedContainer"></div>

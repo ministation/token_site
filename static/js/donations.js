@@ -64,7 +64,7 @@ async function loadDonateCatalog() {
 
 function renderDonateTierCard(t) {
     const coinLine = t.coins
-        ? `<li class="donate-perk-coins"><span>${t.coins}</span> ${COIN_IMG} <span class="donate-perk-period">в месяц</span></li>`
+        ? `<li class="donate-perk-coins"><span class="coin-qty">${t.coins}${COIN_IMG}</span><span class="donate-perk-period">в месяц</span></li>`
         : '';
     const perks = (t.perks || []).map(p => `<li><span>${escapeHtml(p)}</span></li>`).join('');
     const active = selectedDonateTierId === t.id ? ' active' : '';
@@ -90,8 +90,6 @@ function renderDonateTierCard(t) {
 }
 
 function packPileCount(coins) {
-    if (coins >= 250) return 5;
-    if (coins >= 150) return 4;
     if (coins >= 80) return 3;
     if (coins >= 40) return 2;
     return 1;
@@ -100,27 +98,38 @@ function packPileCount(coins) {
 function renderPackCoinPile(coins) {
     const n = packPileCount(coins);
     const imgs = Array.from({ length: n }, (_, i) =>
-        `<img src="/static/coin.png" alt="" class="donate-pack-coin-art pile-coin pile-coin--${i}" width="72" height="72">`
+        `<img src="/static/coin.png" alt="" class="donate-pack-coin-art pile-coin pile-coin--${i}" width="56" height="56">`
     ).join('');
     return `<div class="donate-pack-pile donate-pack-pile--${n}" aria-hidden="true">${imgs}</div>`;
+}
+
+/** Ящики только у бандлов 4–5 — селф-мейд спрайты. */
+function packCrateIcon(coins) {
+    if (coins >= 250) return { src: '/static/icons/syndie-coins-self-made.png', size: 'lg' };
+    if (coins >= 150) return { src: '/static/icons/coins-self-made.png', size: 'md' };
+    return null;
 }
 
 function renderDonatePackCard(p) {
     const active = selectedDonatePackId === p.id ? ' active' : '';
     const featured = p.featured ? ' featured' : '';
     const badge = p.badge ? `<span class="donate-tier-badge">${escapeHtml(p.badge)}</span>` : '';
+    const crate = packCrateIcon(p.coins);
+    const visual = crate
+        ? `<img src="${crate.src}" alt="" class="donate-pack-crate donate-pack-crate--${crate.size}" width="32" height="32"
+                style="image-rendering:pixelated">`
+        : renderPackCoinPile(p.coins);
     return `
         <article class="donate-pack-card${active}${featured}" data-pack="${p.id}">
             ${badge}
             <button type="button" class="donate-pack-select" onclick="selectDonatePack(${p.id})" aria-pressed="${active ? 'true' : 'false'}">
-                <div class="donate-pack-visual">
-                    ${renderPackCoinPile(p.coins)}
+                <div class="donate-pack-visual${crate ? ' has-crate' : ''}">
+                    ${visual}
                 </div>
                 <div class="donate-pack-body">
                     <div class="donate-pack-name">${escapeHtml(p.name)}</div>
                     <div class="donate-pack-amount">
-                        <span class="donate-pack-coins">${p.coins}</span>
-                        <img src="/static/coin.png" class="coin-icon-result donate-coin-inline" alt="">
+                        <span class="donate-pack-coins coin-qty">${p.coins}<img src="/static/coin.png" class="coin-icon-result donate-coin-inline" alt=""></span>
                     </div>
                     <div class="donate-pack-price">${escapeHtml(p.price_label)}</div>
                 </div>
@@ -236,8 +245,9 @@ function updateDonateCheckoutUI() {
     } else if (pack) {
         if (icon) {
             icon.hidden = false;
-            icon.src = '/static/coin.png';
-            icon.alt = 'Монетки';
+            const crate = packCrateIcon(pack.coins);
+            icon.src = crate ? crate.src : '/static/coin.png';
+            icon.alt = crate ? 'Ящик с монетами' : 'Монетки';
         }
         if (name) name.textContent = `${pack.name}: ${pack.coins}`;
         if (price) price.textContent = pack.price_label;
