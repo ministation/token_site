@@ -62,9 +62,16 @@ TRANSFER_COOLDOWN = int(os.getenv("TRANSFER_COOLDOWN", "60"))
 MAX_CHAT_MESSAGES = int(os.getenv("MAX_CHAT_MESSAGES", "100"))
 
 SUPPORT_EMAIL = os.getenv("SUPPORT_EMAIL", "mini-station-14@yandex.ru")
+SUPPORT_PHONE = os.getenv("SUPPORT_PHONE", "+7 (965) 197-54-12")
+SUPPORT_PHONE_TEL = os.getenv("SUPPORT_PHONE_TEL", "+79651975412")
 SUPPORT_DISCORD_USERNAME = os.getenv("SUPPORT_DISCORD_USERNAME", "dotnet_build")
 SUPPORT_TELEGRAM_USERNAME = os.getenv("SUPPORT_TELEGRAM_USERNAME", "mini_station_support")
 BOOSTY_URL = os.getenv("BOOSTY_URL", "https://boosty.to/mini-station/")
+
+# Реквизиты продавца (самозанятый) — для оферты / подвала сайта
+SELLER_FULL_NAME = os.getenv("SELLER_FULL_NAME", "Омельченко Егор Романович")
+SELLER_INN = os.getenv("SELLER_INN", "773475132921")
+SELLER_STATUS = os.getenv("SELLER_STATUS", "Самозанятый")
 
 SITE_PUBLIC_URL = os.getenv("SITE_PUBLIC_URL", "https://ministation.ru").rstrip("/")
 

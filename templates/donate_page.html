@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="/static/js/theme.js"></script>
     <script src="/static/js/ambient.js" defer></script>
-    <link rel="stylesheet" href="/static/style.css?v=sbp4">
+    <link rel="stylesheet" href="/static/style.css?v=legal1">
     <link rel="stylesheet" href="/static/chat-discord.css">
     <link rel="icon" type="image/png" href="/static/coin.png">
 </head>
@@ -79,19 +79,10 @@
         </main>
     </div>
 
-    <footer class="site-footer">
-        <div class="site-footer-inner">
-            <div class="site-footer-brand">
-                <strong>Мини-станция</strong>
-                <span>SS14 · некоммерческий проект</span>
-            </div>
-            <nav class="site-footer-nav" aria-label="Правовая информация">
-                <a href="/#/privacy">Политика конфиденциальности</a>
-                <a href="/#/terms">Пользовательское соглашение</a>
-                <a href="/donate" onclick="showDonatePanel('support'); return false;">Обращения</a>
-            </nav>
-        </div>
-    </footer>
+    {% set footer_home = '/' %}
+    {% set footer_support = '/donate#support' %}
+    {% set footer_support_onclick = "if (typeof showDonatePanel === 'function') { showDonatePanel('support'); return false; }" %}
+    {% include 'partials/site_footer.html' %}
 
     <script src="/static/js/common.js"></script>
     <script src="/static/js/chat.js"></script>

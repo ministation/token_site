@@ -1,8 +1,17 @@
 from fastapi import APIRouter, Request, HTTPException, Form, File, UploadFile
 
 from app.config import (
-    SUPPORT_EMAIL, SUPPORT_DISCORD_USERNAME, SUPPORT_TELEGRAM_USERNAME, BOOSTY_URL,
-    COOLDOWN_TICKET_MSG_SEC, COOLDOWN_TICKET_SEC,
+    SUPPORT_EMAIL,
+    SUPPORT_PHONE,
+    SUPPORT_PHONE_TEL,
+    SUPPORT_DISCORD_USERNAME,
+    SUPPORT_TELEGRAM_USERNAME,
+    BOOSTY_URL,
+    SELLER_FULL_NAME,
+    SELLER_INN,
+    SELLER_STATUS,
+    COOLDOWN_TICKET_MSG_SEC,
+    COOLDOWN_TICKET_SEC,
 )
 from app.dependencies import get_current_social_user, get_optional_social_user
 from app.services import support as support_svc
@@ -16,9 +25,14 @@ router = APIRouter(prefix="/api/support", tags=["support"])
 async def support_contacts():
     return {
         "email": SUPPORT_EMAIL,
+        "phone": SUPPORT_PHONE,
+        "phone_tel": SUPPORT_PHONE_TEL,
         "discord_username": SUPPORT_DISCORD_USERNAME,
         "telegram_username": SUPPORT_TELEGRAM_USERNAME,
         "boosty_url": BOOSTY_URL,
+        "seller_name": SELLER_FULL_NAME,
+        "seller_inn": SELLER_INN,
+        "seller_status": SELLER_STATUS,
     }
 
 

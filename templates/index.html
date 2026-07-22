@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="/static/js/theme.js"></script>
     <script src="/static/js/ambient.js" defer></script>
-    <link rel="stylesheet" href="/static/style.css?v=sbp4">
+    <link rel="stylesheet" href="/static/style.css?v=legal1">
     <link rel="stylesheet" href="/static/chat-discord.css">
     <link rel="icon" type="image/png" href="/static/coin.png">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
@@ -99,6 +99,9 @@
             <div id="termsSection" class="section">
                 {% include 'partials/terms.html' %}
             </div>
+            <div id="offerSection" class="section">
+                {% include 'partials/offer.html' %}
+            </div>
             <div id="pricingSection" class="section">
                 {% include 'partials/pricing.html' %}
             </div>
@@ -110,22 +113,9 @@
         </main>
     </div>
 
-    <footer class="site-footer">
-        <div class="site-footer-inner">
-            <div class="site-footer-brand">
-                <strong>Мини-станция</strong>
-                <span>SS14 · некоммерческий проект</span>
-            </div>
-            <nav class="site-footer-nav" aria-label="Правовая информация">
-                <a href="#/privacy">Политика конфиденциальности</a>
-                <a href="#/terms">Пользовательское соглашение</a>
-                <a href="#/support">Обращения</a>
-            </nav>
-            <div class="site-footer-meta">
-                <a href="mailto:mini-station-14@yandex.ru">mini-station-14@yandex.ru</a>
-            </div>
-        </div>
-    </footer>
+    {% set footer_home = '/' %}
+    {% set footer_support = '#/support' %}
+    {% include 'partials/site_footer.html' %}
 
     <script src="/static/js/common.js"></script>
     <script src="/static/js/badges.js"></script>

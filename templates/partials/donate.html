@@ -1,8 +1,13 @@
 <div class="donate-page">
     <header class="donate-hero card">
         <a href="/" class="donate-back"><i class="fa-solid fa-arrow-left"></i> На главную</a>
-        <h1><i class="fa-solid fa-heart"></i> Поддержка</h1>
-        <p>Подписки и монетки. Оплата на сайте (СБП / карта).</p>
+        <h1><i class="fa-solid fa-heart"></i> Поддержка проекта</h1>
+        <p>
+            Цифровые услуги для игроков Space Station 14 «Мини-станция»:
+            спонсорские подписки с игровыми привилегиями и пакеты внутренней валюты (монеток).
+            Оплата на сайте (СБП). Условия — в <a href="/#/offer">публичной оферте</a>,
+            состав и цены — в <a href="/#/pricing">тарифах</a>.
+        </p>
     </header>
 
     <div id="donatePayStatus" class="donate-pay-banner" hidden role="status" aria-live="polite"></div>
@@ -77,7 +82,10 @@
                 <button type="button" class="donate-pay-btn" id="donatePayBtn" disabled onclick="startDonationCheckout()">
                     <i class="fa-solid fa-credit-card"></i> Купить
                 </button>
-                <p class="donate-hint" id="donateHint">После оплаты подписка и монетки активируются автоматически.</p>
+                <p class="donate-hint" id="donateHint">
+                    Оплачивая заказ, вы принимаете <a href="/#/offer">публичную оферту</a>.
+                    После подтверждения оплаты подписка и монетки активируются на аккаунте.
+                </p>
                 <div id="donateCheckoutResult" class="result" role="status" aria-live="polite"></div>
 
                 <p class="donate-alt">
