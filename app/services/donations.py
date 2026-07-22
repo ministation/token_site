@@ -117,7 +117,7 @@ PAYMENT_METHODS = [
         "id": 10,
         "label": "МИР",
         "hint": "Карта МИР",
-        "icon": "/static/payment/mir.svg",
+        "icon": "/static/payment/mir.png",
     },
     {
         "id": 12,

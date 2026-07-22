@@ -5230,6 +5230,7 @@ label.chat-tool-btn input[type="file"] {
 
 .donate-standalone-layout {
     max-width: 1280px;
+    align-items: stretch;
 }
 .donate-page {
     display: flex;
@@ -5777,10 +5778,23 @@ label.chat-tool-btn input[type="file"] {
 .donate-standalone .layout {
     position: relative;
     z-index: 1;
+    align-items: stretch;
 }
 .donate-standalone .sidebar {
     position: relative;
+    top: auto;
     z-index: 5;
+    align-self: stretch;
+    height: auto;
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+.donate-standalone .sidebar .side-group-fill {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
 }
 .donate-standalone .sidebar .side-link {
     pointer-events: auto;
@@ -5800,7 +5814,20 @@ label.chat-tool-btn input[type="file"] {
 }
 .donate-standalone .sidebar .donate-nav-btn.active i { color: #fff; }
 .donate-panel[hidden] { display: none !important; }
-.donate-panel { min-width: 0; }
+.donate-panel { min-width: 0; height: 100%; }
+.donate-standalone .content {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    align-self: stretch;
+}
+.donate-standalone .content > .donate-panel.active {
+    flex: 1 1 auto;
+}
+.donate-standalone .content .legal-card {
+    min-height: 100%;
+    box-sizing: border-box;
+}
 
 @media (max-width: 900px) {
     .donate-shell { grid-template-columns: 1fr; }

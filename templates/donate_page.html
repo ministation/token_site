@@ -49,30 +49,24 @@
                     onclick="showDonatePanel('shop', this)">
                     <i class="fa-solid fa-heart"></i> Покупка
                 </button>
-                <button type="button" class="side-link donate-nav-btn" data-donate-panel="pricing"
-                    onclick="showDonatePanel('pricing', this)">
-                    <i class="fa-solid fa-tags"></i> Цены
-                </button>
                 <button type="button" class="side-link donate-nav-btn" data-donate-panel="support"
                     onclick="showDonatePanel('support', this)">
                     <i class="fa-solid fa-life-ring"></i> Обращения
                 </button>
             </div>
-            <div class="side-group">
+            <div class="side-group side-group-fill">
                 <div class="side-group-title"><i class="fa-solid fa-link"></i> Ссылки</div>
                 <a class="side-link" href="http://cdn.ministation.ru/" target="_blank" rel="noopener"><i class="fa-solid fa-cloud"></i> CDN</a>
                 <a class="side-link" href="https://wiki.ministation.ru" target="_blank" rel="noopener"><i class="fa-solid fa-book"></i> Вики</a>
                 <a class="side-link" href="https://discord.gg/mini-station" target="_blank" rel="noopener"><i class="fa-brands fa-discord"></i> Discord</a>
                 <a class="side-link" href="https://t.me/mini_station" target="_blank" rel="noopener"><i class="fa-brands fa-telegram"></i> Telegram</a>
+                <a class="side-link" href="https://boosty.to/mini-station/" target="_blank" rel="noopener"><i class="fa-solid fa-bolt"></i> Boosty</a>
             </div>
         </aside>
 
         <main class="content">
             <div id="donatePanelShop" class="donate-panel active">
                 {% include 'partials/donate.html' %}
-            </div>
-            <div id="donatePanelPricing" class="donate-panel" hidden>
-                {% include 'partials/pricing.html' %}
             </div>
             <div id="donatePanelSupport" class="donate-panel" hidden>
                 {% include 'partials/support.html' %}
@@ -90,7 +84,6 @@
                 <a href="/#/privacy">Политика конфиденциальности</a>
                 <a href="/#/terms">Пользовательское соглашение</a>
                 <a href="/donate" onclick="showDonatePanel('shop'); return false;">Поддержка</a>
-                <a href="/donate" onclick="showDonatePanel('pricing'); return false;">Цены и тарифы</a>
                 <a href="/donate" onclick="showDonatePanel('support'); return false;">Обращения</a>
             </nav>
         </div>
@@ -103,7 +96,6 @@
         function showDonatePanel(name, btn) {
             const map = {
                 shop: 'donatePanelShop',
-                pricing: 'donatePanelPricing',
                 support: 'donatePanelSupport',
             };
             const key = map[name] ? name : 'shop';
@@ -152,8 +144,8 @@
         document.addEventListener('DOMContentLoaded', async () => {
             await checkDonateAuth();
             const hash = (location.hash || '').replace(/^#/, '');
-            if (hash === 'pricing' || hash === 'support') {
-                showDonatePanel(hash);
+            if (hash === 'support') {
+                showDonatePanel('support');
             } else {
                 showDonatePanel('shop');
                 if (typeof initDonateSection === 'function') initDonateSection();

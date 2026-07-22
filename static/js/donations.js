@@ -337,7 +337,7 @@ async function handleDonateReturnQuery() {
                     ? `Оплата получена: ${data.coins_amount || ''} монет зачислено.`
                     : `Оплата получена (${data.amount_rub || ''} ₽). Монеты зачислятся чуть позже.`;
             } else {
-                banner.textContent = `Оплата получена: ${data.tier_name || 'тариф'} (${data.amount_rub || ''} ₽). Привилегии выдаст администрация.`;
+                banner.textContent = `Оплата получена: ${data.tier_name || 'тариф'} (${data.amount_rub || ''} ₽). Подписка активируется автоматически.`;
             }
         } else if (st === 'canceled' || result === 'fail') {
             banner.classList.add('fail');
