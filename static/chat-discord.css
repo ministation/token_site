@@ -15,15 +15,38 @@
 body.section-chat,
 body.section-messages {
     overflow: hidden;
+    height: 100dvh;
+    max-height: 100dvh;
+    display: flex;
+    flex-direction: column;
 }
-body.section-chat .layout,
-body.section-messages .layout {
-    align-items: stretch;
-    padding-bottom: 16px;
+
+body.section-chat > .topbar,
+body.section-messages > .topbar {
+    flex-shrink: 0;
 }
+
+body.section-chat > .bg-ambient,
+body.section-messages > .bg-ambient {
+    flex: none;
+}
+
 body.section-chat .site-footer,
 body.section-messages .site-footer {
     display: none;
+}
+
+body.section-chat .layout,
+body.section-messages .layout {
+    align-items: stretch;
+    flex: 1 1 auto;
+    min-height: 0;
+    height: auto;
+    max-height: calc(100dvh - var(--chat-topbar, 64px));
+    padding-top: 12px;
+    padding-bottom: 12px;
+    overflow: hidden;
+    box-sizing: border-box;
 }
 
 body.section-chat .content,
@@ -33,6 +56,9 @@ body.section-messages .content {
     min-width: 0;
     min-height: 0;
     align-self: stretch;
+    height: 100%;
+    max-height: 100%;
+    overflow: hidden;
 }
 
 body.section-chat #chatSection.active,
@@ -41,21 +67,27 @@ body.section-messages #messagesSection.active {
     display: flex !important;
     flex-direction: column;
     min-height: 0;
-    height: auto;
+    height: 100%;
+    max-height: 100%;
+    overflow: hidden;
+    margin: 0;
 }
 
 body.section-chat .dc-shell,
 body.section-messages .messages-page.dc-shell {
     flex: 1 1 auto;
-    /* высота = видимая область под шапкой (syncPanelHeightToSidebar) */
-    max-height: none !important;
+    width: 100%;
+    margin-bottom: 0 !important;
     min-height: 0 !important;
+    overflow: hidden;
 }
 
 body.section-chat .sidebar,
 body.section-messages .sidebar {
     align-self: stretch;
     height: auto;
+    max-height: 100%;
+    overflow-y: auto;
 }
 
 .dc-channel-header {
@@ -562,41 +594,72 @@ button.dc-name:hover {
     right: 4px;
 }
 
-/* Composer */
+/* Composer — одна полоса как в Discord */
 .dc-composer.chat-composer,
 .dc-main .chat-composer,
 .pm-chat-area .chat-composer {
-    margin: 0 12px 12px;
-    padding: 8px 10px;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    background: var(--panel-2);
-    border-top: 1px solid var(--border);
+    display: flex !important;
+    flex-direction: row;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
+    margin: 0 16px 16px !important;
+    padding: 0 8px 0 4px !important;
+    min-height: 44px;
+    border: none !important;
+    border-radius: 8px !important;
+    background: var(--panel-3) !important;
+    box-shadow: none !important;
     flex-shrink: 0;
+    position: relative;
+    box-sizing: border-box;
+}
+
+.dc-composer .chat-composer-tools,
+.pm-chat-area .chat-composer-tools {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0;
+    flex-shrink: 0;
+    padding-left: 4px;
 }
 
 .dc-composer .chat-tool-btn,
 .dc-composer label.chat-tool-btn,
-.pm-chat-area .chat-tool-btn {
-    width: 36px;
-    height: 36px;
-    min-width: 36px;
-    min-height: 36px;
-    border-radius: 8px;
-    border: none;
-    background: transparent;
-    box-shadow: none;
-    color: var(--muted);
+.pm-chat-area .chat-tool-btn,
+.pm-chat-area label.chat-tool-btn {
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    min-height: 32px !important;
+    border-radius: 4px !important;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: var(--muted) !important;
+    padding: 0 !important;
+    font-size: 1.05rem;
 }
 
 .dc-composer .chat-tool-btn:hover,
-.pm-chat-area .chat-tool-btn:hover {
-    background: color-mix(in srgb, var(--ink) 8%, transparent);
-    color: var(--ink);
-    transform: none;
-    box-shadow: none;
+.dc-composer label.chat-tool-btn:hover,
+.pm-chat-area .chat-tool-btn:hover,
+.pm-chat-area label.chat-tool-btn:hover {
+    background: color-mix(in srgb, var(--ink) 8%, transparent) !important;
+    color: var(--ink) !important;
+    transform: none !important;
+    box-shadow: none !important;
+    border: none !important;
+}
+
+.dc-composer .chat-composer-main,
+.pm-chat-area .chat-composer-main {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
 }
 
 .dc-composer .chat-composer-main input,
@@ -606,38 +669,62 @@ button.dc-name:hover {
     border: none !important;
     background: transparent !important;
     box-shadow: none !important;
-    height: 40px;
-    min-height: 40px;
-    line-height: 40px;
-    padding: 0 8px;
-    font-size: 0.95rem;
+    outline: none !important;
+    width: 100%;
+    height: 44px !important;
+    min-height: 44px !important;
+    max-height: 44px !important;
+    line-height: 44px !important;
+    padding: 0 8px !important;
+    margin: 0 !important;
+    font-size: 0.95rem !important;
+    font-family: var(--font-body) !important;
+    color: var(--ink);
+    resize: none;
+    white-space: nowrap;
+    overflow-x: hidden;
+}
+
+.dc-composer .chat-composer-main textarea,
+.pm-chat-area .chat-composer-main textarea {
+    white-space: pre-wrap;
+    line-height: 1.35 !important;
+    height: auto !important;
+    min-height: 44px !important;
+    max-height: 120px !important;
+    padding: 12px 8px !important;
 }
 
 .dc-composer .chat-send-btn,
 .pm-chat-area .chat-send-btn {
-    width: 36px;
-    height: 36px;
-    min-width: 36px;
-    min-height: 36px;
-    border-radius: 8px;
-    border: none;
-    background: var(--accent);
-    color: #fff;
-    box-shadow: none;
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    min-height: 32px !important;
+    border-radius: 4px !important;
+    border: none !important;
+    background: transparent !important;
+    color: var(--muted) !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    flex-shrink: 0;
 }
 
 .dc-composer .chat-send-btn:hover,
 .pm-chat-area .chat-send-btn:hover {
-    background: var(--accent-deep);
-    transform: none;
+    background: color-mix(in srgb, var(--accent) 16%, transparent) !important;
+    color: var(--accent-deep) !important;
+    transform: none !important;
+    box-shadow: none !important;
 }
 
 .dc-main .chat-login-hint {
-    margin: 0 12px 12px;
+    margin: 0 16px 16px;
     padding: 12px;
     border: 1px dashed var(--border);
-    border-radius: 10px;
+    border-radius: 8px;
     background: var(--panel-2);
+    flex-shrink: 0;
 }
 
 .messages-page.dc-shell {
@@ -719,9 +806,10 @@ button.dc-name:hover {
 
 .messages-page.dc-shell #messagesSection .pm-input-area .chat-send-btn,
 .messages-page.dc-shell .pm-input-area .chat-send-btn {
-    background: var(--accent);
-    border: none;
-    color: #fff;
+    background: transparent !important;
+    border: none !important;
+    color: var(--muted) !important;
+    box-shadow: none !important;
 }
 
 .pm-status { display: none; }

@@ -187,7 +187,10 @@ function showSection(sectionId) {
     document.body.classList.toggle('section-chat', sectionId === 'chat');
     document.body.classList.toggle('section-messages', sectionId === 'messages');
     if (sectionId === 'chat' || sectionId === 'messages') {
-        requestAnimationFrame(() => syncPanelHeightToSidebar(sectionId));
+        requestAnimationFrame(() => {
+            syncPanelHeightToSidebar(sectionId);
+            requestAnimationFrame(() => syncPanelHeightToSidebar(sectionId));
+        });
     }
     if (sectionId !== 'messages' && typeof stopPmPolling === 'function') stopPmPolling();
     if (sectionId !== 'chat' && typeof stopGlobalChatPolling === 'function') stopGlobalChatPolling();
@@ -195,19 +198,28 @@ function showSection(sectionId) {
 }
 
 function syncPanelHeightToSidebar(sectionId) {
-    if (window.matchMedia('(max-width: 900px)').matches) return;
     const shell = sectionId === 'messages'
         ? document.querySelector('#messagesSection .dc-shell')
         : document.querySelector('#chatSection .dc-shell');
     if (!shell) return;
+
     const topbar = document.querySelector('.topbar');
-    const top = topbar ? Math.ceil(topbar.getBoundingClientRect().bottom) : 0;
-    const footerGap = 16;
-    const available = Math.floor(window.innerHeight - top - footerGap);
-    const h = Math.max(360, available);
-    shell.style.height = `${h}px`;
-    shell.style.maxHeight = `${h}px`;
+    const topbarH = topbar ? Math.ceil(topbar.getBoundingClientRect().height) : 64;
+    document.documentElement.style.setProperty('--chat-topbar', `${topbarH}px`);
+
+    // Сбрасываем, чтобы измерить реальное положение под шапкой/паддингами
+    shell.style.height = '';
+    shell.style.maxHeight = '';
     shell.style.minHeight = '0';
+
+    requestAnimationFrame(() => {
+        const top = Math.ceil(shell.getBoundingClientRect().top);
+        const bottomPad = 8;
+        const h = Math.max(280, Math.floor(window.innerHeight - top - bottomPad));
+        shell.style.height = `${h}px`;
+        shell.style.maxHeight = `${h}px`;
+        shell.style.minHeight = '0';
+    });
 }
 
 window.addEventListener('resize', () => {
