@@ -126,3 +126,10 @@ app.include_router(inventory.router)
 app.include_router(admin.router)
 app.include_router(playtime.router)
 app.include_router(compensation.router)
+
+
+@app.post("/platega/callback")
+async def platega_callback_alias(request: Request):
+    """Alias под URL из ЛК Platega: https://ministation.ru/platega/callback"""
+    from app.routers.donations import platega_callback
+    return await platega_callback(request)

@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import uuid
 from typing import Any
+from urllib.parse import quote
 
 import aiohttp
 
@@ -12,6 +13,7 @@ from app.config import (
     DONATION_NOTIFY_EMAIL,
     MANUAL_SBP_ENABLED,
     PLATEGA_API_BASE,
+    PLATEGA_DEFAULT_METHOD,
     PLATEGA_MERCHANT_ID,
     PLATEGA_SECRET,
     SBP_PAY_LINK,
@@ -168,16 +170,17 @@ def robokassa_configured() -> bool:
 
 
 def payments_available() -> bool:
-    return robokassa_configured() or bool(MANUAL_SBP_ENABLED) or platega_configured()
+    return platega_configured() or robokassa_configured() or bool(MANUAL_SBP_ENABLED)
 
 
 def payment_mode() -> str:
+    # Приоритет: Platega → Robokassa → ручной СБП
+    if platega_configured():
+        return "platega"
     if robokassa_configured():
         return "robokassa"
     if MANUAL_SBP_ENABLED:
         return "manual_sbp"
-    if platega_configured():
-        return "platega"
     return "off"
 
 
@@ -236,6 +239,50 @@ def _platega_headers() -> dict[str, str]:
         "X-MerchantId": PLATEGA_MERCHANT_ID,
         "X-Secret": PLATEGA_SECRET,
     }
+
+
+async def create_platega_transaction(
+    *,
+    transaction_id: str,
+    amount_rub: int,
+    description: str,
+    payment_method: int,
+    payload: str | None = None,
+) -> dict:
+    """POST /transaction/process → redirect URL."""
+    method = int(payment_method or PLATEGA_DEFAULT_METHOD or 2)
+    if method not in {m["id"] for m in PAYMENT_METHODS}:
+        method = int(PLATEGA_DEFAULT_METHOD or 2)
+    return_url = f"{SITE_PUBLIC_URL}/donate?order={transaction_id}&paid=1&result=success"
+    fail_url = f"{SITE_PUBLIC_URL}/donate?order={transaction_id}&paid=0&result=fail"
+    body = {
+        "paymentMethod": method,
+        "id": transaction_id,
+        "paymentDetails": {
+            "amount": int(amount_rub),
+            "currency": "RUB",
+        },
+        "description": (description or "Мини-станция")[:200],
+        "return": return_url,
+        "failedUrl": fail_url,
+        "payload": payload or transaction_id,
+    }
+    url = f"{PLATEGA_API_BASE}/transaction/process"
+    timeout = aiohttp.ClientTimeout(total=30)
+    async with aiohttp.ClientSession(timeout=timeout) as session:
+        async with session.post(url, headers=_platega_headers(), json=body) as resp:
+            data = await resp.json(content_type=None)
+            if resp.status >= 400:
+                msg = None
+                if isinstance(data, dict):
+                    msg = data.get("message") or data.get("Message") or data.get("error")
+                raise ValueError(msg or f"Platega ошибка ({resp.status})")
+            if not isinstance(data, dict):
+                raise ValueError("Некорректный ответ Platega")
+            redirect = data.get("redirect") or data.get("Redirect")
+            if not redirect:
+                raise ValueError("Platega не вернула ссылку на оплату")
+            return data
 
 
 def _resolve_game_uuid(user: dict | None) -> str | None:
@@ -312,9 +359,9 @@ async def create_payment(
         raise ValueError("Платежи временно недоступны")
 
     mode = payment_mode()
-    method = int(payment_method or 2)
+    method = int(payment_method or PLATEGA_DEFAULT_METHOD or 2)
     if method not in {m["id"] for m in PAYMENT_METHODS}:
-        method = 2
+        method = int(PLATEGA_DEFAULT_METHOD or 2)
 
     prepared = _prepare_product(
         product_type=product_type,
@@ -343,9 +390,56 @@ async def create_payment(
             "game_user_uuid": game_user_uuid or "",
             "coins_amount": coins_amount,
             "mode": mode,
+            "payment_method": method,
         },
         ensure_ascii=False,
     )
+
+    if mode == "platega":
+        social_db.create_donation_order(
+            transaction_id=tx_id,
+            tier_id=tier_db_id,
+            tier_name=tier_name,
+            amount_rub=amount_rub,
+            payment_method=method,
+            player_id=player_id,
+            discord_id=discord_id,
+            contact=contact,
+            payload=payload,
+            product_type=product_type,
+            coins_amount=coins_amount,
+            game_user_uuid=game_user_uuid,
+        )
+        try:
+            remote = await create_platega_transaction(
+                transaction_id=tx_id,
+                amount_rub=amount_rub,
+                description=description,
+                payment_method=method,
+                payload=tx_id,
+            )
+        except Exception:
+            social_db.update_donation_order(tx_id, status="failed")
+            raise
+        redirect = remote.get("redirect") or remote.get("Redirect")
+        social_db.update_donation_order(
+            tx_id,
+            redirect_url=redirect,
+            raw_callback=json.dumps({"platega_create": remote}, ensure_ascii=False),
+        )
+        return {
+            "transaction_id": tx_id,
+            "mode": "platega",
+            "status": "pending",
+            "product_type": product_type,
+            "item": serialized,
+            "tier_name": tier_name,
+            "amount_rub": amount_rub,
+            "amount_label": _rub_label(amount_rub),
+            "redirect": redirect,
+            "remote": remote,
+            "wait_path": f"/donate?order={tx_id}&wait=1",
+        }
 
     if mode == "robokassa":
         order = social_db.create_donation_order(
@@ -612,7 +706,8 @@ async def confirm_order_manual(transaction_id: str, *, admin_name: str = "") -> 
 
 
 async def apply_callback(payload: dict) -> dict:
-    tx_id = str(payload.get("id") or "")
+    """Callback Platega: id + status (+ amount). Всегда фиксируем статус, выдачу — best effort."""
+    tx_id = str(payload.get("id") or payload.get("transactionId") or "").strip()
     status_raw = str(payload.get("status") or "").upper()
     if not tx_id:
         raise ValueError("Нет id транзакции")
@@ -625,6 +720,26 @@ async def apply_callback(payload: dict) -> dict:
         "CHARGEBACKED": "chargebacked",
     }
     status = status_map.get(status_raw, status_raw.lower() or "pending")
+
+    order = social_db.get_donation_order_by_tx(tx_id)
+    if not order:
+        raise ValueError("Заказ не найден")
+
+    # проверка суммы, если пришла в callback
+    amount = payload.get("amount")
+    if amount is None and isinstance(payload.get("paymentDetails"), dict):
+        amount = payload["paymentDetails"].get("amount")
+    if amount is not None and status == "confirmed":
+        try:
+            paid = float(str(amount).replace(",", ".").replace(" ", "").replace("RUB", ""))
+            expected = float(order.get("amount_rub") or 0)
+            if abs(paid - expected) > 0.01:
+                raise ValueError("Сумма callback не совпадает с заказом")
+        except ValueError:
+            raise
+        except Exception:
+            pass
+
     social_db.update_donation_order(
         tx_id,
         status=status,
@@ -632,12 +747,27 @@ async def apply_callback(payload: dict) -> dict:
     )
     order = social_db.get_donation_order_by_tx(tx_id)
     if status == "confirmed":
-        order = await fulfill_order_if_needed(order)
+        try:
+            order = await fulfill_order_if_needed(order) or order
+        except Exception:
+            pass
     return {"ok": True, "transaction_id": tx_id, "status": status, "order": order}
 
 
 def catalog_payload() -> dict:
     mode = payment_mode()
+    urls = {
+        "callback": f"{SITE_PUBLIC_URL}/platega/callback",
+        "callback_api": f"{SITE_PUBLIC_URL}/api/donations/platega/callback",
+        "success": f"{SITE_PUBLIC_URL}/donate?paid=1",
+        "fail": f"{SITE_PUBLIC_URL}/donate?paid=0",
+    }
+    if mode == "robokassa":
+        urls.update({
+            "result": f"{SITE_PUBLIC_URL}/api/donations/robokassa/result",
+            "success": f"{SITE_PUBLIC_URL}/api/donations/robokassa/success",
+            "fail": f"{SITE_PUBLIC_URL}/api/donations/robokassa/fail",
+        })
     return {
         "configured": payments_available(),
         "mode": mode,
@@ -645,14 +775,10 @@ def catalog_payload() -> dict:
         "tiers": list_tiers(),
         "coin_packs": list_coin_packs(),
         "methods": PAYMENT_METHODS,
-        "default_method": 2,
+        "default_method": int(PLATEGA_DEFAULT_METHOD or 2),
         "sbp": sbp_payment_info() if mode == "manual_sbp" else None,
         "smtp_ready": smtp_configured(),
-        "urls": {
-            "result": f"{SITE_PUBLIC_URL}/api/donations/robokassa/result",
-            "success": f"{SITE_PUBLIC_URL}/api/donations/robokassa/success",
-            "fail": f"{SITE_PUBLIC_URL}/api/donations/robokassa/fail",
-        },
+        "urls": urls,
     }
 
 
@@ -671,5 +797,5 @@ def serialize_order(order: dict) -> dict:
         "player_id": order.get("player_id"),
         "fulfilled": bool(order.get("fulfilled")),
         "created_at": order.get("created_at"),
-        "sbp": sbp_payment_info(int(order["amount_rub"] or 0)),
+        "sbp": None,
     }

@@ -251,7 +251,10 @@ function updateDonateCheckoutUI() {
     const item = tier || pack;
     const mode = donateCatalog?.mode || '';
 
-    if (hint && mode === 'robokassa') {
+    if (hint && mode === 'platega') {
+        hint.innerHTML = 'Оплачивая заказ, вы принимаете <a href="/#/offer">публичную оферту</a>. '
+            + 'Откроется безопасная страница Platega (СБП / карта). После оплаты привилегии активируются автоматически.';
+    } else if (hint && mode === 'robokassa') {
         hint.innerHTML = 'Оплачивая заказ, вы принимаете <a href="/#/offer">публичную оферту</a>. '
             + 'Откроется безопасная страница Robokassa (СБП / карта). После оплаты привилегии активируются автоматически.';
     }

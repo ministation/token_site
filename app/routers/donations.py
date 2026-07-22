@@ -242,13 +242,15 @@ async def robokassa_fail(request: Request):
 
 @router.post("/platega/callback")
 async def platega_callback(request: Request):
-    """Callback URL для ЛК Platega → Настройки → Callback URLs."""
+    """Callback URL для ЛК Platega → Настройки → Callback URLs.
+    Также доступен как POST /platega/callback (без /api/donations).
+    """
     merchant = request.headers.get("X-MerchantId") or request.headers.get("x-merchantid")
     secret = request.headers.get("X-Secret") or request.headers.get("x-secret")
-    if PLATEGA_MERCHANT_ID and merchant and merchant != PLATEGA_MERCHANT_ID:
-        raise HTTPException(status_code=401, detail="Bad merchant")
-    if PLATEGA_SECRET and secret and secret != PLATEGA_SECRET:
-        raise HTTPException(status_code=401, detail="Bad secret")
+    if not PLATEGA_MERCHANT_ID or not PLATEGA_SECRET:
+        raise HTTPException(status_code=503, detail="Platega не настроена")
+    if merchant != PLATEGA_MERCHANT_ID or secret != PLATEGA_SECRET:
+        raise HTTPException(status_code=401, detail="Bad credentials")
     try:
         payload = await request.json()
     except Exception:
@@ -256,5 +258,9 @@ async def platega_callback(request: Request):
     try:
         result = await donations_svc.apply_callback(payload if isinstance(payload, dict) else {})
     except ValueError as e:
+        # 200 не отдаём при явной ошибке данных — иначе Platega решит, что всё ок
         raise HTTPException(status_code=400, detail=str(e))
-    return JSONResponse({"ok": True, **{k: result[k] for k in ("transaction_id", "status") if k in result}})
+    return JSONResponse(
+        {"ok": True, **{k: result[k] for k in ("transaction_id", "status") if k in result}},
+        status_code=200,
+    )
