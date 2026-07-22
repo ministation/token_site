@@ -4634,22 +4634,40 @@ label.chat-tool-btn input[type="file"] {
 }
 
 .legal-card { max-width: 920px; }
+.legal-card > h2,
+.card.legal-card h2 {
+    font-family: var(--font-body);
+    font-size: 1.3rem;
+    font-weight: 700;
+    text-transform: none;
+    letter-spacing: 0.01em;
+    color: var(--muted);
+}
+.legal-card > h2 i,
+.card.legal-card h2 i {
+    color: var(--dim);
+    font-size: 1.1rem;
+}
 .legal-updated {
     color: var(--muted);
-    font-size: 0.88rem;
+    font-size: 0.95rem;
     margin: -4px 0 16px;
+    font-family: var(--font-body);
 }
 .legal-prose {
     font-family: var(--font-body);
-    font-size: 0.95rem;
-    line-height: 1.55;
+    font-size: 1rem;
+    line-height: 1.65;
     color: var(--ink);
 }
 .legal-prose h3 {
-    font-family: var(--font-pixel);
-    font-size: 0.52rem;
-    margin: 18px 0 8px;
-    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin: 22px 0 10px;
+    color: var(--muted);
+    letter-spacing: 0.01em;
+    text-transform: none;
 }
 .legal-prose p { margin: 0 0 10px; }
 .legal-prose ul {
@@ -5230,7 +5248,7 @@ label.chat-tool-btn input[type="file"] {
 
 .donate-standalone-layout {
     max-width: 1280px;
-    align-items: stretch;
+    align-items: flex-start;
 }
 .donate-page {
     display: flex;
@@ -5778,23 +5796,21 @@ label.chat-tool-btn input[type="file"] {
 .donate-standalone .layout {
     position: relative;
     z-index: 1;
-    align-items: stretch;
+    align-items: flex-start;
 }
 .donate-standalone .sidebar {
-    position: relative;
-    top: auto;
+    position: sticky;
+    top: 88px;
     z-index: 5;
-    align-self: stretch;
+    align-self: flex-start;
     height: auto;
-    min-height: 100%;
+    min-height: 0;
     display: flex;
     flex-direction: column;
     gap: 14px;
 }
 .donate-standalone .sidebar .side-group-fill {
-    flex: 1 1 auto;
-    display: flex;
-    flex-direction: column;
+    flex: 0 0 auto;
 }
 .donate-standalone .sidebar .side-link {
     pointer-events: auto;
@@ -5814,18 +5830,19 @@ label.chat-tool-btn input[type="file"] {
 }
 .donate-standalone .sidebar .donate-nav-btn.active i { color: #fff; }
 .donate-panel[hidden] { display: none !important; }
-.donate-panel { min-width: 0; height: 100%; }
+.donate-panel { min-width: 0; height: auto; }
 .donate-standalone .content {
-    display: flex;
-    flex-direction: column;
+    display: block;
     min-height: 0;
-    align-self: stretch;
+    align-self: flex-start;
+    flex: 1;
+    min-width: 0;
 }
 .donate-standalone .content > .donate-panel.active {
-    flex: 1 1 auto;
+    flex: none;
 }
 .donate-standalone .content .legal-card {
-    min-height: 100%;
+    min-height: 0;
     box-sizing: border-box;
 }
 
