@@ -28,6 +28,9 @@
                 <img src="/static/logo.png" alt="Логотип" onerror="this.src='/static/coin.png'">
                 <h1>Мини<span>-</span>станция</h1>
             </a>
+            <button type="button" class="nav-toggle" id="navToggle" aria-label="Меню" aria-expanded="false">
+                <i class="fa-solid fa-bars"></i> Меню
+            </button>
             <div id="userInfo">
                 <button type="button" class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Сменить тему">
                     <i class="fa-solid fa-moon"></i>
@@ -42,7 +45,8 @@
     </header>
 
     <div class="layout donate-standalone-layout">
-        <aside class="sidebar">
+        <div class="nav-backdrop" id="navBackdrop" aria-hidden="true"></div>
+        <aside class="sidebar" id="mainNav" aria-label="Навигация доната">
             <div class="side-group">
                 <div class="side-group-title"><i class="fa-solid fa-compass"></i> Навигация</div>
                 <a class="side-link" href="/"><i class="fa-solid fa-house"></i> На главную</a>
@@ -94,6 +98,33 @@
     <script src="/static/js/donations.js"></script>
     <script src="/static/js/support.js"></script>
     <script>
+        function setDonateNavOpen(open) {
+            const mainNav = document.getElementById('mainNav');
+            const navToggle = document.getElementById('navToggle');
+            const navBackdrop = document.getElementById('navBackdrop');
+            if (mainNav) mainNav.classList.toggle('open', open);
+            if (navToggle) navToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+            if (navBackdrop) {
+                navBackdrop.classList.toggle('visible', open);
+                navBackdrop.setAttribute('aria-hidden', open ? 'false' : 'true');
+            }
+            document.body.classList.toggle('nav-open', open);
+        }
+
+        function setupDonateNav() {
+            const navToggle = document.getElementById('navToggle');
+            const mainNav = document.getElementById('mainNav');
+            const navBackdrop = document.getElementById('navBackdrop');
+            if (navToggle && mainNav) {
+                navToggle.addEventListener('click', () => {
+                    setDonateNavOpen(!mainNav.classList.contains('open'));
+                });
+            }
+            if (navBackdrop) {
+                navBackdrop.addEventListener('click', () => setDonateNavOpen(false));
+            }
+        }
+
         function showDonatePanel(name, btn) {
             const map = {
                 shop: 'donatePanelShop',
@@ -121,6 +152,7 @@
             try {
                 history.replaceState(null, '', key === 'shop' ? '/donate' : `/donate#${key}`);
             } catch (e) {}
+            setDonateNavOpen(false);
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
@@ -143,6 +175,7 @@
         }
 
         document.addEventListener('DOMContentLoaded', async () => {
+            setupDonateNav();
             await checkDonateAuth();
             const hash = (location.hash || '').replace(/^#/, '');
             if (hash === 'support') {
