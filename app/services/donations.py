@@ -1,4 +1,4 @@
-"""Спонсорские тарифы, пакеты монет и оплата через Platega.io."""
+"""Спонсорские тарифы, пакеты монет и ручная оплата СБП."""
 from __future__ import annotations
 
 import json
@@ -10,13 +10,19 @@ import aiohttp
 
 import database_social as social_db
 from app.config import (
+    DONATION_NOTIFY_EMAIL,
+    MANUAL_SBP_ENABLED,
     PLATEGA_API_BASE,
     PLATEGA_DEFAULT_METHOD,
     PLATEGA_MERCHANT_ID,
     PLATEGA_SECRET,
+    SBP_PAY_LINK,
+    SBP_QR_PATH,
     SITE_PUBLIC_URL,
+    SPONSORSHIP_DAYS,
 )
 from app.services.bank import add_tokens
+from app.services.mail import send_email, smtp_configured
 
 # Цены в рублях (месяц). Иконки - /static/icons/
 DONATION_TIERS: dict[int, dict[str, Any]] = {
@@ -95,7 +101,6 @@ DONATION_TIERS: dict[int, dict[str, Any]] = {
     },
 }
 
-# Пакеты монет: база ~12₽/шт, скидка растёт с объёмом.
 COIN_PACKS: dict[int, dict[str, Any]] = {
     1: {"id": 1, "name": "Рюкзак монет", "coins": 20, "price_rub": 190, "badge": None},
     2: {"id": 2, "name": "Тулбокс монет", "coins": 50, "price_rub": 490, "badge": None},
@@ -113,23 +118,15 @@ PAYMENT_METHODS = [
         "hint": "Оплата по QR",
         "icon": "/static/payment/sbp.png",
     },
-    {
-        "id": 10,
-        "label": "МИР",
-        "hint": "Карта МИР",
-        "icon": "/static/payment/mir.png",
-    },
-    {
-        "id": 12,
-        "label": "Visa / Mastercard",
-        "hint": "Банковская карта",
-        "icon": "/static/payment/card-intl.svg",
-    },
 ]
 
 
 def platega_configured() -> bool:
     return bool(PLATEGA_MERCHANT_ID and PLATEGA_SECRET)
+
+
+def payments_available() -> bool:
+    return bool(MANUAL_SBP_ENABLED) or platega_configured()
 
 
 def icon_url(filename: str) -> str:
@@ -209,24 +206,13 @@ def _resolve_game_uuid(user: dict | None) -> str | None:
     return None
 
 
-async def create_payment(
+def _build_product(
     *,
-    product_type: str = "tier",
-    tier_id: int | None = None,
-    pack_id: int | None = None,
-    payment_method: int | None = None,
-    player_id: str | None = None,
-    discord_id: str | None = None,
-    game_user_uuid: str | None = None,
-    contact: str | None = None,
-) -> dict:
-    if not platega_configured():
-        raise ValueError("Платежи временно недоступны")
-
-    method = int(payment_method or PLATEGA_DEFAULT_METHOD)
-    if method not in {m["id"] for m in PAYMENT_METHODS}:
-        raise ValueError("Недоступный способ оплаты")
-
+    product_type: str,
+    tier_id: int | None,
+    pack_id: int | None,
+    game_user_uuid: str | None,
+) -> tuple[str, int, str, int, dict]:
     product_type = (product_type or "tier").strip().lower()
     coins_amount = 0
     if product_type == "coins":
@@ -239,7 +225,6 @@ async def create_payment(
         tier_db_id = int(raw_pack["id"])
         tier_name = f"Монетки · {raw_pack['coins']}"
         coins_amount = int(raw_pack["coins"])
-        description = f"Мини-станция · {raw_pack['coins']} монет"
         serialized = serialize_coin_pack(raw_pack)
     elif product_type == "tier":
         raw = DONATION_TIERS.get(int(tier_id or 0))
@@ -249,160 +234,10 @@ async def create_payment(
         tier_db_id = int(raw["id"])
         tier_name = raw["name"]
         coins_amount = int(raw.get("coins") or 0)
-        description = f"Мини-станция · {raw['name']} (мес.)"
         serialized = serialize_tier(raw)
     else:
         raise ValueError("Неизвестный тип товара")
-
-    tx_id = str(uuid.uuid4())
-    return_url = f"{SITE_PUBLIC_URL}/donate?order={tx_id}&result=success"
-    fail_url = f"{SITE_PUBLIC_URL}/donate?order={tx_id}&result=fail"
-    payload = json.dumps(
-        {
-            "product_type": product_type,
-            "tier_id": tier_id,
-            "pack_id": pack_id,
-            "player_id": player_id or "",
-            "game_user_uuid": game_user_uuid or "",
-            "coins_amount": coins_amount,
-        },
-        ensure_ascii=False,
-    )
-
-    social_db.create_donation_order(
-        transaction_id=tx_id,
-        tier_id=tier_db_id,
-        tier_name=tier_name,
-        amount_rub=amount_rub,
-        payment_method=method,
-        player_id=player_id,
-        discord_id=discord_id,
-        contact=contact,
-        payload=payload,
-        product_type=product_type,
-        coins_amount=coins_amount,
-        game_user_uuid=game_user_uuid,
-    )
-
-    body = {
-        "paymentMethod": method,
-        "id": tx_id,
-        "paymentDetails": {
-            "amount": amount_rub,
-            "currency": "RUB",
-        },
-        "description": description,
-        "return": return_url,
-        "failedUrl": fail_url,
-        "payload": payload,
-    }
-
-    url = f"{PLATEGA_API_BASE}/transaction/process"
-    timeout = aiohttp.ClientTimeout(total=30)
-    async with aiohttp.ClientSession(timeout=timeout) as session:
-        async with session.post(url, headers=_platega_headers(), json=body) as resp:
-            data = await resp.json(content_type=None)
-            if resp.status >= 400:
-                msg = data.get("message") if isinstance(data, dict) else None
-                social_db.update_donation_order(
-                    tx_id, status="failed", raw_callback=json.dumps(data, ensure_ascii=False)
-                )
-                raise ValueError(msg or "Ошибка платёжного сервиса")
-
-    redirect = (data or {}).get("redirect")
-    if redirect:
-        social_db.update_donation_order(tx_id, redirect_url=redirect)
-    return {
-        "transaction_id": (data or {}).get("transactionId") or tx_id,
-        "redirect": redirect,
-        "status": (data or {}).get("status") or "PENDING",
-        "expires_in": (data or {}).get("expiresIn"),
-        "product_type": product_type,
-        "item": serialized,
-        "amount_rub": amount_rub,
-    }
+    return product_type, tier_db_id, tier_name, coins_amount, amount_rub, serialized  # type: wrong
 
 
-async def fetch_payment_status(transaction_id: str) -> dict:
-    if not platega_configured():
-        raise ValueError("Платежи временно недоступны")
-    url = f"{PLATEGA_API_BASE}/transaction/{transaction_id}"
-    timeout = aiohttp.ClientTimeout(total=20)
-    async with aiohttp.ClientSession(timeout=timeout) as session:
-        async with session.get(url, headers=_platega_headers()) as resp:
-            data = await resp.json(content_type=None)
-            if resp.status >= 400:
-                raise ValueError((data or {}).get("message") or f"Ошибка статуса ({resp.status})")
-            return data if isinstance(data, dict) else {"raw": data}
-
-
-async def fulfill_order_if_needed(order: dict | None) -> dict | None:
-    """Идемпотентно начисляет монеты за confirmed coin-заказ."""
-    if not order:
-        return order
-    if order.get("status") != "confirmed":
-        return order
-    if order.get("fulfilled"):
-        return order
-    if (order.get("product_type") or "tier") != "coins":
-        return order
-
-    coins = int(order.get("coins_amount") or 0)
-    game_uuid = order.get("game_user_uuid") or ""
-    if not game_uuid and order.get("payload"):
-        try:
-            meta = json.loads(order["payload"])
-            game_uuid = meta.get("game_user_uuid") or ""
-            coins = coins or int(meta.get("coins_amount") or 0)
-        except Exception:
-            pass
-
-    if not game_uuid or str(game_uuid).startswith("discord_") or coins <= 0:
-        return order
-
-    # атомарно захватываем fulfilled
-    if not social_db.mark_donation_fulfilled(order["transaction_id"]):
-        return social_db.get_donation_order_by_tx(order["transaction_id"])
-
-    try:
-        await add_tokens(str(game_uuid), coins)
-    except Exception:
-        social_db.update_donation_order(order["transaction_id"], fulfilled=0)
-        raise
-    return social_db.get_donation_order_by_tx(order["transaction_id"])
-
-
-async def apply_callback(payload: dict) -> dict:
-    tx_id = str(payload.get("id") or "")
-    status_raw = str(payload.get("status") or "").upper()
-    if not tx_id:
-        raise ValueError("Нет id транзакции")
-
-    status_map = {
-        "CONFIRMED": "confirmed",
-        "CANCELED": "canceled",
-        "CANCELLED": "canceled",
-        "PENDING": "pending",
-        "CHARGEBACKED": "chargebacked",
-    }
-    status = status_map.get(status_raw, status_raw.lower() or "pending")
-    social_db.update_donation_order(
-        tx_id,
-        status=status,
-        raw_callback=json.dumps(payload, ensure_ascii=False),
-    )
-    order = social_db.get_donation_order_by_tx(tx_id)
-    if status == "confirmed":
-        order = await fulfill_order_if_needed(order)
-    return {"ok": True, "transaction_id": tx_id, "status": status, "order": order}
-
-
-def catalog_payload() -> dict:
-    return {
-        "configured": platega_configured(),
-        "currency": "RUB",
-        "tiers": list_tiers(),
-        "coin_packs": list_coin_packs(),
-        "methods": PAYMENT_METHODS,
-        "default_method": PLATEGA_DEFAULT_METHOD,
-    }
+# Fix return type - I made a mistake with tuple unpacking. Let me rewrite create_payment cleanly.

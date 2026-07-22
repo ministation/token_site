@@ -96,3 +96,19 @@ COOLDOWN_TICKET_SEC = float(os.getenv("COOLDOWN_TICKET_SEC", "60"))
 COOLDOWN_TICKET_MSG_SEC = float(os.getenv("COOLDOWN_TICKET_MSG_SEC", "5"))
 COOLDOWN_LIKE_SEC = float(os.getenv("COOLDOWN_LIKE_SEC", "1"))
 COOLDOWN_SEARCH_SEC = float(os.getenv("COOLDOWN_SEARCH_SEC", "0.4"))
+
+# Ручная оплата СБП (QR / ссылка на перевод)
+SBP_PAY_LINK = os.getenv(
+    "SBP_PAY_LINK",
+    "https://www.sberbank.ru/ru/choise_bank?requisiteNumber=79651975412&bankCode=100000000111",
+)
+SBP_QR_PATH = os.getenv("SBP_QR_PATH", "/static/payment/sbp-qr.png")
+DONATION_NOTIFY_EMAIL = os.getenv("DONATION_NOTIFY_EMAIL", "proegorweb@gmail.com")
+SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
+SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USER = os.getenv("SMTP_USER", "")
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
+SMTP_FROM = os.getenv("SMTP_FROM", "") or SMTP_USER or DONATION_NOTIFY_EMAIL
+SMTP_USE_TLS = os.getenv("SMTP_USE_TLS", "1").strip().lower() not in ("0", "false", "no")
+MANUAL_SBP_ENABLED = os.getenv("MANUAL_SBP_ENABLED", "1").strip().lower() not in ("0", "false", "no")
+SPONSORSHIP_DAYS = int(os.getenv("SPONSORSHIP_DAYS", "30"))

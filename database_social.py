@@ -436,6 +436,28 @@ def _migrate_schema():
     if "fulfilled" not in don_cols:
         cursor.execute("ALTER TABLE donation_orders ADD COLUMN fulfilled INTEGER DEFAULT 0")
     cursor.execute("""
+        CREATE TABLE IF NOT EXISTS sponsorships (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            order_transaction_id TEXT UNIQUE,
+            player_id TEXT,
+            discord_id TEXT,
+            game_user_uuid TEXT,
+            contact TEXT,
+            tier_id INTEGER NOT NULL,
+            tier_name TEXT NOT NULL,
+            amount_rub INTEGER NOT NULL,
+            coins_granted INTEGER DEFAULT 0,
+            starts_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            ends_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            notes TEXT
+        )
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_sponsorships_player
+        ON sponsorships(player_id, ends_at DESC)
+    """)
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS site_bans (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             discord_id TEXT NOT NULL,
@@ -1812,6 +1834,106 @@ def update_donation_order(
     ok = cursor.rowcount > 0
     conn.close()
     return ok
+
+
+def list_donation_orders(
+    status: str | None = None,
+    limit: int = 50,
+    offset: int = 0,
+) -> list[dict]:
+    conn = get_db()
+    cursor = conn.cursor()
+    limit = min(max(int(limit), 1), 100)
+    offset = max(int(offset), 0)
+    if status:
+        cursor.execute(
+            """
+            SELECT * FROM donation_orders
+            WHERE status = ?
+            ORDER BY created_at DESC
+            LIMIT ? OFFSET ?
+            """,
+            (status, limit, offset),
+        )
+    else:
+        cursor.execute(
+            """
+            SELECT * FROM donation_orders
+            ORDER BY created_at DESC
+            LIMIT ? OFFSET ?
+            """,
+            (limit, offset),
+        )
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return rows
+
+
+def create_sponsorship(
+    *,
+    order_transaction_id: str,
+    tier_id: int,
+    tier_name: str,
+    amount_rub: int,
+    days: int = 30,
+    player_id: str | None = None,
+    discord_id: str | None = None,
+    game_user_uuid: str | None = None,
+    contact: str | None = None,
+    coins_granted: int = 0,
+    notes: str | None = None,
+) -> dict:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM sponsorships WHERE order_transaction_id = ?", (order_transaction_id,))
+    existing = cursor.fetchone()
+    if existing:
+        cursor.execute("SELECT * FROM sponsorships WHERE id = ?", (existing["id"],))
+        row = dict(cursor.fetchone())
+        conn.close()
+        return row
+    cursor.execute(
+        """
+        INSERT INTO sponsorships (
+            order_transaction_id, player_id, discord_id, game_user_uuid, contact,
+            tier_id, tier_name, amount_rub, coins_granted, ends_at, notes
+        ) VALUES (
+            ?, ?, ?, ?, ?,
+            ?, ?, ?, ?, datetime('now', ?), ?
+        )
+        """,
+        (
+            order_transaction_id,
+            player_id,
+            discord_id,
+            game_user_uuid,
+            contact,
+            int(tier_id),
+            tier_name,
+            int(amount_rub),
+            int(coins_granted or 0),
+            f"+{int(days)} days",
+            notes,
+        ),
+    )
+    conn.commit()
+    sid = cursor.lastrowid
+    cursor.execute("SELECT * FROM sponsorships WHERE id = ?", (sid,))
+    row = dict(cursor.fetchone())
+    conn.close()
+    return row
+
+
+def get_sponsorship_by_order(order_transaction_id: str) -> dict | None:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT * FROM sponsorships WHERE order_transaction_id = ?",
+        (order_transaction_id,),
+    )
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
 
 
 def add_global_chat_message(author_id: str, author_nickname: str,
