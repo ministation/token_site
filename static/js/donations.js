@@ -7,6 +7,30 @@ let currentDonateOrderId = null;
 let donateStatusPoll = null;
 
 const COIN_IMG = '<img src="/static/coin.png" class="coin-icon-result donate-coin-inline" alt="">';
+const DONATE_METHOD_KEY = 'donatePaymentMethod';
+const METHOD_ALIASES = { 10: 11, 12: 2 }; // 10→МИР(11), международные убраны
+
+function normalizeDonateMethod(id) {
+    let n = Number(id);
+    if (!Number.isFinite(n)) n = 2;
+    if (METHOD_ALIASES[n] != null) n = METHOD_ALIASES[n];
+    return n;
+}
+
+function loadSavedDonateMethod(fallback = 2) {
+    try {
+        const raw = sessionStorage.getItem(DONATE_METHOD_KEY);
+        if (raw != null && raw !== '') return normalizeDonateMethod(raw);
+    } catch (_) { /* ignore */ }
+    return normalizeDonateMethod(fallback);
+}
+
+function saveDonateMethod(id) {
+    selectedDonateMethod = normalizeDonateMethod(id);
+    try {
+        sessionStorage.setItem(DONATE_METHOD_KEY, String(selectedDonateMethod));
+    } catch (_) { /* ignore */ }
+}
 
 async function initDonateSection() {
     selectedDonateTierId = null;
@@ -43,7 +67,13 @@ async function loadDonateCatalog() {
     if (!box && !packsBox) return;
     try {
         donateCatalog = await apiCall('GET', '/api/donations/catalog');
-        selectedDonateMethod = donateCatalog.default_method || 2;
+        const methods = donateCatalog.methods || [];
+        const allowed = new Set(methods.map(m => Number(m.id)));
+        let method = loadSavedDonateMethod(donateCatalog.default_method || 2);
+        if (!allowed.has(method) && methods.length) {
+            method = Number(methods[0].id);
+        }
+        saveDonateMethod(method);
         const tiers = donateCatalog.tiers || [];
         const packs = donateCatalog.coin_packs || [];
         if (box) {
@@ -193,7 +223,7 @@ function renderDonateMethods() {
 }
 
 function onDonateMethodChange(input) {
-    selectedDonateMethod = Number(input.value);
+    saveDonateMethod(input.value);
     document.querySelectorAll('.donate-method-option').forEach(el => {
         el.classList.toggle('is-active', !!el.querySelector('input')?.checked);
     });
@@ -365,7 +395,7 @@ async function startDonationCheckout() {
     formData.append('product_type', isCoins ? 'coins' : 'tier');
     formData.append('tier_id', String(selectedDonateTierId || 0));
     formData.append('pack_id', String(selectedDonatePackId || 0));
-    formData.append('payment_method', String(selectedDonateMethod || 2));
+    formData.append('payment_method', String(normalizeDonateMethod(selectedDonateMethod || 2)));
     formData.append('contact', document.getElementById('donateContact')?.value.trim() || '');
 
     if (btn) {

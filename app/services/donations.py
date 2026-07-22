@@ -147,18 +147,17 @@ PAYMENT_METHODS = [
         "icon": "/static/payment/sbp.png",
     },
     {
-        "id": 10,
+        "id": 11,
         "label": "МИР",
-        "hint": "Карта МИР",
+        "hint": "Карта МИР / RUB",
         "icon": "/static/payment/mir.png",
     },
-    {
-        "id": 12,
-        "label": "Visa / Mastercard",
-        "hint": "Банковская карта",
-        "icon": "/static/payment/card-intl.svg",
-    },
 ]
+
+# Старые id из UI/доков → актуальные коды Platega
+_PLATEGA_METHOD_ALIASES = {
+    10: 11,  # устаревший CardRu → карточный эквайринг
+}
 
 
 def platega_configured() -> bool:
@@ -251,8 +250,13 @@ async def create_platega_transaction(
 ) -> dict:
     """POST /transaction/process → redirect URL."""
     method = int(payment_method or PLATEGA_DEFAULT_METHOD or 2)
-    if method not in {m["id"] for m in PAYMENT_METHODS}:
+    method = int(_PLATEGA_METHOD_ALIASES.get(method, method))
+    allowed = {m["id"] for m in PAYMENT_METHODS}
+    if method not in allowed:
         method = int(PLATEGA_DEFAULT_METHOD or 2)
+        method = int(_PLATEGA_METHOD_ALIASES.get(method, method))
+        if method not in allowed:
+            method = 2
     return_url = f"{SITE_PUBLIC_URL}/donate?order={transaction_id}&paid=1&result=success"
     fail_url = f"{SITE_PUBLIC_URL}/donate?order={transaction_id}&paid=0&result=fail"
     body = {
@@ -279,9 +283,16 @@ async def create_platega_transaction(
                 raise ValueError(msg or f"Platega ошибка ({resp.status})")
             if not isinstance(data, dict):
                 raise ValueError("Некорректный ответ Platega")
-            redirect = data.get("redirect") or data.get("Redirect")
+            redirect = (
+                data.get("redirect")
+                or data.get("Redirect")
+                or data.get("url")
+                or data.get("Url")
+            )
             if not redirect:
                 raise ValueError("Platega не вернула ссылку на оплату")
+            data["redirect"] = redirect
+            data["_paymentMethodSent"] = method
             return data
 
 
@@ -360,8 +371,12 @@ async def create_payment(
 
     mode = payment_mode()
     method = int(payment_method or PLATEGA_DEFAULT_METHOD or 2)
+    method = int(_PLATEGA_METHOD_ALIASES.get(method, method))
     if method not in {m["id"] for m in PAYMENT_METHODS}:
         method = int(PLATEGA_DEFAULT_METHOD or 2)
+        method = int(_PLATEGA_METHOD_ALIASES.get(method, method))
+        if method not in {m["id"] for m in PAYMENT_METHODS}:
+            method = 2
 
     prepared = _prepare_product(
         product_type=product_type,

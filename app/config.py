@@ -79,7 +79,7 @@ SITE_PUBLIC_URL = os.getenv("SITE_PUBLIC_URL", "https://ministation.ru").rstrip(
 PLATEGA_MERCHANT_ID = os.getenv("PLATEGA_MERCHANT_ID", "")
 PLATEGA_SECRET = os.getenv("PLATEGA_SECRET", "")
 PLATEGA_API_BASE = os.getenv("PLATEGA_API_BASE", "https://app.platega.io").rstrip("/")
-PLATEGA_DEFAULT_METHOD = int(os.getenv("PLATEGA_DEFAULT_METHOD", "2"))  # 2 = СБП/QR
+PLATEGA_DEFAULT_METHOD = int(os.getenv("PLATEGA_DEFAULT_METHOD", "2"))  # 2 = СБП/QR, 11 = карты МИР/RUB
 
 # Robokassa (ЛК → Технические настройки)
 ROBOKASSA_LOGIN = os.getenv("ROBOKASSA_LOGIN", "").strip()
