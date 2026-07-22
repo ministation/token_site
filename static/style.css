@@ -5798,6 +5798,8 @@ label.chat-tool-btn input[type="file"] {
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
+    margin: 0 0 12px;
+    align-items: stretch;
 }
 .donate-tab {
     min-height: 44px;
@@ -5809,6 +5811,10 @@ label.chat-tool-btn input[type="file"] {
     font-weight: 700;
     cursor: pointer;
     box-shadow: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.2;
 }
 .donate-tab:hover { transform: none; border-color: var(--accent); }
 .donate-tab.active {
@@ -5825,7 +5831,11 @@ label.chat-tool-btn input[type="file"] {
     min-width: 0;
     width: 100%;
 }
-.donate-catalog { min-width: 0; }
+.donate-catalog {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
 .donate-tiers,
 .donate-coin-packs {
     display: grid;

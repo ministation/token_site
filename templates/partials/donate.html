@@ -38,15 +38,14 @@
     </div>
 
     <div id="donateShopMain">
-        <div class="donate-tabs" role="tablist" aria-label="Тип покупки">
-            <button type="button" class="donate-tab active" role="tab" aria-selected="true"
-                data-tab="tiers" id="donateTabTiers" onclick="switchDonateTab('tiers')">Подписки</button>
-            <button type="button" class="donate-tab" role="tab" aria-selected="false"
-                data-tab="coins" id="donateTabCoins" onclick="switchDonateTab('coins')">Монетки</button>
-        </div>
-
         <div class="donate-shell">
             <section class="donate-catalog" aria-label="Каталог">
+                <div class="donate-tabs" role="tablist" aria-label="Тип покупки">
+                    <button type="button" class="donate-tab active" role="tab" aria-selected="true"
+                        data-tab="tiers" id="donateTabTiers" onclick="switchDonateTab('tiers')">Подписки</button>
+                    <button type="button" class="donate-tab" role="tab" aria-selected="false"
+                        data-tab="coins" id="donateTabCoins" onclick="switchDonateTab('coins')">Монетки</button>
+                </div>
                 <div class="donate-tiers" id="donateTiers" data-panel="tiers">
                     <p class="empty-state">Загрузка тарифов...</p>
                 </div>
