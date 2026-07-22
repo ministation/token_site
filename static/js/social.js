@@ -2,9 +2,9 @@ let currentForumCategory = 'news';
 let currentForumTopic = '';
 
 const FORUM_HINTS = {
-    news: 'Официальные новости проекта — публикуют администраторы, читать могут все',
-    forum: 'Общие темы, вопросы и обсуждения сообщества',
-    discussion: 'Обсуждения по конкретным темам — выберите категорию ниже',
+    news: 'Новости проекта от администрации',
+    forum: 'Общие темы и вопросы сообщества',
+    discussion: 'Обсуждения по выбранной теме',
 };
 
 document.addEventListener('change', function(e) {
@@ -157,9 +157,9 @@ function forumEmptyMessage() {
         return 'В этой теме пока нет обсуждений';
     }
     if (currentForumCategory === 'discussion') {
-        return 'Обсуждений пока нет — начните первым';
+        return 'Обсуждений пока нет';
     }
-    return 'Записей пока нет — будьте первым';
+    return 'Записей пока нет';
 }
 
 function renderPosts(posts, containerId) {

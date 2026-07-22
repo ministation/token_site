@@ -12,10 +12,18 @@
     overflow: hidden;
 }
 
-/* Чат по высоте = боковая панель (навигация + ссылки) */
+body.section-chat,
+body.section-messages {
+    overflow: hidden;
+}
 body.section-chat .layout,
 body.section-messages .layout {
     align-items: stretch;
+    padding-bottom: 16px;
+}
+body.section-chat .site-footer,
+body.section-messages .site-footer {
+    display: none;
 }
 
 body.section-chat .content,
@@ -39,7 +47,7 @@ body.section-messages #messagesSection.active {
 body.section-chat .dc-shell,
 body.section-messages .messages-page.dc-shell {
     flex: 1 1 auto;
-    /* высоту выставляет syncPanelHeightToSidebar() = низ блока «Ссылки» */
+    /* высота = видимая область под шапкой (syncPanelHeightToSidebar) */
     max-height: none !important;
     min-height: 0 !important;
 }

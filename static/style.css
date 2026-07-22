@@ -5509,11 +5509,18 @@ label.chat-tool-btn input[type="file"] {
     align-items: center;
     justify-content: center;
     padding: 20px 16px 12px;
+    min-height: 112px;
     background:
         radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 65%),
         var(--panel-2);
 }
-.donate-pack-coin-art {
+.donate-pack-pile {
+    position: relative;
+    width: 96px;
+    height: 80px;
+}
+.donate-pack-coin-art,
+.donate-pack-pile .pile-coin {
     width: 72px;
     height: 72px;
     object-fit: contain;
@@ -5521,9 +5528,36 @@ label.chat-tool-btn input[type="file"] {
     filter: drop-shadow(0 6px 10px color-mix(in srgb, var(--ink) 18%, transparent));
     transition: transform 0.2s ease;
 }
+.donate-pack-pile .pile-coin {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    margin: 0;
+    transform: translate(-50%, -50%);
+}
+.donate-pack-pile--2 .pile-coin--0 { transform: translate(-68%, -42%) rotate(-12deg); }
+.donate-pack-pile--2 .pile-coin--1 { transform: translate(-32%, -52%) rotate(10deg); z-index: 2; }
+.donate-pack-pile--3 .pile-coin--0 { transform: translate(-78%, -38%) rotate(-16deg); }
+.donate-pack-pile--3 .pile-coin--1 { transform: translate(-22%, -36%) rotate(14deg); }
+.donate-pack-pile--3 .pile-coin--2 { transform: translate(-50%, -58%) rotate(-4deg); z-index: 2; }
+.donate-pack-pile--4 .pile-coin--0 { transform: translate(-82%, -30%) rotate(-18deg); }
+.donate-pack-pile--4 .pile-coin--1 { transform: translate(-18%, -28%) rotate(16deg); }
+.donate-pack-pile--4 .pile-coin--2 { transform: translate(-66%, -52%) rotate(-8deg); z-index: 2; }
+.donate-pack-pile--4 .pile-coin--3 { transform: translate(-34%, -56%) rotate(8deg); z-index: 3; }
+.donate-pack-pile--5 .pile-coin--0 { transform: translate(-86%, -24%) rotate(-20deg); }
+.donate-pack-pile--5 .pile-coin--1 { transform: translate(-14%, -22%) rotate(18deg); }
+.donate-pack-pile--5 .pile-coin--2 { transform: translate(-72%, -48%) rotate(-10deg); z-index: 2; }
+.donate-pack-pile--5 .pile-coin--3 { transform: translate(-28%, -50%) rotate(12deg); z-index: 2; }
+.donate-pack-pile--5 .pile-coin--4 { transform: translate(-50%, -62%) rotate(-2deg); z-index: 3; }
 .donate-pack-card:hover .donate-pack-coin-art,
-.donate-pack-card.active .donate-pack-coin-art {
-    transform: translateY(-2px) scale(1.04);
+.donate-pack-card.active .donate-pack-coin-art,
+.donate-pack-card:hover .pile-coin,
+.donate-pack-card.active .pile-coin {
+    filter: drop-shadow(0 8px 12px color-mix(in srgb, var(--ink) 22%, transparent));
+}
+.donate-pack-card:hover .donate-pack-pile--1 .pile-coin,
+.donate-pack-card.active .donate-pack-pile--1 .pile-coin {
+    transform: translate(-50%, -54%) scale(1.04);
 }
 .donate-pack-body {
     display: flex;
@@ -5563,13 +5597,7 @@ label.chat-tool-btn input[type="file"] {
     color: var(--accent-deep);
     font-family: var(--font-body);
 }
-.donate-pack-unit {
-    font-size: 0.82rem;
-    color: var(--muted);
-    padding: 3px 10px;
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--ink) 5%, transparent);
-}
+.donate-pack-unit { display: none; }
 
 .donate-checkout {
     position: sticky;
@@ -5674,10 +5702,13 @@ label.chat-tool-btn input[type="file"] {
 .donate-method-icon {
     width: 72px;
     max-width: 100%;
-    height: 32px;
+    height: 36px;
     object-fit: contain;
     object-position: center;
-    background: transparent;
+    background: #fff;
+    border-radius: 6px;
+    padding: 2px 4px;
+    box-sizing: border-box;
 }
 .donate-method-text {
     min-width: 0;
@@ -5708,21 +5739,28 @@ label.chat-tool-btn input[type="file"] {
 }
 .donate-pay-btn {
     width: 100%;
-    min-height: 48px;
-    border: none;
-    border-radius: 10px;
+    min-height: 56px;
+    margin-top: 4px;
+    border: 3px solid var(--accent-deep);
+    border-radius: 12px;
     background: var(--accent);
     color: #fff;
-    font-weight: 700;
+    font-family: var(--font-body);
+    font-size: 1.05rem;
+    font-weight: 800;
+    letter-spacing: 0.01em;
     cursor: pointer;
+    box-shadow: 0 4px 0 var(--accent-deep), 0 8px 18px color-mix(in srgb, var(--accent) 35%, transparent);
 }
 .donate-pay-btn:hover:not(:disabled) {
     background: var(--accent-deep);
-    transform: none;
+    transform: translateY(1px);
+    box-shadow: 0 3px 0 color-mix(in srgb, var(--accent-deep) 80%, #000), 0 6px 14px color-mix(in srgb, var(--accent) 30%, transparent);
 }
 .donate-pay-btn:disabled {
-    opacity: 0.55;
+    opacity: 0.45;
     cursor: not-allowed;
+    box-shadow: none;
 }
 .donate-hint {
     margin: 10px 0 0;
@@ -5734,6 +5772,25 @@ label.chat-tool-btn input[type="file"] {
     margin: 14px 0 0;
     font-size: 0.85rem;
     color: var(--muted);
+}
+
+.donate-standalone .layout {
+    position: relative;
+    z-index: 1;
+}
+.donate-standalone .sidebar {
+    position: relative;
+    z-index: 5;
+}
+.donate-standalone .sidebar .side-link {
+    pointer-events: auto;
+    font-family: var(--font-body);
+    font-size: 0.92rem;
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--ink);
+    opacity: 1;
 }
 
 @media (max-width: 900px) {

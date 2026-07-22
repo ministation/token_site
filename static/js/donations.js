@@ -55,10 +55,6 @@ async function loadDonateCatalog() {
                 : '<p class="empty-state">Пакеты недоступны</p>';
         }
         renderDonateMethods();
-        const hint = document.getElementById('donateHint');
-        if (hint && !donateCatalog.configured) {
-            hint.textContent = 'Оплата временно недоступна. Можете выбрать тариф — платёж заработает после подключения приёма платежей.';
-        }
         switchDonateTab(donateActiveTab);
         updateDonateCheckoutUI();
     } catch (e) {
@@ -68,7 +64,7 @@ async function loadDonateCatalog() {
 
 function renderDonateTierCard(t) {
     const coinLine = t.coins
-        ? `<li class="donate-perk-coins"><span>+${t.coins}</span> ${COIN_IMG} <span class="donate-perk-period">в месяц</span></li>`
+        ? `<li class="donate-perk-coins"><span>${t.coins}</span> ${COIN_IMG} <span class="donate-perk-period">в месяц</span></li>`
         : '';
     const perks = (t.perks || []).map(p => `<li><span>${escapeHtml(p)}</span></li>`).join('');
     const active = selectedDonateTierId === t.id ? ' active' : '';
@@ -93,6 +89,22 @@ function renderDonateTierCard(t) {
         </article>`;
 }
 
+function packPileCount(coins) {
+    if (coins >= 250) return 5;
+    if (coins >= 150) return 4;
+    if (coins >= 80) return 3;
+    if (coins >= 40) return 2;
+    return 1;
+}
+
+function renderPackCoinPile(coins) {
+    const n = packPileCount(coins);
+    const imgs = Array.from({ length: n }, (_, i) =>
+        `<img src="/static/coin.png" alt="" class="donate-pack-coin-art pile-coin pile-coin--${i}" width="72" height="72">`
+    ).join('');
+    return `<div class="donate-pack-pile donate-pack-pile--${n}" aria-hidden="true">${imgs}</div>`;
+}
+
 function renderDonatePackCard(p) {
     const active = selectedDonatePackId === p.id ? ' active' : '';
     const featured = p.featured ? ' featured' : '';
@@ -101,17 +113,16 @@ function renderDonatePackCard(p) {
         <article class="donate-pack-card${active}${featured}" data-pack="${p.id}">
             ${badge}
             <button type="button" class="donate-pack-select" onclick="selectDonatePack(${p.id})" aria-pressed="${active ? 'true' : 'false'}">
-                <div class="donate-pack-visual" aria-hidden="true">
-                    <img src="/static/coin.png" alt="" class="donate-pack-coin-art" width="72" height="72">
+                <div class="donate-pack-visual">
+                    ${renderPackCoinPile(p.coins)}
                 </div>
                 <div class="donate-pack-body">
                     <div class="donate-pack-name">${escapeHtml(p.name)}</div>
                     <div class="donate-pack-amount">
-                        <span class="donate-pack-coins">+${p.coins}</span>
+                        <span class="donate-pack-coins">${p.coins}</span>
                         <img src="/static/coin.png" class="coin-icon-result donate-coin-inline" alt="">
                     </div>
                     <div class="donate-pack-price">${escapeHtml(p.price_label)}</div>
-                    <div class="donate-pack-unit">${escapeHtml(p.unit_label)}</div>
                 </div>
             </button>
         </article>`;
@@ -127,8 +138,8 @@ function renderDonateMethods() {
                 ${Number(m.id) === Number(selectedDonateMethod) ? 'checked' : ''}
                 onchange="onDonateMethodChange(this)">
             <span class="donate-method-icon-wrap">
-                <img class="donate-method-icon" src="${escapeHtml(m.icon || '')}" alt=""
-                    onerror="this.style.display='none'">
+                <img class="donate-method-icon" src="${escapeHtml(m.icon || '')}" alt="${escapeHtml(m.label || '')}"
+                    loading="lazy" onerror="this.onerror=null;this.src='/static/payment/card-intl.svg'">
             </span>
             <span class="donate-method-text">
                 <strong>${escapeHtml(m.label)}</strong>
@@ -228,8 +239,8 @@ function updateDonateCheckoutUI() {
             icon.src = '/static/coin.png';
             icon.alt = 'Монетки';
         }
-        if (name) name.textContent = `${pack.name} · +${pack.coins}`;
-        if (price) price.textContent = `${pack.price_label} · ${pack.unit_label}`;
+        if (name) name.textContent = `${pack.name}: ${pack.coins}`;
+        if (price) price.textContent = pack.price_label;
     }
 
     const contact = document.getElementById('donateContact');
@@ -255,7 +266,7 @@ async function startDonationCheckout() {
     if (donateCatalog && !donateCatalog.configured) {
         if (result) {
             result.className = 'result error';
-            result.textContent = 'Оплата временно недоступна. Попробуйте позже или напишите в обращения.';
+            result.textContent = 'Оплата сейчас недоступна. Напишите в обращения.';
         }
         return;
     }
@@ -297,7 +308,7 @@ async function startDonationCheckout() {
     } finally {
         if (btn) {
             btn.disabled = !(selectedDonateTierId || selectedDonatePackId);
-            btn.innerHTML = '<i class="fa-solid fa-credit-card"></i> Перейти к оплате';
+            btn.innerHTML = '<i class="fa-solid fa-credit-card"></i> Купить';
         }
     }
 }
@@ -323,21 +334,21 @@ async function handleDonateReturnQuery() {
             banner.classList.add('ok');
             if ((data.product_type || '') === 'coins') {
                 banner.textContent = data.fulfilled
-                    ? `Оплата получена: +${data.coins_amount || ''} монет зачислено. Спасибо!`
-                    : `Оплата получена: ${data.tier_name || 'монетки'} · ${data.amount_rub || ''} ₽. Зачисление уточняется.`;
+                    ? `Оплата получена: ${data.coins_amount || ''} монет зачислено.`
+                    : `Оплата получена (${data.amount_rub || ''} ₽). Монеты зачислятся чуть позже.`;
             } else {
-                banner.textContent = `Оплата получена: ${data.tier_name || 'тариф'} · ${data.amount_rub || ''} ₽. Спасибо! Привилегии выдаст администрация.`;
+                banner.textContent = `Оплата получена: ${data.tier_name || 'тариф'} (${data.amount_rub || ''} ₽). Привилегии выдаст администрация.`;
             }
         } else if (st === 'canceled' || result === 'fail') {
             banner.classList.add('fail');
-            banner.textContent = 'Оплата не завершена. Можно выбрать товар и попробовать снова.';
+            banner.textContent = 'Оплата не завершена. Попробуйте снова.';
         } else {
-            banner.textContent = `Платёж в обработке (${st || 'pending'}). Обновите страницу через минуту.`;
+            banner.textContent = 'Платёж в обработке. Обновите страницу через минуту.';
         }
     } catch {
         banner.classList.add('fail');
         banner.textContent = result === 'success'
-            ? 'Вернулись после оплаты — статус уточняется. Напишите в поддержку, если привилегии не появились.'
+            ? 'Оплата принята. Если привилегии не появились, напишите в поддержку.'
             : 'Не удалось проверить статус заказа.';
     }
 }

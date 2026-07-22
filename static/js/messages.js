@@ -12,7 +12,7 @@ async function loadDialogs() {
     try {
         const dialogs = await apiCall('GET', '/api/messages/dialogs');
         if (!dialogs.length) {
-            container.innerHTML = '<p class="empty-state">Нет диалогов — найдите игрока слева</p>';
+            container.innerHTML = '<p class="empty-state">Нет диалогов. Найдите игрока слева.</p>';
             return;
         }
         container.innerHTML = dialogs.map(d => `

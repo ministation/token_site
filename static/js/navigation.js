@@ -196,16 +196,17 @@ function showSection(sectionId) {
 
 function syncPanelHeightToSidebar(sectionId) {
     if (window.matchMedia('(max-width: 900px)').matches) return;
-    const sidebar = document.getElementById('mainNav');
-    if (!sidebar) return;
     const shell = sectionId === 'messages'
         ? document.querySelector('#messagesSection .dc-shell')
         : document.querySelector('#chatSection .dc-shell');
     if (!shell) return;
-    const h = Math.round(sidebar.getBoundingClientRect().height);
-    if (h < 200) return;
+    const topbar = document.querySelector('.topbar');
+    const top = topbar ? Math.ceil(topbar.getBoundingClientRect().bottom) : 0;
+    const footerGap = 16;
+    const available = Math.floor(window.innerHeight - top - footerGap);
+    const h = Math.max(360, available);
     shell.style.height = `${h}px`;
-    shell.style.maxHeight = 'none';
+    shell.style.maxHeight = `${h}px`;
     shell.style.minHeight = '0';
 }
 
