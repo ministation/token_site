@@ -14,6 +14,7 @@ from app.config import (
     MANUAL_SBP_ENABLED,
     PLATEGA_API_BASE,
     PLATEGA_DEFAULT_METHOD,
+    PLATEGA_ENABLED,
     PLATEGA_MERCHANT_ID,
     PLATEGA_SECRET,
     SBP_PAY_LINK,
@@ -161,7 +162,7 @@ _PLATEGA_METHOD_ALIASES = {
 
 
 def platega_configured() -> bool:
-    return bool(PLATEGA_MERCHANT_ID and PLATEGA_SECRET)
+    return bool(PLATEGA_ENABLED and PLATEGA_MERCHANT_ID and PLATEGA_SECRET)
 
 
 def robokassa_configured() -> bool:
@@ -173,7 +174,7 @@ def payments_available() -> bool:
 
 
 def payment_mode() -> str:
-    # Приоритет: Platega → Robokassa → ручной СБП
+    # Platega только при PLATEGA_ENABLED=1; иначе Robokassa → ручной СБП
     if platega_configured():
         return "platega"
     if robokassa_configured():

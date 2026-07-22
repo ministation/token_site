@@ -76,6 +76,8 @@ SELLER_STATUS = os.getenv("SELLER_STATUS", "Самозанятый")
 SITE_PUBLIC_URL = os.getenv("SITE_PUBLIC_URL", "https://ministation.ru").rstrip("/")
 
 # Platega.io — ключи выдаёт менеджер / ЛК «Настройки»
+# По умолчанию выключена (сомнительный провайдер); код/callback остаются на случай включения.
+PLATEGA_ENABLED = os.getenv("PLATEGA_ENABLED", "0").strip().lower() in ("1", "true", "yes")
 PLATEGA_MERCHANT_ID = os.getenv("PLATEGA_MERCHANT_ID", "")
 PLATEGA_SECRET = os.getenv("PLATEGA_SECRET", "")
 PLATEGA_API_BASE = os.getenv("PLATEGA_API_BASE", "https://app.platega.io").rstrip("/")
