@@ -139,7 +139,7 @@ function renderDonateMethods() {
                 onchange="onDonateMethodChange(this)">
             <span class="donate-method-icon-wrap">
                 <img class="donate-method-icon" src="${escapeHtml(m.icon || '')}" alt="${escapeHtml(m.label || '')}"
-                    loading="lazy" onerror="this.onerror=null;this.src='/static/payment/card-intl.svg'">
+                    loading="lazy">
             </span>
             <span class="donate-method-text">
                 <strong>${escapeHtml(m.label)}</strong>

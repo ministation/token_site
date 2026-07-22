@@ -45,8 +45,18 @@
             <div class="side-group">
                 <div class="side-group-title"><i class="fa-solid fa-compass"></i> Навигация</div>
                 <a class="side-link" href="/"><i class="fa-solid fa-house"></i> На главную</a>
-                <a class="side-link" href="/" onclick="location.href='/#/pricing'; return false;"><i class="fa-solid fa-tags"></i> Цены</a>
-                <a class="side-link" href="/" onclick="location.href='/#/support'; return false;"><i class="fa-solid fa-life-ring"></i> Обращения</a>
+                <button type="button" class="side-link donate-nav-btn active" data-donate-panel="shop"
+                    onclick="showDonatePanel('shop', this)">
+                    <i class="fa-solid fa-heart"></i> Покупка
+                </button>
+                <button type="button" class="side-link donate-nav-btn" data-donate-panel="pricing"
+                    onclick="showDonatePanel('pricing', this)">
+                    <i class="fa-solid fa-tags"></i> Цены
+                </button>
+                <button type="button" class="side-link donate-nav-btn" data-donate-panel="support"
+                    onclick="showDonatePanel('support', this)">
+                    <i class="fa-solid fa-life-ring"></i> Обращения
+                </button>
             </div>
             <div class="side-group">
                 <div class="side-group-title"><i class="fa-solid fa-link"></i> Ссылки</div>
@@ -58,7 +68,15 @@
         </aside>
 
         <main class="content">
-            {% include 'partials/donate.html' %}
+            <div id="donatePanelShop" class="donate-panel active">
+                {% include 'partials/donate.html' %}
+            </div>
+            <div id="donatePanelPricing" class="donate-panel" hidden>
+                {% include 'partials/pricing.html' %}
+            </div>
+            <div id="donatePanelSupport" class="donate-panel" hidden>
+                {% include 'partials/support.html' %}
+            </div>
         </main>
     </div>
 
@@ -71,16 +89,48 @@
             <nav class="site-footer-nav" aria-label="Правовая информация">
                 <a href="/#/privacy">Политика конфиденциальности</a>
                 <a href="/#/terms">Пользовательское соглашение</a>
-                <a href="/donate">Поддержка</a>
-                <a href="/" onclick="location.href='/#/pricing'; return false;">Цены и тарифы</a>
-                <a href="/" onclick="location.href='/#/support'; return false;">Обращения</a>
+                <a href="/donate" onclick="showDonatePanel('shop'); return false;">Поддержка</a>
+                <a href="/donate" onclick="showDonatePanel('pricing'); return false;">Цены и тарифы</a>
+                <a href="/donate" onclick="showDonatePanel('support'); return false;">Обращения</a>
             </nav>
         </div>
     </footer>
 
     <script src="/static/js/common.js"></script>
     <script src="/static/js/donations.js"></script>
+    <script src="/static/js/support.js"></script>
     <script>
+        function showDonatePanel(name, btn) {
+            const map = {
+                shop: 'donatePanelShop',
+                pricing: 'donatePanelPricing',
+                support: 'donatePanelSupport',
+            };
+            const key = map[name] ? name : 'shop';
+            Object.entries(map).forEach(([panel, id]) => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                const on = panel === key;
+                el.hidden = !on;
+                el.classList.toggle('active', on);
+            });
+            document.querySelectorAll('.donate-nav-btn').forEach(el => {
+                const on = el.dataset.donatePanel === key;
+                el.classList.toggle('active', on);
+            });
+            if (btn) btn.classList.add('active');
+            if (key === 'support' && typeof initSupportSection === 'function') {
+                initSupportSection();
+            }
+            if (key === 'shop' && typeof initDonateSection === 'function' && !donateCatalog) {
+                initDonateSection();
+            }
+            try {
+                history.replaceState(null, '', key === 'shop' ? '/donate' : `/donate#${key}`);
+            } catch (e) {}
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
         async function checkDonateAuth() {
             try {
                 const res = await fetch('/api/me');
@@ -101,7 +151,13 @@
 
         document.addEventListener('DOMContentLoaded', async () => {
             await checkDonateAuth();
-            if (typeof initDonateSection === 'function') initDonateSection();
+            const hash = (location.hash || '').replace(/^#/, '');
+            if (hash === 'pricing' || hash === 'support') {
+                showDonatePanel(hash);
+            } else {
+                showDonatePanel('shop');
+                if (typeof initDonateSection === 'function') initDonateSection();
+            }
         });
     </script>
 </body>

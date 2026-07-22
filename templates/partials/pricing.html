@@ -1,7 +1,7 @@
 <div class="card legal-card">
     <h2><i class="fa-solid fa-tags"></i> Цены и тарифы</h2>
     <p class="legal-updated">
-        Оплата на странице <a href="/donate">Поддержка</a>.
+        Оплата на странице <a href="/donate" onclick="if (typeof showDonatePanel === 'function') { showDonatePanel('shop'); return false; }">Поддержка</a>.
         Сайт и игра бесплатны, подписка добровольная.
     </p>
 
@@ -104,8 +104,8 @@
 
     <div class="pricing-fineprint legal-prose">
         <p>Цены в рублях. Оплата на сайте (СБП / карта). Альтернатива: <a href="https://boosty.to/mini-station/" target="_blank" rel="noopener">Boosty</a>.</p>
-        <p>Пакеты монет и подписки на <a href="/donate">странице поддержки</a>.</p>
-        <p>Подписка не освобождает от правил сервера. Возвраты по <a href="#/terms">Пользовательскому соглашению</a>.</p>
-        <p>Вопросы по оплате: <a href="#/support">Обращения</a>.</p>
+        <p>Пакеты монет и подписки на <a href="/donate" onclick="if (typeof showDonatePanel === 'function') { showDonatePanel('shop'); return false; }">странице поддержки</a>.</p>
+        <p>Подписка не освобождает от правил сервера. Возвраты по <a href="/#/terms">Пользовательскому соглашению</a>.</p>
+        <p>Вопросы по оплате: <a href="/donate#support" onclick="if (typeof showDonatePanel === 'function') { showDonatePanel('support'); return false; }">Обращения</a>.</p>
     </div>
 </div>

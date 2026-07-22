@@ -1,6 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 40" role="img" aria-label="MIR">
   <rect width="72" height="40" rx="6" fill="#0B5C3B"/>
-  <text x="10" y="26" fill="#fff" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="700">МИР</text>
-  <path fill="#00A0E3" d="M48 10h14c0 7.7-6.3 14-14 14V10z"/>
-  <path fill="#4DBB3A" d="M48 10c0 7.7 6.3 14 14 14v-7c-3.9 0-7-3.1-7-7H48z"/>
+  <!-- MIR wordmark as paths (no text glyphs) -->
+  <path fill="#fff" d="M8 28V12h3.4l3.2 10.2L18 12h3.4v16H18V16.2L14.9 28h-2.2L9.6 16.2V28H8z"/>
+  <path fill="#fff" d="M24.2 28V12h8.6v2.8h-5.2v3.4h4.6v2.7h-4.6V25h5.4V28h-8.8z"/>
+  <path fill="#fff" d="M35.2 28V12h3.2v13h5.2V28h-8.4z"/>
+  <path fill="#00A0E3" d="M52 10h12c0 6.6-5.4 12-12 12V10z"/>
+  <path fill="#4DBB3A" d="M52 10c0 6.6 5.4 12 12 12v-6c-3.3 0-6-2.7-6-6H52z"/>
 </svg>
