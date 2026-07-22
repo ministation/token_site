@@ -106,8 +106,9 @@ async def shutdown():
 
 @app.get("/")
 async def index(request: Request):
+    from app.seo import home_social_meta
     template = env.get_template("index.html")
-    return HTMLResponse(template.render({"request": request}))
+    return HTMLResponse(template.render({"request": request, **home_social_meta(request)}))
 
 
 app.include_router(auth.router)

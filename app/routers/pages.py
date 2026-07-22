@@ -8,9 +8,10 @@ router = APIRouter(tags=["pages"])
 
 @router.get("/donate")
 async def donate_page(request: Request):
+    from app.seo import donate_social_meta
     env = request.app.state.templates_env
     template = env.get_template("donate_page.html")
-    return HTMLResponse(template.render({"request": request}))
+    return HTMLResponse(template.render({"request": request, **donate_social_meta(request)}))
 
 
 @router.get("/profile/{player_id}")
