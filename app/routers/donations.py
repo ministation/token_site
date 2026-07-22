@@ -14,14 +14,22 @@ router = APIRouter(prefix="/api/donations", tags=["donations"])
 
 
 @router.get("/catalog")
-async def donation_catalog():
-    return donations_svc.catalog_payload()
+async def donation_catalog(request: Request):
+    user = await get_optional_social_user(request)
+    return donations_svc.catalog_payload(
+        for_player_id=user.get("social_id") if user else None,
+        for_discord_id=user.get("discord_id") if user else None,
+    )
 
 
 @router.get("/promo")
-async def donation_promo():
+async def donation_promo(request: Request):
     """Лёгкий endpoint для бейджа скидки на главной / в меню."""
-    promo = donations_svc.active_promo_summary()
+    user = await get_optional_social_user(request)
+    promo = donations_svc.active_promo_summary(
+        for_player_id=user.get("social_id") if user else None,
+        for_discord_id=user.get("discord_id") if user else None,
+    )
     return promo or {"has_sale": False}
 
 
@@ -286,14 +294,57 @@ def _parse_ends_at(raw: str) -> str:
 
 @router.get("/discounts")
 async def list_discounts(request: Request, all: int = 0):
-    """Публично — только активные; админ с all=1 — полный список."""
+    """Публично — активные (свои личные + публичные); админ с all=1 — полный список."""
     user = await get_optional_social_user(request)
     is_admin = bool(user and user.get("is_admin"))
     if all and is_admin:
         rows = social_db.list_donation_discounts(include_inactive=True)
     else:
-        rows = social_db.get_active_donation_discounts()
+        rows = social_db.get_active_donation_discounts(
+            for_player_id=user.get("social_id") if user else None,
+            for_discord_id=user.get("discord_id") if user else None,
+        )
     return [donations_svc.serialize_discount(r) for r in rows]
+
+
+def _resolve_discount_beneficiary(player_id: str = "", discord_id: str = "", query: str = "") -> dict:
+    """Находит игрока сайта для личной скидки."""
+    pid = (player_id or "").strip()
+    did = (discord_id or "").strip()
+    q = (query or "").strip()
+    user = None
+    if pid:
+        user = social_db.get_social_user_by_player_id(pid)
+    if not user and did:
+        user = social_db.get_social_user_by_discord_id(did)
+    if not user and q:
+        user = social_db.get_social_user_by_discord_username(q)
+        if not user:
+            # точный discord_id в строке поиска
+            if q.isdigit():
+                user = social_db.get_social_user_by_discord_id(q)
+        if not user:
+            user = social_db.get_social_user_by_player_id(q)
+        if not user:
+            matches = social_db.list_all_social_users(q, limit=5, offset=0)
+            if len(matches) == 1:
+                user = matches[0]
+            elif len(matches) > 1:
+                raise ValueError("Найдено несколько игроков — уточните ник Discord или выберите из поиска")
+    if not user:
+        raise ValueError("Игрок не найден. Он должен хотя бы раз войти на сайт через Discord.")
+    return user
+
+
+def _discount_scope_label(scope: str, target_id: int | None) -> str:
+    labels = {
+        "all": "все товары доната",
+        "tiers": "все подписки",
+        "coins": "все пакеты монет",
+        "tier": f"подписка #{target_id}",
+        "pack": f"пакет монет #{target_id}",
+    }
+    return labels.get(scope, scope)
 
 
 @router.post("/discounts")
@@ -306,6 +357,11 @@ async def create_discount(
     badge_text: str = Form(""),
     starts_at: str = Form(""),
     ends_at: str = Form(...),
+    personal: int = Form(0),
+    beneficiary_player_id: str = Form(""),
+    beneficiary_discord_id: str = Form(""),
+    beneficiary_query: str = Form(""),
+    notify: int = Form(1),
 ):
     admin = await get_current_admin(request)
     title = (title or "").strip()[:120]
@@ -329,17 +385,76 @@ async def create_discount(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     badge = (badge_text or "").strip()[:32] or None
+
+    bp = None
+    bd = None
+    beneficiary = None
+    is_personal = bool(int(personal or 0)) or bool(
+        (beneficiary_player_id or "").strip()
+        or (beneficiary_discord_id or "").strip()
+        or (beneficiary_query or "").strip()
+    )
+    if is_personal:
+        try:
+            beneficiary = _resolve_discount_beneficiary(
+                player_id=beneficiary_player_id,
+                discord_id=beneficiary_discord_id,
+                query=beneficiary_query,
+            )
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        bp = beneficiary.get("player_id")
+        bd = str(beneficiary.get("discord_id") or "") or None
+        if not badge:
+            badge = f"PERSONAL −{percent}%"
+
     row = social_db.create_donation_discount(
         title=title,
         percent=percent,
         scope=scope,
         target_id=tid,
         badge_text=badge,
+        beneficiary_player_id=bp,
+        beneficiary_discord_id=bd,
         starts_at=starts,
         ends_at=ends,
         created_by=str(admin.get("username") or admin.get("discord_id") or "admin"),
     )
-    return {"ok": True, "discount": donations_svc.serialize_discount(row)}
+
+    notify_ok = False
+    notify_error = None
+    if is_personal and int(notify or 0) and bp:
+        try:
+            from app.services.messages import send_pm
+            from app.config import SITE_PUBLIC_URL
+
+            admin_social = social_db.get_social_user_by_discord_id(str(admin.get("discord_id") or ""))
+            if not admin_social:
+                raise ValueError("У админа нет профиля на сайте — перезайдите через Discord")
+            nick = (
+                (beneficiary or {}).get("game_nickname")
+                or (beneficiary or {}).get("discord_username")
+                or "друг"
+            )
+            scope_label = _discount_scope_label(scope, tid)
+            msg = (
+                f"🎁 {nick}, вам выдана личная скидка на донат!\n\n"
+                f"«{title}» — −{percent}%\n"
+                f"Область: {scope_label}\n"
+                f"Действует до: {ends}\n\n"
+                f"Открыть витрину: {SITE_PUBLIC_URL}/donate"
+            )
+            send_pm(admin_social["player_id"], bp, msg)
+            notify_ok = True
+        except Exception as e:
+            notify_error = str(e)
+
+    return {
+        "ok": True,
+        "discount": donations_svc.serialize_discount(row),
+        "notified": notify_ok,
+        "notify_error": notify_error,
+    }
 
 
 @router.post("/discounts/{discount_id}/deactivate")

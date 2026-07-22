@@ -6761,6 +6761,25 @@ label.chat-tool-btn input[type="file"] {
     color: var(--muted);
 }
 .donate-discount-row.is-live .donate-discount-status { color: #c2410c; }
+.donate-discount-row.is-personal {
+    border-color: color-mix(in srgb, #7c3aed 45%, var(--border));
+}
+.donate-discount-hint {
+    display: block;
+    margin-top: 4px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--muted);
+}
+.donate-sale-badge.is-personal {
+    background: linear-gradient(180deg, #a78bfa 0%, #7c3aed 55%, #5b21b6 100%);
+    box-shadow:
+        0 3px 0 #4c1d95,
+        0 6px 14px color-mix(in srgb, #7c3aed 35%, transparent);
+}
+.donate-sale-badge.is-personal::after {
+    border-color: #4c1d95 transparent transparent transparent;
+}
 .donate-discount-actions {
     display: flex;
     flex-wrap: wrap;

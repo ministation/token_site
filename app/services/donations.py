@@ -193,13 +193,36 @@ def _rub_label(amount: int) -> str:
 
 def serialize_discount(row: dict) -> dict:
     percent = max(1, min(int(row.get("percent") or 0), 90))
+    bp = (row.get("beneficiary_player_id") or "").strip() or None
+    bd = (row.get("beneficiary_discord_id") or "").strip() or None
+    personal = bool(bp or bd)
+    beneficiary_label = None
+    if personal:
+        user = None
+        if bp:
+            user = social_db.get_social_user_by_player_id(bp)
+        if not user and bd:
+            user = social_db.get_social_user_by_discord_id(str(bd))
+        if user:
+            beneficiary_label = (
+                user.get("game_nickname")
+                or user.get("discord_username")
+                or bp
+                or bd
+            )
+        else:
+            beneficiary_label = bp or bd
     return {
         "id": row["id"],
         "title": row.get("title") or "Скидка",
         "percent": percent,
         "scope": row.get("scope") or "all",
         "target_id": row.get("target_id"),
-        "badge_text": row.get("badge_text") or f"SALE −{percent}%",
+        "badge_text": row.get("badge_text") or (f"PERSONAL −{percent}%" if personal else f"SALE −{percent}%"),
+        "beneficiary_player_id": bp,
+        "beneficiary_discord_id": bd,
+        "beneficiary_label": beneficiary_label,
+        "is_personal": personal,
         "starts_at": row.get("starts_at"),
         "ends_at": row.get("ends_at"),
         "active": bool(row.get("active")),
@@ -225,13 +248,19 @@ def _discount_matches(d: dict, product_type: str, product_id: int) -> bool:
 
 
 def best_discount_for(product_type: str, product_id: int, discounts: list[dict] | None = None) -> dict | None:
-    rows = discounts if discounts is not None else social_db.get_active_donation_discounts()
+    rows = discounts if discounts is not None else social_db.get_active_donation_discounts(public_only=True)
     best = None
     for raw in rows:
-        d = serialize_discount(raw) if "percent" in raw and "title" in raw else raw
+        # Already-serialized rows have is_personal; raw DB rows need serialize
+        if "is_personal" in raw and "badge_text" in raw and "percent" in raw:
+            d = raw
+        else:
+            d = serialize_discount(raw)
         if not _discount_matches(d, product_type, product_id):
             continue
         if best is None or int(d["percent"]) > int(best["percent"]):
+            best = d
+        elif best is not None and int(d["percent"]) == int(best["percent"]) and d.get("is_personal") and not best.get("is_personal"):
             best = d
     return best
 
@@ -295,25 +324,47 @@ def serialize_coin_pack(pack: dict, discounts: list[dict] | None = None) -> dict
     }
 
 
+def _serialize_discount_list(rows: list[dict]) -> list[dict]:
+    return [serialize_discount(d) for d in rows]
+
+
 def list_tiers(discounts: list[dict] | None = None) -> list[dict]:
-    active = discounts if discounts is not None else social_db.get_active_donation_discounts()
-    active_s = [serialize_discount(d) for d in active]
+    if discounts is None:
+        active_s = _serialize_discount_list(social_db.get_active_donation_discounts(public_only=True))
+    elif discounts and "is_personal" in discounts[0]:
+        active_s = discounts
+    else:
+        active_s = _serialize_discount_list(discounts)
     return [serialize_tier(DONATION_TIERS[i], active_s) for i in sorted(DONATION_TIERS)]
 
 
 def list_coin_packs(discounts: list[dict] | None = None) -> list[dict]:
-    active = discounts if discounts is not None else social_db.get_active_donation_discounts()
-    active_s = [serialize_discount(d) for d in active]
+    if discounts is None:
+        active_s = _serialize_discount_list(social_db.get_active_donation_discounts(public_only=True))
+    elif discounts and "is_personal" in discounts[0]:
+        active_s = discounts
+    else:
+        active_s = _serialize_discount_list(discounts)
     return [serialize_coin_pack(COIN_PACKS[i], active_s) for i in sorted(COIN_PACKS)]
 
 
-def active_promo_summary() -> dict | None:
+def active_promo_summary(
+    *,
+    for_player_id: str | None = None,
+    for_discord_id: str | None = None,
+) -> dict | None:
     """Лучшая текущая акция для бейджа на кнопке «Донат»."""
-    rows = [serialize_discount(d) for d in social_db.get_active_donation_discounts()]
+    rows = _serialize_discount_list(
+        social_db.get_active_donation_discounts(
+            for_player_id=for_player_id,
+            for_discord_id=for_discord_id,
+            public_only=not (for_player_id or for_discord_id),
+        )
+    )
     if not rows:
         return None
-    best = max(rows, key=lambda d: int(d["percent"]))
-    # ближайший конец среди активных
+    # Личные чуть приоритетнее при равном %
+    best = max(rows, key=lambda d: (int(d["percent"]), 1 if d.get("is_personal") else 0))
     ends = [d.get("ends_at") for d in rows if d.get("ends_at")]
     return {
         "has_sale": True,
@@ -322,6 +373,7 @@ def active_promo_summary() -> dict | None:
         "title": best.get("title"),
         "ends_at": min(ends) if ends else best.get("ends_at"),
         "count": len(rows),
+        "is_personal": bool(best.get("is_personal")),
         "discounts": rows,
     }
 
@@ -406,9 +458,15 @@ def _prepare_product(
     tier_id: int | None,
     pack_id: int | None,
     game_user_uuid: str | None,
+    discounts: list[dict] | None = None,
 ) -> dict:
     product_type = (product_type or "tier").strip().lower()
-    active = [serialize_discount(d) for d in social_db.get_active_donation_discounts()]
+    if discounts is None:
+        active = _serialize_discount_list(social_db.get_active_donation_discounts(public_only=True))
+    elif discounts and "is_personal" in discounts[0]:
+        active = discounts
+    else:
+        active = _serialize_discount_list(discounts)
     if product_type == "coins":
         raw_pack = COIN_PACKS.get(int(pack_id or 0))
         if not raw_pack:
@@ -484,6 +542,12 @@ async def create_payment(
         tier_id=tier_id,
         pack_id=pack_id,
         game_user_uuid=game_user_uuid,
+        discounts=_serialize_discount_list(
+            social_db.get_active_donation_discounts(
+                for_player_id=player_id,
+                for_discord_id=discord_id,
+            )
+        ),
     )
     product_type = prepared["product_type"]
     amount_rub = prepared["amount_rub"]
@@ -872,11 +936,21 @@ async def apply_callback(payload: dict) -> dict:
     return {"ok": True, "transaction_id": tx_id, "status": status, "order": order}
 
 
-def catalog_payload() -> dict:
+def catalog_payload(
+    *,
+    for_player_id: str | None = None,
+    for_discord_id: str | None = None,
+) -> dict:
     mode = payment_mode()
-    active_raw = social_db.get_active_donation_discounts()
-    active = [serialize_discount(d) for d in active_raw]
-    promo = active_promo_summary()
+    active_raw = social_db.get_active_donation_discounts(
+        for_player_id=for_player_id,
+        for_discord_id=for_discord_id,
+    )
+    active = _serialize_discount_list(active_raw)
+    promo = active_promo_summary(
+        for_player_id=for_player_id,
+        for_discord_id=for_discord_id,
+    )
     urls = {
         "callback": f"{SITE_PUBLIC_URL}/platega/callback",
         "callback_api": f"{SITE_PUBLIC_URL}/api/donations/platega/callback",
@@ -902,6 +976,7 @@ def catalog_payload() -> dict:
         "urls": urls,
         "promo": promo,
         "discounts": active,
+        "has_personal_discount": any(d.get("is_personal") for d in active),
     }
 
 

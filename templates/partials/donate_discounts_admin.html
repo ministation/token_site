@@ -1,12 +1,12 @@
 <div class="card legal-card donate-discounts-admin">
     <h2><i class="fa-solid fa-tags"></i> Скидки на донат</h2>
-    <p class="legal-updated">Временные акции: бейдж на кнопке «Донат», зачёркнутые цены и таймер на витрине.</p>
+    <p class="legal-updated">Публичные акции и личные скидки игрокам — с ЛС-уведомлением и ценой только для получателя.</p>
 
     <form id="donateDiscountForm" class="donate-discount-form" onsubmit="createDonateDiscount(event)">
         <div class="donate-discount-grid">
             <label>
                 Название акции
-                <input type="text" id="ddTitle" maxlength="120" required placeholder="Весенняя распродажа">
+                <input type="text" id="ddTitle" maxlength="120" required placeholder="Личная благодарность / Весенняя распродажа">
             </label>
             <label>
                 Скидка, %
@@ -28,7 +28,7 @@
             </label>
             <label>
                 Бейдж (опционально)
-                <input type="text" id="ddBadge" maxlength="32" placeholder="−20% · SALE">
+                <input type="text" id="ddBadge" maxlength="32" placeholder="−20% · SALE / PERSONAL">
             </label>
             <label>
                 Начало
@@ -37,6 +37,27 @@
             <label>
                 Окончание
                 <input type="datetime-local" id="ddEnds" required>
+            </label>
+            <label class="donate-discount-check">
+                <span>Тип скидки</span>
+                <select id="ddPersonal" onchange="onDiscountPersonalChange()">
+                    <option value="0">Публичная (всем)</option>
+                    <option value="1">Личная (конкретному игроку)</option>
+                </select>
+            </label>
+            <label id="ddBeneficiaryWrap" class="donate-discount-beneficiary" hidden>
+                Игрок (ник Discord / игровой)
+                <input type="text" id="ddBeneficiaryQuery" maxlength="80" placeholder="Начните вводить ник…" autocomplete="off" list="ddBeneficiarySuggestions">
+                <datalist id="ddBeneficiarySuggestions"></datalist>
+                <input type="hidden" id="ddBeneficiaryPlayerId" value="">
+                <small id="ddBeneficiaryHint" class="donate-discount-hint">Игрок должен хотя бы раз войти на сайт.</small>
+            </label>
+            <label id="ddNotifyWrap" class="donate-discount-check" hidden>
+                <span>Оповещение</span>
+                <select id="ddNotify">
+                    <option value="1" selected>Отправить ЛС игроку</option>
+                    <option value="0">Без сообщения</option>
+                </select>
             </label>
         </div>
         <button type="submit" class="donate-pay-btn donate-discount-submit">

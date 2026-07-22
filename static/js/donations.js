@@ -113,12 +113,16 @@ function renderDonatePromoBanner(promo) {
     const badge = document.getElementById('donatePromoBadge');
     const title = document.getElementById('donatePromoTitle');
     const lead = document.getElementById('donatePromoLead');
-    if (badge) badge.textContent = promo.badge_text || `−${promo.percent}%`;
-    if (title) title.textContent = promo.title || 'Скидка на донат';
+    if (badge) badge.textContent = promo.badge_text || (promo.is_personal ? `PERSONAL −${promo.percent}%` : `−${promo.percent}%`);
+    if (title) title.textContent = promo.title || (promo.is_personal ? 'Ваша личная скидка' : 'Скидка на донат');
     if (lead) {
-        lead.textContent = promo.count > 1
-            ? `Сейчас ${promo.count} акции · лучшая −${promo.percent}%. Успейте до конца таймера.`
-            : `Скидка −${promo.percent}% на выбранные товары. Успейте купить до конца акции.`;
+        if (promo.is_personal) {
+            lead.textContent = `Только для вас: −${promo.percent}%. Скидка уже применена на витрине.`;
+        } else {
+            lead.textContent = promo.count > 1
+                ? `Сейчас ${promo.count} акции · лучшая −${promo.percent}%. Успейте до конца таймера.`
+                : `Скидка −${promo.percent}% на выбранные товары. Успейте купить до конца акции.`;
+        }
     }
     const endsAt = promo.ends_at;
     const tick = () => {
@@ -174,10 +178,22 @@ async function refreshDonateSaleBadges() {
 /* ---- Admin discounts panel ---- */
 async function initDonateDiscountsAdmin() {
     onDiscountScopeChange();
+    onDiscountPersonalChange();
     const ends = document.getElementById('ddEnds');
     if (ends && !ends.value) {
         const d = new Date(Date.now() + 3 * 24 * 3600 * 1000);
         ends.value = toLocalInputValue(d);
+    }
+    const q = document.getElementById('ddBeneficiaryQuery');
+    if (q && !q.dataset.bound) {
+        q.dataset.bound = '1';
+        let timer = null;
+        q.addEventListener('input', () => {
+            document.getElementById('ddBeneficiaryPlayerId').value = '';
+            clearTimeout(timer);
+            timer = setTimeout(() => searchDiscountBeneficiaries(q.value.trim()), 280);
+        });
+        q.addEventListener('change', () => pickDiscountBeneficiaryFromQuery());
     }
     await loadDonateDiscountsAdmin();
 }
@@ -200,6 +216,62 @@ function onDiscountScopeChange() {
         : (donateCatalog?.coin_packs || []).map(p => ({ id: p.id, label: p.name }));
     sel.innerHTML = items.map(i => `<option value="${i.id}">${escapeHtml(i.label)}</option>`).join('')
         || '<option value="">Нет товаров</option>';
+}
+
+function onDiscountPersonalChange() {
+    const personal = document.getElementById('ddPersonal')?.value === '1';
+    const wrap = document.getElementById('ddBeneficiaryWrap');
+    const notify = document.getElementById('ddNotifyWrap');
+    if (wrap) wrap.hidden = !personal;
+    if (notify) notify.hidden = !personal;
+    const q = document.getElementById('ddBeneficiaryQuery');
+    if (q) q.required = personal;
+    if (!personal) {
+        if (q) q.value = '';
+        const pid = document.getElementById('ddBeneficiaryPlayerId');
+        if (pid) pid.value = '';
+    }
+}
+
+let _ddBeneficiaryCache = [];
+
+async function searchDiscountBeneficiaries(query) {
+    const list = document.getElementById('ddBeneficiarySuggestions');
+    const hint = document.getElementById('ddBeneficiaryHint');
+    if (!list) return;
+    if (!query || query.length < 1) {
+        list.innerHTML = '';
+        _ddBeneficiaryCache = [];
+        return;
+    }
+    try {
+        const data = await apiCall('GET', `/api/admin/users?q=${encodeURIComponent(query)}&limit=8`);
+        _ddBeneficiaryCache = data.users || [];
+        list.innerHTML = _ddBeneficiaryCache.map(u => {
+            const label = `${u.game_nickname || u.discord_username || 'Игрок'} (@${u.discord_username || '—'})`;
+            return `<option value="${escapeHtml(label)}" data-player-id="${escapeHtml(u.player_id || '')}"></option>`;
+        }).join('');
+        if (hint) {
+            hint.textContent = _ddBeneficiaryCache.length
+                ? `Найдено: ${_ddBeneficiaryCache.length}. Выберите из списка или оставьте ник.`
+                : 'Никого не найдено — игрок должен хотя бы раз войти на сайт.';
+        }
+    } catch (e) {
+        if (hint) hint.textContent = e.message || 'Ошибка поиска';
+    }
+}
+
+function pickDiscountBeneficiaryFromQuery() {
+    const q = document.getElementById('ddBeneficiaryQuery')?.value.trim() || '';
+    const pidInput = document.getElementById('ddBeneficiaryPlayerId');
+    if (!pidInput) return;
+    const match = _ddBeneficiaryCache.find(u => {
+        const label = `${u.game_nickname || u.discord_username || 'Игрок'} (@${u.discord_username || '—'})`;
+        return label === q
+            || (u.discord_username || '').toLowerCase() === q.toLowerCase()
+            || (u.game_nickname || '').toLowerCase() === q.toLowerCase();
+    });
+    pidInput.value = match?.player_id || '';
 }
 
 async function loadDonateDiscountsAdmin() {
@@ -227,11 +299,14 @@ async function loadDonateDiscountsAdmin() {
                 tier: `Подписка #${d.target_id}`,
                 pack: `Пакет #${d.target_id}`,
             })[d.scope] || d.scope;
-            return `<article class="donate-discount-row ${cls}">
+            const who = d.is_personal
+                ? ` · 👤 ${escapeHtml(d.beneficiary_label || d.beneficiary_player_id || 'личный')}`
+                : '';
+            return `<article class="donate-discount-row ${cls}${d.is_personal ? ' is-personal' : ''}">
                 <div>
                     <strong>${escapeHtml(d.title)}</strong>
-                    <div class="donate-discount-meta">−${d.percent}% · ${escapeHtml(scopeLabel)} · до ${escapeHtml(String(d.ends_at || ''))}</div>
-                    <span class="donate-discount-status">${status}</span>
+                    <div class="donate-discount-meta">−${d.percent}% · ${escapeHtml(scopeLabel)}${who} · до ${escapeHtml(String(d.ends_at || ''))}</div>
+                    <span class="donate-discount-status">${status}${d.is_personal ? ' · личная' : ''}</span>
                 </div>
                 <div class="donate-discount-actions">
                     ${d.active && end > now ? `<button type="button" class="btn-sm" onclick="deactivateDonateDiscount(${d.id})">Остановить</button>` : ''}
@@ -247,6 +322,8 @@ async function loadDonateDiscountsAdmin() {
 async function createDonateDiscount(event) {
     event.preventDefault();
     const result = document.getElementById('donateDiscountFormResult');
+    const personal = document.getElementById('ddPersonal')?.value === '1';
+    pickDiscountBeneficiaryFromQuery();
     const formData = new FormData();
     formData.append('title', document.getElementById('ddTitle')?.value.trim() || '');
     formData.append('percent', document.getElementById('ddPercent')?.value || '0');
@@ -255,13 +332,25 @@ async function createDonateDiscount(event) {
     formData.append('badge_text', document.getElementById('ddBadge')?.value.trim() || '');
     formData.append('starts_at', document.getElementById('ddStarts')?.value || '');
     formData.append('ends_at', document.getElementById('ddEnds')?.value || '');
+    formData.append('personal', personal ? '1' : '0');
+    formData.append('beneficiary_player_id', document.getElementById('ddBeneficiaryPlayerId')?.value || '');
+    formData.append('beneficiary_query', document.getElementById('ddBeneficiaryQuery')?.value.trim() || '');
+    formData.append('notify', document.getElementById('ddNotify')?.value || '1');
     try {
-        await apiCall('POST', '/api/donations/discounts', formData);
+        const data = await apiCall('POST', '/api/donations/discounts', formData);
         if (result) {
             result.className = 'result success';
-            result.textContent = 'Скидка запущена';
+            if (personal) {
+                result.textContent = data.notified
+                    ? 'Личная скидка выдана, игроку отправлено ЛС'
+                    : (`Личная скидка создана` + (data.notify_error ? ` (ЛС не ушло: ${data.notify_error})` : ''));
+            } else {
+                result.textContent = 'Скидка запущена';
+            }
         }
         document.getElementById('donateDiscountForm')?.reset();
+        onDiscountScopeChange();
+        onDiscountPersonalChange();
         await loadDonateDiscountsAdmin();
         await loadDonateCatalog();
         await refreshDonateSaleBadges();
@@ -306,8 +395,8 @@ function renderDonateTierCard(t) {
     const onSale = !!t.on_sale && t.discount;
     const saleClass = onSale ? ' on-sale' : '';
     const saleBadge = onSale
-        ? `<span class="donate-sale-badge" aria-label="Скидка ${escapeHtml(String(t.discount.percent))}%">
-                <span class="donate-sale-badge-sale">SALE</span>
+        ? `<span class="donate-sale-badge${t.discount.is_personal ? ' is-personal' : ''}" aria-label="Скидка ${escapeHtml(String(t.discount.percent))}%">
+                <span class="donate-sale-badge-sale">${t.discount.is_personal ? 'PERSONAL' : 'SALE'}</span>
                 <span class="donate-sale-badge-pct">−${escapeHtml(String(t.discount.percent))}%</span>
            </span>`
         : (t.featured ? '<span class="donate-tier-badge">Популярный</span>' : '');
@@ -400,8 +489,8 @@ function renderDonatePackCard(p) {
     const onSale = !!p.on_sale && p.discount;
     const saleClass = onSale ? ' on-sale' : '';
     const badge = onSale
-        ? `<span class="donate-sale-badge" aria-label="Скидка ${escapeHtml(String(p.discount.percent))}%">
-                <span class="donate-sale-badge-sale">SALE</span>
+        ? `<span class="donate-sale-badge${p.discount.is_personal ? ' is-personal' : ''}" aria-label="Скидка ${escapeHtml(String(p.discount.percent))}%">
+                <span class="donate-sale-badge-sale">${p.discount.is_personal ? 'PERSONAL' : 'SALE'}</span>
                 <span class="donate-sale-badge-pct">−${escapeHtml(String(p.discount.percent))}%</span>
            </span>`
         : (p.badge ? `<span class="donate-tier-badge">${escapeHtml(p.badge)}</span>` : '');

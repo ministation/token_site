@@ -465,6 +465,8 @@ def _migrate_schema():
             scope TEXT NOT NULL DEFAULT 'all',
             target_id INTEGER,
             badge_text TEXT,
+            beneficiary_player_id TEXT,
+            beneficiary_discord_id TEXT,
             starts_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             ends_at TIMESTAMP NOT NULL,
             active INTEGER NOT NULL DEFAULT 1,
@@ -472,9 +474,18 @@ def _migrate_schema():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
+    dd_cols = _table_columns(cursor, "donation_discounts")
+    if "beneficiary_player_id" not in dd_cols:
+        cursor.execute("ALTER TABLE donation_discounts ADD COLUMN beneficiary_player_id TEXT")
+    if "beneficiary_discord_id" not in dd_cols:
+        cursor.execute("ALTER TABLE donation_discounts ADD COLUMN beneficiary_discord_id TEXT")
     cursor.execute("""
         CREATE INDEX IF NOT EXISTS idx_donation_discounts_active
         ON donation_discounts(active, starts_at, ends_at)
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_donation_discounts_beneficiary
+        ON donation_discounts(beneficiary_player_id, active)
     """)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS site_bans (
@@ -1913,6 +1924,8 @@ def ensure_donation_discounts_table():
             scope TEXT NOT NULL DEFAULT 'all',
             target_id INTEGER,
             badge_text TEXT,
+            beneficiary_player_id TEXT,
+            beneficiary_discord_id TEXT,
             starts_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             ends_at TIMESTAMP NOT NULL,
             active INTEGER NOT NULL DEFAULT 1,
@@ -1920,9 +1933,18 @@ def ensure_donation_discounts_table():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
+    cols = _table_columns(cursor, "donation_discounts")
+    if "beneficiary_player_id" not in cols:
+        cursor.execute("ALTER TABLE donation_discounts ADD COLUMN beneficiary_player_id TEXT")
+    if "beneficiary_discord_id" not in cols:
+        cursor.execute("ALTER TABLE donation_discounts ADD COLUMN beneficiary_discord_id TEXT")
     cursor.execute("""
         CREATE INDEX IF NOT EXISTS idx_donation_discounts_active
         ON donation_discounts(active, starts_at, ends_at)
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_donation_discounts_beneficiary
+        ON donation_discounts(beneficiary_player_id, active)
     """)
     conn.commit()
     conn.close()
@@ -1964,6 +1986,8 @@ def create_donation_discount(
     scope: str = "all",
     target_id: int | None = None,
     badge_text: str | None = None,
+    beneficiary_player_id: str | None = None,
+    beneficiary_discord_id: str | None = None,
     starts_at: str | None = None,
     ends_at: str,
     created_by: str | None = None,
@@ -1971,13 +1995,17 @@ def create_donation_discount(
     ensure_donation_discounts_table()
     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     start_val = starts_at or now
+    bp = (beneficiary_player_id or "").strip() or None
+    bd = (beneficiary_discord_id or "").strip() or None
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute(
         """
         INSERT INTO donation_discounts (
-            title, percent, scope, target_id, badge_text, starts_at, ends_at, active, created_by
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)
+            title, percent, scope, target_id, badge_text,
+            beneficiary_player_id, beneficiary_discord_id,
+            starts_at, ends_at, active, created_by
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
         """,
         (
             title,
@@ -1985,6 +2013,8 @@ def create_donation_discount(
             scope,
             target_id,
             badge_text,
+            bp,
+            bd,
             start_val,
             ends_at,
             created_by,
@@ -2021,8 +2051,42 @@ def list_donation_discounts(*, include_inactive: bool = True, limit: int = 100) 
     return active[:limit]
 
 
-def get_active_donation_discounts() -> list[dict]:
-    return list_donation_discounts(include_inactive=False, limit=50)
+def _discount_is_personal(row: dict) -> bool:
+    return bool((row.get("beneficiary_player_id") or "").strip() or (row.get("beneficiary_discord_id") or "").strip())
+
+
+def _discount_belongs_to_user(row: dict, player_id: str | None, discord_id: str | None) -> bool:
+    bp = (row.get("beneficiary_player_id") or "").strip()
+    bd = (row.get("beneficiary_discord_id") or "").strip()
+    if not bp and not bd:
+        return True
+    if player_id and bp and bp == str(player_id):
+        return True
+    if discord_id and bd and str(bd) == str(discord_id):
+        return True
+    return False
+
+
+def get_active_donation_discounts(
+    *,
+    for_player_id: str | None = None,
+    for_discord_id: str | None = None,
+    public_only: bool = False,
+) -> list[dict]:
+    """Активные скидки: публичные и/или личные для указанного игрока."""
+    rows = list_donation_discounts(include_inactive=False, limit=100)
+    out = []
+    for r in rows:
+        personal = _discount_is_personal(r)
+        if public_only and personal:
+            continue
+        if personal and not _discount_belongs_to_user(r, for_player_id, for_discord_id):
+            continue
+        # Личные чужим не отдаём; без for_* — только публичные
+        if personal and not for_player_id and not for_discord_id:
+            continue
+        out.append(r)
+    return out[:50]
 
 
 def get_donation_discount(discount_id: int) -> Optional[Dict]:
