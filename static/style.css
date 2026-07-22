@@ -5734,10 +5734,32 @@ label.chat-tool-btn input[type="file"] {
 .donate-wait-link {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    margin-top: 4px;
-    font-weight: 700;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 52px;
+    margin-top: 8px;
+    padding: 12px 18px;
+    box-sizing: border-box;
+    border: 3px solid var(--accent-deep);
+    border-radius: 12px;
+    background: var(--accent);
+    color: #fff !important;
+    font-family: var(--font-body);
+    font-size: 1.05rem;
+    font-weight: 800;
+    text-decoration: none !important;
+    letter-spacing: 0.01em;
+    cursor: pointer;
+    box-shadow: 0 4px 0 var(--accent-deep), 0 8px 18px color-mix(in srgb, var(--accent) 35%, transparent);
 }
+.donate-wait-link:hover {
+    background: var(--accent-deep);
+    color: #fff !important;
+    transform: translateY(1px);
+    box-shadow: 0 3px 0 color-mix(in srgb, var(--accent-deep) 80%, #000), 0 6px 14px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.donate-wait-link i { color: #fff; }
 @media (max-width: 700px) {
     .donate-wait-grid { grid-template-columns: 1fr; }
 }

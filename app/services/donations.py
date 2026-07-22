@@ -19,10 +19,38 @@ from app.config import (
     SBP_PAY_LINK,
     SBP_QR_PATH,
     SITE_PUBLIC_URL,
-    SPONSORSHIP_DAYS,
 )
+from app.db.database import get_pg_pool
 from app.services.bank import add_tokens
 from app.services.mail import send_email, smtp_configured
+
+
+async def upsert_discord_sponsor(discord_id: str | int, sponsor_level: int) -> dict:
+    """Пишет/обновляет спонсора в игровой Postgres-таблице discord_sponsor.
+    Уровень не понижается, если уже есть более высокий.
+    """
+    did = int(str(discord_id).strip())
+    level = max(1, min(int(sponsor_level), 5))
+    pg = await get_pg_pool()
+    async with pg.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT id, sponsor_level FROM discord_sponsor WHERE discord_id = $1::bigint",
+            did,
+        )
+        if row:
+            new_level = max(int(row["sponsor_level"] or 0), level)
+            await conn.execute(
+                "UPDATE discord_sponsor SET sponsor_level = $1 WHERE discord_id = $2::bigint",
+                new_level,
+                did,
+            )
+            return {"discord_id": str(did), "sponsor_level": new_level, "updated": True}
+        await conn.execute(
+            "INSERT INTO discord_sponsor (discord_id, sponsor_level) VALUES ($1::bigint, $2)",
+            did,
+            level,
+        )
+        return {"discord_id": str(did), "sponsor_level": level, "updated": False}
 
 DONATION_TIERS: dict[int, dict[str, Any]] = {
     1: {
@@ -416,19 +444,20 @@ async def fulfill_order_if_needed(order: dict | None) -> dict | None:
 
     try:
         if product_type == "tier":
-            social_db.create_sponsorship(
-                order_transaction_id=tx_id,
-                tier_id=int(order.get("tier_id") or 0),
-                tier_name=order.get("tier_name") or "Спонсор",
-                amount_rub=int(order.get("amount_rub") or 0),
-                days=SPONSORSHIP_DAYS,
-                player_id=order.get("player_id"),
-                discord_id=order.get("discord_id"),
-                game_user_uuid=game_uuid or None,
-                contact=order.get("contact"),
-                coins_granted=coins if game_uuid and not str(game_uuid).startswith("discord_") else 0,
-                notes="manual_sbp",
-            )
+            discord_id = order.get("discord_id") or ""
+            if not discord_id:
+                # попытка из player_id вида discord_<id>
+                pid = str(order.get("player_id") or "")
+                if pid.startswith("discord_"):
+                    discord_id = pid.replace("discord_", "", 1)
+            if not discord_id:
+                social_db.update_donation_order(tx_id, fulfilled=0)
+                raise ValueError("Нет Discord ID — нельзя выдать спонсорство в игровой БД")
+            tier_level = int(order.get("tier_id") or 0)
+            if tier_level < 1 or tier_level > 5:
+                social_db.update_donation_order(tx_id, fulfilled=0)
+                raise ValueError("Некорректный уровень спонсорства")
+            await upsert_discord_sponsor(discord_id, tier_level)
             if coins > 0 and game_uuid and not str(game_uuid).startswith("discord_"):
                 await add_tokens(str(game_uuid), coins)
         elif product_type == "coins":
