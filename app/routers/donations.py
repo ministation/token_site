@@ -65,7 +65,7 @@ async def donation_mark_paid(transaction_id: str, request: Request):
     return {
         "ok": True,
         **donations_svc.serialize_order(order),
-        "message": "Заявка отправлена. Ожидайте подтверждения оплаты администратором.",
+        "message": "Платёж принят в обработку. Ожидайте зачисления.",
     }
 
 

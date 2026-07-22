@@ -356,7 +356,8 @@ async function startDonationCheckout() {
     }
     try {
         const data = await apiCall('POST', '/api/donations/checkout', formData);
-        if (data.mode === 'manual_sbp' || data.sbp) {
+        // Ручной СБП: всегда открываем страницу ожидания с QR
+        if (data.mode === 'manual_sbp' || data.sbp || (data.transaction_id && !data.redirect)) {
             showDonateWaitPanel(data);
             return;
         }
@@ -368,7 +369,11 @@ async function startDonationCheckout() {
             window.location.href = data.redirect;
             return;
         }
-        throw new Error('Не удалось открыть оплату');
+        if (data.transaction_id) {
+            showDonateWaitPanel(data);
+            return;
+        }
+        throw new Error('Не удалось открыть оплату СБП');
     } catch (e) {
         if (result) {
             result.className = 'result error';
@@ -377,7 +382,7 @@ async function startDonationCheckout() {
     } finally {
         if (btn) {
             btn.disabled = !(selectedDonateTierId || selectedDonatePackId);
-            btn.innerHTML = '<i class="fa-solid fa-qrcode"></i> Оплатить СБП';
+            btn.innerHTML = '<i class="fa-solid fa-credit-card"></i> Купить';
         }
     }
 }
@@ -386,15 +391,24 @@ function showDonateWaitPanel(data) {
     currentDonateOrderId = data.transaction_id;
     const wait = document.getElementById('donateWaitPanel');
     const shop = document.getElementById('donateShopMain');
+    if (!wait) {
+        // Старый HTML без панели ожидания — перезагрузка на wait URL
+        if (data.transaction_id) {
+            window.location.href = `/donate?order=${encodeURIComponent(data.transaction_id)}&wait=1`;
+        }
+        return;
+    }
     if (shop) shop.hidden = true;
-    if (wait) wait.hidden = false;
+    wait.hidden = false;
 
     const sbp = data.sbp || donateCatalog?.sbp || {};
     const item = data.item || {};
     const qr = document.getElementById('donateWaitQr');
     if (qr) qr.src = sbp.qr || '/static/payment/sbp-qr.png';
     const link = document.getElementById('donateWaitLink');
-    if (link) link.href = sbp.link || '#';
+    if (link) {
+        link.href = sbp.link || (donateCatalog?.sbp?.link) || '#';
+    }
     const txEl = document.getElementById('donateWaitTx');
     if (txEl) txEl.textContent = (data.transaction_id || '').slice(0, 8) + '…';
     const amountEl = document.getElementById('donateWaitAmount');
@@ -406,8 +420,8 @@ function showDonateWaitPanel(data) {
     const markBtn = document.getElementById('donateMarkPaidBtn');
     if (markBtn) {
         markBtn.disabled = (data.status === 'awaiting_confirmation' || data.status === 'confirmed');
-        markBtn.innerHTML = data.status === 'awaiting_confirmation'
-            ? '<i class="fa-solid fa-hourglass-half"></i> Ожидает подтверждения'
+        markBtn.innerHTML = (data.status === 'awaiting_confirmation' || data.status === 'confirmed')
+            ? '<i class="fa-solid fa-hourglass-half"></i> Ожидание платежа'
             : '<i class="fa-solid fa-check"></i> Я оплатил';
     }
     const res = document.getElementById('donateWaitResult');
@@ -428,13 +442,13 @@ function hideDonateWaitPanel() {
 
 function statusLabel(st) {
     const map = {
-        pending: 'ожидание оплаты',
-        awaiting_confirmation: 'ожидает подтверждения админом',
-        confirmed: 'оплата подтверждена',
+        pending: 'ожидание платежа',
+        awaiting_confirmation: 'ожидание платежа',
+        confirmed: 'оплата получена',
         canceled: 'отменён',
         failed: 'ошибка',
     };
-    return map[st] || st;
+    return map[st] || 'ожидание платежа';
 }
 
 async function markDonationPaid() {
@@ -449,16 +463,16 @@ async function markDonationPaid() {
         const data = await apiCall('POST', `/api/donations/mark-paid/${encodeURIComponent(currentDonateOrderId)}`);
         if (res) {
             res.className = 'result success';
-            res.textContent = data.message || 'Заявка отправлена администратору.';
+            res.textContent = 'Платёж принят в обработку. Ожидайте зачисления.';
         }
         const statusEl = document.getElementById('donateWaitStatus');
-        if (statusEl) statusEl.textContent = statusLabel(data.status || 'awaiting_confirmation');
-        if (btn) btn.innerHTML = '<i class="fa-solid fa-hourglass-half"></i> Ожидает подтверждения';
+        if (statusEl) statusEl.textContent = statusLabel('awaiting_confirmation');
+        if (btn) btn.innerHTML = '<i class="fa-solid fa-hourglass-half"></i> Ожидание платежа';
         startDonateStatusPoll();
     } catch (e) {
         if (res) {
             res.className = 'result error';
-            res.textContent = e.message || 'Не удалось отправить заявку';
+            res.textContent = e.message || 'Не удалось отправить статус';
         }
         if (btn) {
             btn.disabled = false;
@@ -491,8 +505,8 @@ async function refreshDonateOrderStatus() {
         if (markBtn && (data.status === 'awaiting_confirmation' || data.status === 'confirmed')) {
             markBtn.disabled = true;
             markBtn.innerHTML = data.status === 'confirmed'
-                ? '<i class="fa-solid fa-check-double"></i> Готово'
-                : '<i class="fa-solid fa-hourglass-half"></i> Ожидает подтверждения';
+                ? '<i class="fa-solid fa-check-double"></i> Оплата получена'
+                : '<i class="fa-solid fa-hourglass-half"></i> Ожидание платежа';
         }
         if (data.status === 'confirmed') {
             stopDonateStatusPoll();
@@ -502,10 +516,10 @@ async function refreshDonateOrderStatus() {
                 banner.className = 'donate-pay-banner ok';
                 if ((data.product_type || '') === 'coins') {
                     banner.textContent = data.fulfilled
-                        ? `Оплата подтверждена: ${data.coins_amount || ''} монет зачислено.`
-                        : `Оплата подтверждена (${data.amount_rub || ''} ₽).`;
+                        ? `Оплата получена: ${data.coins_amount || ''} монет зачислено.`
+                        : `Оплата получена (${data.amount_rub || ''} ₽). Монеты зачислятся автоматически.`;
                 } else {
-                    banner.textContent = `Оплата подтверждена: спонсорство «${data.tier_name || ''}» активировано.`;
+                    banner.textContent = `Оплата получена: ${data.tier_name || 'подписка'} активирована.`;
                 }
             }
             const res = document.getElementById('donateWaitResult');
@@ -553,7 +567,7 @@ async function handleDonateReturnQuery() {
                     ? `Оплата получена: ${data.coins_amount || ''} монет зачислено.`
                     : `Оплата получена (${data.amount_rub || ''} ₽).`;
             } else {
-                banner.textContent = `Оплата подтверждена: ${data.tier_name || 'тариф'} (${data.amount_rub || ''} ₽).`;
+                banner.textContent = `Оплата получена: ${data.tier_name || 'тариф'} (${data.amount_rub || ''} ₽).`;
             }
         } else if (st === 'awaiting_confirmation') {
             showDonateWaitPanel(data);

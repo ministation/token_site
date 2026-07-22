@@ -117,6 +117,18 @@ PAYMENT_METHODS = [
         "hint": "Оплата по QR",
         "icon": "/static/payment/sbp.png",
     },
+    {
+        "id": 10,
+        "label": "МИР",
+        "hint": "Карта МИР",
+        "icon": "/static/payment/mir.png",
+    },
+    {
+        "id": 12,
+        "label": "Visa / Mastercard",
+        "hint": "Банковская карта",
+        "icon": "/static/payment/card-intl.svg",
+    },
 ]
 
 
@@ -259,8 +271,10 @@ async def create_payment(
         raise ValueError("Платежи временно недоступны")
 
     method = int(payment_method or 2)
+    # Сейчас все способы ведут на ручной СБП/QR (МИР и карты — только в UI).
     if method not in {m["id"] for m in PAYMENT_METHODS}:
-        raise ValueError("Сейчас доступна только оплата через СБП")
+        method = 2
+    method = 2  # фактическая оплата всегда через СБП QR
 
     prepared = _prepare_product(
         product_type=product_type,
@@ -285,46 +299,12 @@ async def create_payment(
             "player_id": player_id or "",
             "game_user_uuid": game_user_uuid or "",
             "coins_amount": coins_amount,
-            "mode": "manual_sbp" if MANUAL_SBP_ENABLED else "platega",
+            "mode": "manual_sbp",
         },
         ensure_ascii=False,
     )
 
-    # Ручной СБП — основной режим
-    if MANUAL_SBP_ENABLED:
-        social_db.create_donation_order(
-            transaction_id=tx_id,
-            tier_id=tier_db_id,
-            tier_name=tier_name,
-            amount_rub=amount_rub,
-            payment_method=method,
-            player_id=player_id,
-            discord_id=discord_id,
-            contact=contact,
-            payload=payload,
-            product_type=product_type,
-            coins_amount=coins_amount,
-            game_user_uuid=game_user_uuid,
-            redirect_url=SBP_PAY_LINK,
-        )
-        return {
-            "transaction_id": tx_id,
-            "mode": "manual_sbp",
-            "status": "pending",
-            "product_type": product_type,
-            "item": serialized,
-            "amount_rub": amount_rub,
-            "amount_label": _rub_label(amount_rub),
-            "sbp": sbp_payment_info(amount_rub),
-            "wait_path": f"/donate?order={tx_id}&wait=1",
-        }
-
-    # Fallback: Platega (если ручной режим выключен)
-    if not platega_configured():
-        raise ValueError("Платежи временно недоступны")
-
-    return_url = f"{SITE_PUBLIC_URL}/donate?order={tx_id}&result=success"
-    fail_url = f"{SITE_PUBLIC_URL}/donate?order={tx_id}&result=fail"
+    # Только ручной СБП (QR + подтверждение админом)
     social_db.create_donation_order(
         transaction_id=tx_id,
         tier_id=tier_db_id,
@@ -338,39 +318,20 @@ async def create_payment(
         product_type=product_type,
         coins_amount=coins_amount,
         game_user_uuid=game_user_uuid,
+        redirect_url=SBP_PAY_LINK,
     )
-    body = {
-        "paymentMethod": method,
-        "id": tx_id,
-        "paymentDetails": {"amount": amount_rub, "currency": "RUB"},
-        "description": description,
-        "return": return_url,
-        "failedUrl": fail_url,
-        "payload": payload,
-    }
-    url = f"{PLATEGA_API_BASE}/transaction/process"
-    timeout = aiohttp.ClientTimeout(total=30)
-    async with aiohttp.ClientSession(timeout=timeout) as session:
-        async with session.post(url, headers=_platega_headers(), json=body) as resp:
-            data = await resp.json(content_type=None)
-            if resp.status >= 400:
-                msg = data.get("message") if isinstance(data, dict) else None
-                social_db.update_donation_order(
-                    tx_id, status="failed", raw_callback=json.dumps(data, ensure_ascii=False)
-                )
-                raise ValueError(msg or "Ошибка платёжного сервиса")
-    redirect = (data or {}).get("redirect")
-    if redirect:
-        social_db.update_donation_order(tx_id, redirect_url=redirect)
     return {
-        "transaction_id": (data or {}).get("transactionId") or tx_id,
-        "redirect": redirect,
-        "mode": "platega",
-        "status": (data or {}).get("status") or "PENDING",
-        "expires_in": (data or {}).get("expiresIn"),
+        "transaction_id": tx_id,
+        "mode": "manual_sbp",
+        "status": "pending",
         "product_type": product_type,
         "item": serialized,
+        "tier_name": tier_name,
         "amount_rub": amount_rub,
+        "amount_label": _rub_label(amount_rub),
+        "sbp": sbp_payment_info(amount_rub),
+        "redirect": None,
+        "wait_path": f"/donate?order={tx_id}&wait=1",
     }
 
 

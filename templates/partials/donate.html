@@ -2,14 +2,14 @@
     <header class="donate-hero card">
         <a href="/" class="donate-back"><i class="fa-solid fa-arrow-left"></i> На главную</a>
         <h1><i class="fa-solid fa-heart"></i> Поддержка</h1>
-        <p>Подписки и монетки. Оплата через СБП (QR).</p>
+        <p>Подписки и монетки. Оплата на сайте (СБП / карта).</p>
     </header>
 
     <div id="donatePayStatus" class="donate-pay-banner" hidden role="status" aria-live="polite"></div>
 
     <div id="donateWaitPanel" class="card donate-wait-panel" hidden>
         <h2><i class="fa-solid fa-qrcode"></i> Оплата СБП</h2>
-        <p class="donate-wait-lead" id="donateWaitLead">Переведите сумму по QR или ссылке, затем нажмите «Я оплатил».</p>
+        <p class="donate-wait-lead" id="donateWaitLead">Отсканируйте QR или откройте ссылку оплаты. После перевода нажмите «Я оплатил» — статус обновится автоматически.</p>
         <div class="donate-wait-grid">
             <div class="donate-wait-qr-wrap">
                 <img id="donateWaitQr" class="donate-wait-qr" src="/static/payment/sbp-qr.png" alt="QR СБП">
@@ -18,7 +18,7 @@
                 <div class="donate-wait-row"><span>Заказ</span><strong id="donateWaitTx">—</strong></div>
                 <div class="donate-wait-row"><span>Сумма</span><strong id="donateWaitAmount">—</strong></div>
                 <div class="donate-wait-row"><span>Товар</span><strong id="donateWaitItem">—</strong></div>
-                <div class="donate-wait-row"><span>Статус</span><strong id="donateWaitStatus">ожидание оплаты</strong></div>
+                <div class="donate-wait-row"><span>Статус</span><strong id="donateWaitStatus">ожидание платежа</strong></div>
                 <a id="donateWaitLink" class="donate-wait-link" href="#" target="_blank" rel="noopener">
                     <i class="fa-solid fa-mobile-screen"></i> Открыть оплату СБП
                 </a>
@@ -75,9 +75,9 @@
                 </label>
 
                 <button type="button" class="donate-pay-btn" id="donatePayBtn" disabled onclick="startDonationCheckout()">
-                    <i class="fa-solid fa-qrcode"></i> Оплатить СБП
+                    <i class="fa-solid fa-credit-card"></i> Купить
                 </button>
-                <p class="donate-hint" id="donateHint">После перевода нажмите «Я оплатил» — привилегии выдаст администратор после проверки.</p>
+                <p class="donate-hint" id="donateHint">После оплаты подписка и монетки активируются автоматически.</p>
                 <div id="donateCheckoutResult" class="result" role="status" aria-live="polite"></div>
 
                 <p class="donate-alt">
