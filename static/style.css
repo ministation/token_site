@@ -5295,7 +5295,7 @@ label.chat-tool-btn input[type="file"] {
 .donate-tiers,
 .donate-coin-packs {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
     gap: 14px;
     min-width: 0;
 }
@@ -5309,7 +5309,10 @@ label.chat-tool-btn input[type="file"] {
     background: var(--panel);
     box-shadow: var(--shadow-hard);
     overflow: hidden;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+.donate-pack-card:hover {
+    border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
 }
 .donate-tier-card.featured,
 .donate-pack-card.featured { border-color: var(--accent); }
@@ -5344,12 +5347,18 @@ label.chat-tool-btn input[type="file"] {
     cursor: pointer;
     box-shadow: none;
     font-family: var(--font-body);
+    font-size: 0.95rem;
     min-height: 44px;
+    white-space: normal;
+    height: auto;
+    align-items: stretch;
+    justify-content: flex-start;
 }
 .donate-tier-select:hover,
 .donate-pack-select:hover {
     transform: none;
     background: color-mix(in srgb, var(--ink) 3%, transparent);
+    box-shadow: none;
 }
 .donate-tier-media {
     display: flex;
@@ -5370,8 +5379,10 @@ label.chat-tool-btn input[type="file"] {
 }
 .donate-tier-copy {
     min-width: 0;
+    width: 100%;
     padding: 8px 14px 16px;
-    overflow: hidden;
+    overflow: visible;
+    box-sizing: border-box;
 }
 .donate-tier-top {
     display: flex;
@@ -5391,12 +5402,14 @@ label.chat-tool-btn input[type="file"] {
     font-size: 1.12rem;
     font-family: var(--font-body);
     overflow-wrap: anywhere;
+    white-space: normal;
 }
 .donate-tier-price {
     font-size: 1.35rem;
     font-weight: 800;
     margin: 4px 0 10px;
     color: var(--ink);
+    white-space: normal;
 }
 .donate-tier-price span {
     font-size: 0.8rem;
@@ -5409,6 +5422,8 @@ label.chat-tool-btn input[type="file"] {
     list-style: none;
     display: grid;
     gap: 8px;
+    width: 100%;
+    min-width: 0;
 }
 .donate-tier-perks li {
     display: grid;
@@ -5416,8 +5431,10 @@ label.chat-tool-btn input[type="file"] {
     gap: 8px;
     align-items: start;
     font-size: 0.84rem;
-    line-height: 1.4;
+    line-height: 1.45;
     color: var(--ink);
+    white-space: normal;
+    min-width: 0;
 }
 .donate-tier-perks li::before {
     content: "";
@@ -5430,8 +5447,10 @@ label.chat-tool-btn input[type="file"] {
 }
 .donate-tier-perks li span {
     min-width: 0;
+    max-width: 100%;
     overflow-wrap: anywhere;
     word-break: break-word;
+    white-space: normal;
 }
 .donate-perk-coins {
     grid-template-columns: 8px auto !important;
@@ -5460,7 +5479,41 @@ label.chat-tool-btn input[type="file"] {
 }
 .donate-perk-period { color: var(--muted); font-weight: 500; }
 
-.donate-pack-select { padding: 18px 14px; align-items: center; text-align: center; gap: 8px; }
+.donate-pack-select {
+    padding: 0;
+    align-items: stretch;
+    text-align: center;
+    gap: 0;
+}
+.donate-pack-visual {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 16px 12px;
+    background:
+        radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 65%),
+        var(--panel-2);
+}
+.donate-pack-coin-art {
+    width: 72px;
+    height: 72px;
+    object-fit: contain;
+    image-rendering: pixelated;
+    filter: drop-shadow(0 6px 10px color-mix(in srgb, var(--ink) 18%, transparent));
+    transition: transform 0.2s ease;
+}
+.donate-pack-card:hover .donate-pack-coin-art,
+.donate-pack-card.active .donate-pack-coin-art {
+    transform: translateY(-2px) scale(1.04);
+}
+.donate-pack-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 14px 18px;
+    min-width: 0;
+}
 .donate-pack-amount {
     display: flex;
     align-items: center;
@@ -5468,22 +5521,35 @@ label.chat-tool-btn input[type="file"] {
     gap: 8px;
 }
 .donate-pack-coins {
-    font-size: 1.8rem;
+    font-size: 1.65rem;
     font-weight: 800;
+    letter-spacing: -0.02em;
+    font-family: var(--font-body);
 }
 .donate-pack-amount .donate-coin-inline {
-    width: 28px !important;
-    height: 28px !important;
+    width: 22px !important;
+    height: 22px !important;
 }
-.donate-pack-name { font-weight: 700; font-size: 1rem; }
+.donate-pack-name {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 0.78rem;
+}
 .donate-pack-price {
-    font-size: 1.25rem;
+    font-size: 1.35rem;
     font-weight: 800;
     color: var(--accent-deep);
+    font-family: var(--font-body);
 }
 .donate-pack-unit {
     font-size: 0.82rem;
     color: var(--muted);
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--ink) 5%, transparent);
 }
 
 .donate-checkout {
@@ -5658,5 +5724,6 @@ label.chat-tool-btn input[type="file"] {
 
 @media (prefers-reduced-motion: reduce) {
     .donate-tier-card,
-    .donate-pack-card { transition: none; }
+    .donate-pack-card,
+    .donate-pack-coin-art { transition: none; }
 }

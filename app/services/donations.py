@@ -221,7 +221,7 @@ async def create_payment(
     contact: str | None = None,
 ) -> dict:
     if not platega_configured():
-        raise ValueError("Платежи пока не подключены: укажите PLATEGA_MERCHANT_ID и PLATEGA_SECRET")
+        raise ValueError("Платежи временно недоступны")
 
     method = int(payment_method or PLATEGA_DEFAULT_METHOD)
     if method not in {m["id"] for m in PAYMENT_METHODS}:
@@ -307,7 +307,7 @@ async def create_payment(
                 social_db.update_donation_order(
                     tx_id, status="failed", raw_callback=json.dumps(data, ensure_ascii=False)
                 )
-                raise ValueError(msg or f"Ошибка Platega ({resp.status})")
+                raise ValueError(msg or "Ошибка платёжного сервиса")
 
     redirect = (data or {}).get("redirect")
     if redirect:
@@ -325,7 +325,7 @@ async def create_payment(
 
 async def fetch_payment_status(transaction_id: str) -> dict:
     if not platega_configured():
-        raise ValueError("Platega не настроена")
+        raise ValueError("Платежи временно недоступны")
     url = f"{PLATEGA_API_BASE}/transaction/{transaction_id}"
     timeout = aiohttp.ClientTimeout(total=20)
     async with aiohttp.ClientSession(timeout=timeout) as session:

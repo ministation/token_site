@@ -57,7 +57,7 @@ async function loadDonateCatalog() {
         renderDonateMethods();
         const hint = document.getElementById('donateHint');
         if (hint && !donateCatalog.configured) {
-            hint.textContent = 'Оплата через Platega. Ключи на сервере ещё не заданы — интерфейс готов, платежи заработают после настройки.';
+            hint.textContent = 'Оплата временно недоступна. Можете выбрать тариф — платёж заработает после подключения приёма платежей.';
         }
         switchDonateTab(donateActiveTab);
         updateDonateCheckoutUI();
@@ -101,13 +101,18 @@ function renderDonatePackCard(p) {
         <article class="donate-pack-card${active}${featured}" data-pack="${p.id}">
             ${badge}
             <button type="button" class="donate-pack-select" onclick="selectDonatePack(${p.id})" aria-pressed="${active ? 'true' : 'false'}">
-                <div class="donate-pack-amount">
-                    <span class="donate-pack-coins">+${p.coins}</span>
-                    ${COIN_IMG}
+                <div class="donate-pack-visual" aria-hidden="true">
+                    <img src="/static/coin.png" alt="" class="donate-pack-coin-art" width="72" height="72">
                 </div>
-                <div class="donate-pack-name">${escapeHtml(p.name)}</div>
-                <div class="donate-pack-price">${escapeHtml(p.price_label)}</div>
-                <div class="donate-pack-unit">${escapeHtml(p.unit_label)}</div>
+                <div class="donate-pack-body">
+                    <div class="donate-pack-name">${escapeHtml(p.name)}</div>
+                    <div class="donate-pack-amount">
+                        <span class="donate-pack-coins">+${p.coins}</span>
+                        <img src="/static/coin.png" class="coin-icon-result donate-coin-inline" alt="">
+                    </div>
+                    <div class="donate-pack-price">${escapeHtml(p.price_label)}</div>
+                    <div class="donate-pack-unit">${escapeHtml(p.unit_label)}</div>
+                </div>
             </button>
         </article>`;
 }
@@ -250,7 +255,7 @@ async function startDonationCheckout() {
     if (donateCatalog && !donateCatalog.configured) {
         if (result) {
             result.className = 'result error';
-            result.textContent = 'Platega ещё не подключена: добавьте ключи в .env';
+            result.textContent = 'Оплата временно недоступна. Попробуйте позже или напишите в обращения.';
         }
         return;
     }
