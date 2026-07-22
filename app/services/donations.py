@@ -4,7 +4,6 @@ from __future__ import annotations
 import json
 import uuid
 from typing import Any
-from urllib.parse import quote
 
 import aiohttp
 
@@ -13,7 +12,6 @@ from app.config import (
     DONATION_NOTIFY_EMAIL,
     MANUAL_SBP_ENABLED,
     PLATEGA_API_BASE,
-    PLATEGA_DEFAULT_METHOD,
     PLATEGA_MERCHANT_ID,
     PLATEGA_SECRET,
     SBP_PAY_LINK,
@@ -21,6 +19,7 @@ from app.config import (
     SITE_PUBLIC_URL,
 )
 from app.db.database import get_pg_pool
+from app.services import robokassa
 from app.services.bank import add_tokens
 from app.services.mail import send_email, smtp_configured
 
@@ -164,8 +163,22 @@ def platega_configured() -> bool:
     return bool(PLATEGA_MERCHANT_ID and PLATEGA_SECRET)
 
 
+def robokassa_configured() -> bool:
+    return robokassa.configured()
+
+
 def payments_available() -> bool:
-    return bool(MANUAL_SBP_ENABLED) or platega_configured()
+    return robokassa_configured() or bool(MANUAL_SBP_ENABLED) or platega_configured()
+
+
+def payment_mode() -> str:
+    if robokassa_configured():
+        return "robokassa"
+    if MANUAL_SBP_ENABLED:
+        return "manual_sbp"
+    if platega_configured():
+        return "platega"
+    return "off"
 
 
 def icon_url(filename: str) -> str:
@@ -298,11 +311,10 @@ async def create_payment(
     if not payments_available():
         raise ValueError("Платежи временно недоступны")
 
+    mode = payment_mode()
     method = int(payment_method or 2)
-    # Сейчас все способы ведут на ручной СБП/QR (МИР и карты — только в UI).
     if method not in {m["id"] for m in PAYMENT_METHODS}:
         method = 2
-    method = 2  # фактическая оплата всегда через СБП QR
 
     prepared = _prepare_product(
         product_type=product_type,
@@ -318,6 +330,9 @@ async def create_payment(
     serialized = prepared["item"]
     description = prepared["description"]
 
+    if product_type == "tier" and not discord_id:
+        raise ValueError("Для покупки подписки войдите через Discord")
+
     tx_id = str(uuid.uuid4())
     payload = json.dumps(
         {
@@ -327,18 +342,67 @@ async def create_payment(
             "player_id": player_id or "",
             "game_user_uuid": game_user_uuid or "",
             "coins_amount": coins_amount,
-            "mode": "manual_sbp",
+            "mode": mode,
         },
         ensure_ascii=False,
     )
 
-    # Только ручной СБП (QR + подтверждение админом)
+    if mode == "robokassa":
+        order = social_db.create_donation_order(
+            transaction_id=tx_id,
+            tier_id=tier_db_id,
+            tier_name=tier_name,
+            amount_rub=amount_rub,
+            payment_method=method,
+            player_id=player_id,
+            discord_id=discord_id,
+            contact=contact,
+            payload=payload,
+            product_type=product_type,
+            coins_amount=coins_amount,
+            game_user_uuid=game_user_uuid,
+        )
+        inv_id = int(order["id"])
+        shp = {"Shp_tx": tx_id}
+        pay_params = robokassa.build_payment_params(
+            amount_rub=amount_rub,
+            inv_id=inv_id,
+            description=description,
+            email=None,
+            include_receipt=None,
+            shp=shp,
+        )
+        pay_url = f"/api/donations/robokassa/pay/{tx_id}"
+        meta = json.loads(payload)
+        meta["robokassa_pay"] = pay_params
+        meta["robokassa_endpoint"] = robokassa.payment_endpoint()
+        social_db.update_donation_order(
+            tx_id,
+            redirect_url=pay_url,
+            payload=json.dumps(meta, ensure_ascii=False),
+        )
+        return {
+            "transaction_id": tx_id,
+            "inv_id": inv_id,
+            "mode": "robokassa",
+            "status": "pending",
+            "product_type": product_type,
+            "item": serialized,
+            "tier_name": tier_name,
+            "amount_rub": amount_rub,
+            "amount_label": _rub_label(amount_rub),
+            "redirect": pay_url,
+            "pay_path": pay_url,
+            "wait_path": f"/donate?order={tx_id}&wait=1",
+        }
+
+    # Ручной СБП (QR + подтверждение админом) — запасной режим
     social_db.create_donation_order(
         transaction_id=tx_id,
         tier_id=tier_db_id,
         tier_name=tier_name,
         amount_rub=amount_rub,
-        payment_method=method,
+        payment_method=2,
         player_id=player_id,
         discord_id=discord_id,
         contact=contact,
@@ -361,6 +425,64 @@ async def create_payment(
         "redirect": None,
         "wait_path": f"/donate?order={tx_id}&wait=1",
     }
+
+
+async def apply_robokassa_result(params: dict[str, Any]) -> str:
+    """Обрабатывает Result URL. Возвращает тело ответа OK{InvId} или ошибку."""
+    out_sum = str(params.get("OutSum") or params.get("out_sum") or "").strip()
+    inv_raw = params.get("InvId") or params.get("inv_id") or ""
+    signature = str(params.get("SignatureValue") or params.get("signaturevalue") or "").strip()
+    if not out_sum or inv_raw in ("", None) or not signature:
+        raise ValueError("Неполные параметры Robokassa")
+
+    try:
+        inv_id = int(inv_raw)
+    except (TypeError, ValueError) as e:
+        raise ValueError("Некорректный InvId") from e
+
+    shp = robokassa.extract_shp(params)
+    if not robokassa.verify_result_signature(
+        out_sum=out_sum,
+        inv_id=inv_id,
+        signature_value=signature,
+        shp=shp or None,
+    ):
+        raise ValueError("Неверная подпись Robokassa")
+
+    order = social_db.get_donation_order_by_id(inv_id)
+    if not order:
+        # запасной поиск по Shp_tx
+        tx = shp.get("Shp_tx") or ""
+        if tx:
+            order = social_db.get_donation_order_by_tx(tx)
+    if not order:
+        raise ValueError("Заказ не найден")
+
+    expected = float(order.get("amount_rub") or 0)
+    paid = float(out_sum.replace(",", "."))
+    if abs(paid - expected) > 0.01:
+        raise ValueError("Сумма не совпадает с заказом")
+
+    tx_id = order["transaction_id"]
+    if order.get("status") == "confirmed" and order.get("fulfilled"):
+        return f"OK{inv_id}"
+
+    social_db.update_donation_order(
+        tx_id,
+        status="confirmed",
+        raw_callback=json.dumps(
+            {"robokassa": True, "params": {k: str(v) for k, v in params.items()}},
+            ensure_ascii=False,
+        ),
+    )
+    # Всегда отвечаем OK после фиксации оплаты — иначе Robokassa может «потерять» callback.
+    # Выдача привилегий догоняется здесь и через /status.
+    try:
+        order = social_db.get_donation_order_by_tx(tx_id)
+        await fulfill_order_if_needed(order)
+    except Exception:
+        pass
+    return f"OK{inv_id}"
 
 
 async def mark_order_paid(transaction_id: str) -> dict:
@@ -515,16 +637,22 @@ async def apply_callback(payload: dict) -> dict:
 
 
 def catalog_payload() -> dict:
+    mode = payment_mode()
     return {
         "configured": payments_available(),
-        "mode": "manual_sbp" if MANUAL_SBP_ENABLED else ("platega" if platega_configured() else "off"),
+        "mode": mode,
         "currency": "RUB",
         "tiers": list_tiers(),
         "coin_packs": list_coin_packs(),
         "methods": PAYMENT_METHODS,
         "default_method": 2,
-        "sbp": sbp_payment_info(),
+        "sbp": sbp_payment_info() if mode == "manual_sbp" else None,
         "smtp_ready": smtp_configured(),
+        "urls": {
+            "result": f"{SITE_PUBLIC_URL}/api/donations/robokassa/result",
+            "success": f"{SITE_PUBLIC_URL}/api/donations/robokassa/success",
+            "fail": f"{SITE_PUBLIC_URL}/api/donations/robokassa/fail",
+        },
     }
 
 

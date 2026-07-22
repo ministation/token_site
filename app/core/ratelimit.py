@@ -192,6 +192,10 @@ async def rate_limit_middleware(request: Request, call_next):
     if path.startswith("/static"):
         return await call_next(request)
 
+    # Result URL Robokassa — не режем (идемпотентный callback)
+    if path.startswith("/api/donations/robokassa/"):
+        return await call_next(request)
+
     ip = client_ip(request)
     user_key = _session_user_key(request)
 

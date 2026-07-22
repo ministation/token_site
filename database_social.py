@@ -1786,6 +1786,15 @@ def get_donation_order_by_tx(transaction_id: str) -> Optional[Dict]:
     return dict(row) if row else None
 
 
+def get_donation_order_by_id(order_id: int) -> Optional[Dict]:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM donation_orders WHERE id = ?", (int(order_id),))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
 def mark_donation_fulfilled(transaction_id: str) -> bool:
     """Атомарно ставит fulfilled=1 только если ещё не выдано. True = мы захватили заказ."""
     conn = get_db()
@@ -1808,6 +1817,7 @@ def update_donation_order(
     redirect_url: str | None = None,
     raw_callback: str | None = None,
     fulfilled: int | None = None,
+    payload: str | None = None,
 ) -> bool:
     conn = get_db()
     cursor = conn.cursor()
@@ -1825,6 +1835,9 @@ def update_donation_order(
     if fulfilled is not None:
         sets.append("fulfilled = ?")
         params.append(int(fulfilled))
+    if payload is not None:
+        sets.append("payload = ?")
+        params.append(payload)
     params.append(transaction_id)
     cursor.execute(
         f"UPDATE donation_orders SET {', '.join(sets)} WHERE transaction_id = ?",

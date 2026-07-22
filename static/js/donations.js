@@ -241,6 +241,7 @@ function updateDonateCheckoutUI() {
     const methods = document.getElementById('donateMethods');
     const contactWrap = document.getElementById('donateContactWrap');
     const payBtn = document.getElementById('donatePayBtn');
+    const hint = document.getElementById('donateHint');
     const icon = document.getElementById('donateSelectedIcon');
     const name = document.getElementById('donateSelectedName');
     const price = document.getElementById('donateSelectedPrice');
@@ -248,6 +249,12 @@ function updateDonateCheckoutUI() {
     const tier = (donateCatalog?.tiers || []).find(t => t.id === selectedDonateTierId);
     const pack = (donateCatalog?.coin_packs || []).find(p => p.id === selectedDonatePackId);
     const item = tier || pack;
+    const mode = donateCatalog?.mode || '';
+
+    if (hint && mode === 'robokassa') {
+        hint.innerHTML = 'Оплачивая заказ, вы принимаете <a href="/#/offer">публичную оферту</a>. '
+            + 'Откроется безопасная страница Robokassa (СБП / карта). После оплаты привилегии активируются автоматически.';
+    }
 
     if (!item) {
         if (empty) empty.hidden = false;
@@ -267,6 +274,7 @@ function updateDonateCheckoutUI() {
 
     if (empty) empty.hidden = true;
     if (selected) selected.hidden = false;
+    // При Robokassa способ выбирается на их стороне — показываем иконки как подсказку
     if (methods) methods.hidden = false;
     if (contactWrap) contactWrap.hidden = false;
     if (payBtn) payBtn.disabled = false;
@@ -335,10 +343,17 @@ async function startDonationCheckout() {
         }
         return;
     }
-    if (isCoins && !currentUser?.authenticated) {
+    if isCoins && !currentUser?.authenticated) {
         if (result) {
             result.className = 'result error';
             result.textContent = 'Для покупки монет войдите через Discord';
+        }
+        return;
+    }
+    if (isTier && !currentUser?.authenticated) {
+        if (result) {
+            result.className = 'result error';
+            result.textContent = 'Для покупки подписки войдите через Discord';
         }
         return;
     }
@@ -347,7 +362,7 @@ async function startDonationCheckout() {
     formData.append('product_type', isCoins ? 'coins' : 'tier');
     formData.append('tier_id', String(selectedDonateTierId || 0));
     formData.append('pack_id', String(selectedDonatePackId || 0));
-    formData.append('payment_method', '2');
+    formData.append('payment_method', String(selectedDonateMethod || 2));
     formData.append('contact', document.getElementById('donateContact')?.value.trim() || '');
 
     if (btn) {
@@ -356,24 +371,23 @@ async function startDonationCheckout() {
     }
     try {
         const data = await apiCall('POST', '/api/donations/checkout', formData);
-        // Ручной СБП: всегда открываем страницу ожидания с QR
-        if (data.mode === 'manual_sbp' || data.sbp || (data.transaction_id && !data.redirect)) {
-            showDonateWaitPanel(data);
-            return;
-        }
-        if (data.redirect) {
+        if (data.redirect || data.pay_path) {
             if (result) {
                 result.className = 'result success';
                 result.textContent = 'Перенаправляем на оплату…';
             }
-            window.location.href = data.redirect;
+            window.location.href = data.pay_path || data.redirect;
+            return;
+        }
+        if (data.mode === 'manual_sbp' || data.sbp) {
+            showDonateWaitPanel(data);
             return;
         }
         if (data.transaction_id) {
             showDonateWaitPanel(data);
             return;
         }
-        throw new Error('Не удалось открыть оплату СБП');
+        throw new Error('Не удалось открыть оплату');
     } catch (e) {
         if (result) {
             result.className = 'result error';
@@ -536,15 +550,32 @@ async function handleDonateReturnQuery() {
     let order = params.get('order');
     let result = params.get('result');
     let wait = params.get('wait');
+    let paid = params.get('paid');
     if (!order && location.hash.includes('?')) {
         const hq = new URLSearchParams(location.hash.split('?')[1] || '');
         order = hq.get('order');
         result = hq.get('result');
         wait = hq.get('wait');
+        paid = hq.get('paid');
     }
+
+    if (paid === '1' || paid === '0') {
+        const banner = document.getElementById('donatePayStatus');
+        if (banner && !order) {
+            banner.hidden = false;
+            if (paid === '1') {
+                banner.className = 'donate-pay-banner ok';
+                banner.textContent = 'Оплата прошла. Если привилегии не появились сразу — обновите страницу через минуту.';
+            } else {
+                banner.className = 'donate-pay-banner fail';
+                banner.textContent = 'Оплата не завершена. Попробуйте снова.';
+            }
+        }
+    }
+
     if (!order) return;
 
-    if (wait === '1' || !result) {
+    if (wait === '1' && !result && paid !== '1') {
         try {
             const data = await apiCall('GET', `/api/donations/order/${encodeURIComponent(order)}`);
             showDonateWaitPanel(data);
@@ -560,7 +591,7 @@ async function handleDonateReturnQuery() {
     try {
         const data = await apiCall('GET', `/api/donations/status/${encodeURIComponent(order)}`);
         const st = data.status || '';
-        if (st === 'confirmed' || result === 'success') {
+        if (st === 'confirmed' || result === 'success' || paid === '1') {
             banner.classList.add('ok');
             if ((data.product_type || '') === 'coins') {
                 banner.textContent = data.fulfilled
@@ -569,15 +600,21 @@ async function handleDonateReturnQuery() {
             } else {
                 banner.textContent = `Оплата получена: ${data.tier_name || 'тариф'} (${data.amount_rub || ''} ₽).`;
             }
+            if (st !== 'confirmed') {
+                // Result URL мог ещё не успеть — опрашиваем
+                currentDonateOrderId = order;
+                startDonateStatusPoll();
+            }
         } else if (st === 'awaiting_confirmation') {
             showDonateWaitPanel(data);
             banner.hidden = true;
-        } else if (st === 'canceled' || result === 'fail') {
+        } else if (st === 'canceled' || result === 'fail' || paid === '0') {
             banner.classList.add('fail');
             banner.textContent = 'Оплата не завершена. Попробуйте снова.';
         } else {
-            showDonateWaitPanel(data);
-            banner.hidden = true;
+            currentDonateOrderId = order;
+            startDonateStatusPoll();
+            banner.textContent = 'Ожидаем подтверждение оплаты…';
         }
     } catch {
         banner.classList.add('fail');

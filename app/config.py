@@ -81,6 +81,24 @@ PLATEGA_SECRET = os.getenv("PLATEGA_SECRET", "")
 PLATEGA_API_BASE = os.getenv("PLATEGA_API_BASE", "https://app.platega.io").rstrip("/")
 PLATEGA_DEFAULT_METHOD = int(os.getenv("PLATEGA_DEFAULT_METHOD", "2"))  # 2 = СБП/QR
 
+# Robokassa (ЛК → Технические настройки)
+ROBOKASSA_LOGIN = os.getenv("ROBOKASSA_LOGIN", "").strip()
+ROBOKASSA_PASSWORD1 = os.getenv("ROBOKASSA_PASSWORD1", "").strip()
+ROBOKASSA_PASSWORD2 = os.getenv("ROBOKASSA_PASSWORD2", "").strip()
+ROBOKASSA_HASH = os.getenv("ROBOKASSA_HASH", "md5").strip().lower()  # md5 | sha256 | sha512
+ROBOKASSA_IS_TEST = os.getenv("ROBOKASSA_IS_TEST", "0").strip().lower() in ("1", "true", "yes")
+ROBOKASSA_TEST_PASSWORD1 = os.getenv("ROBOKASSA_TEST_PASSWORD1", "").strip()
+ROBOKASSA_TEST_PASSWORD2 = os.getenv("ROBOKASSA_TEST_PASSWORD2", "").strip()
+ROBOKASSA_PAYMENT_URL = os.getenv(
+    "ROBOKASSA_PAYMENT_URL",
+    "https://auth.robokassa.ru/Merchant/Index.aspx",
+)
+# Ставка НДС в чеке 54-ФЗ: none (самозанятый) | vat0 | vat10 | vat20 …
+ROBOKASSA_RECEIPT_TAX = os.getenv("ROBOKASSA_RECEIPT_TAX", "none").strip() or "none"
+ROBOKASSA_RECEIPT_ENABLED = os.getenv("ROBOKASSA_RECEIPT_ENABLED", "1").strip().lower() not in (
+    "0", "false", "no",
+)
+
 # Файлы и загрузки
 SESSIONS_FILE = os.getenv("SESSIONS_FILE", "sessions.json")
 UPLOAD_DIR = os.getenv("UPLOAD_DIR", "static/uploads")
