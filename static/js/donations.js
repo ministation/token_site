@@ -346,7 +346,7 @@ async function startDonationCheckout() {
         }
         return;
     }
-    if isCoins && !currentUser?.authenticated) {
+    if (isCoins && !currentUser?.authenticated) {
         if (result) {
             result.className = 'result error';
             result.textContent = 'Для покупки монет войдите через Discord';
