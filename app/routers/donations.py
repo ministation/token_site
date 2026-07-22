@@ -406,7 +406,7 @@ async def create_discount(
         bp = beneficiary.get("player_id")
         bd = str(beneficiary.get("discord_id") or "") or None
         if not badge:
-            badge = f"PERSONAL −{percent}%"
+            badge = f"−{percent}%"
 
     row = social_db.create_donation_discount(
         title=title,

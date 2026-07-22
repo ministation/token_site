@@ -67,6 +67,7 @@ async function loadDonateCatalog() {
     if (!box && !packsBox) return;
     try {
         donateCatalog = await apiCall('GET', '/api/donations/catalog');
+        renderDonatePromoBanner(donateCatalog.promo);
         const methods = donateCatalog.methods || [];
         const allowed = new Set(methods.map(m => Number(m.id)));
         let method = loadSavedDonateMethod(donateCatalog.default_method || 2);
@@ -90,7 +91,7 @@ async function loadDonateCatalog() {
         renderDonateMethods();
         switchDonateTab(donateActiveTab);
         updateDonateCheckoutUI();
-        renderDonatePromoBanner(donateCatalog.promo);
+        await refreshDonateSaleBadges();
     } catch (e) {
         if (box) box.innerHTML = `<p class="error">${escapeHtml(e.message || 'Ошибка загрузки')}</p>`;
     }

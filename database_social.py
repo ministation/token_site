@@ -1976,7 +1976,14 @@ def _is_discount_currently_active(row: dict, now: Optional[datetime.datetime] = 
     end = _parse_discount_dt(row.get("ends_at"))
     if end is None:
         return False
-    return start <= now < end
+    # Допуск на сдвиг TZ (UTC vs MSK): старт «в будущем» до 14ч всё ещё считаем активным,
+    # если окончание ещё не наступило.
+    if start > now:
+        skew = start - now
+        if skew <= datetime.timedelta(hours=14) and now < end:
+            return True
+        return False
+    return now < end
 
 
 def create_donation_discount(
@@ -1993,7 +2000,8 @@ def create_donation_discount(
     created_by: str | None = None,
 ) -> dict:
     ensure_donation_discounts_table()
-    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    now_dt = datetime.datetime.now() - datetime.timedelta(seconds=30)
+    now = now_dt.strftime("%Y-%m-%d %H:%M:%S")
     start_val = starts_at or now
     bp = (beneficiary_player_id or "").strip() or None
     bd = (beneficiary_discord_id or "").strip() or None

@@ -193,16 +193,27 @@ def _rub_label(amount: int) -> str:
 
 def serialize_discount(row: dict) -> dict:
     percent = max(1, min(int(row.get("percent") or 0), 90))
+    # Уже сериализовано — не ходим в БД повторно и не затираем поля
+    if isinstance(row, dict) and "is_personal" in row and "title" in row and "scope" in row:
+        out = dict(row)
+        out["percent"] = percent
+        if not (out.get("badge_text") or "").strip():
+            out["badge_text"] = f"−{percent}%"
+        return out
+
     bp = (row.get("beneficiary_player_id") or "").strip() or None
     bd = (row.get("beneficiary_discord_id") or "").strip() or None
     personal = bool(bp or bd)
     beneficiary_label = None
     if personal:
         user = None
-        if bp:
-            user = social_db.get_social_user_by_player_id(bp)
-        if not user and bd:
-            user = social_db.get_social_user_by_discord_id(str(bd))
+        try:
+            if bp:
+                user = social_db.get_social_user_by_player_id(bp)
+            if not user and bd:
+                user = social_db.get_social_user_by_discord_id(str(bd))
+        except Exception:
+            user = None
         if user:
             beneficiary_label = (
                 user.get("game_nickname")
@@ -212,13 +223,14 @@ def serialize_discount(row: dict) -> dict:
             )
         else:
             beneficiary_label = bp or bd
+    raw_badge = (row.get("badge_text") or "").strip()
     return {
         "id": row["id"],
         "title": row.get("title") or "Скидка",
         "percent": percent,
         "scope": row.get("scope") or "all",
         "target_id": row.get("target_id"),
-        "badge_text": row.get("badge_text") or (f"PERSONAL −{percent}%" if personal else f"SALE −{percent}%"),
+        "badge_text": raw_badge or f"−{percent}%",
         "beneficiary_player_id": bp,
         "beneficiary_discord_id": bd,
         "beneficiary_label": beneficiary_label,
@@ -251,16 +263,17 @@ def best_discount_for(product_type: str, product_id: int, discounts: list[dict] 
     rows = discounts if discounts is not None else social_db.get_active_donation_discounts(public_only=True)
     best = None
     for raw in rows:
-        # Already-serialized rows have is_personal; raw DB rows need serialize
-        if "is_personal" in raw and "badge_text" in raw and "percent" in raw:
-            d = raw
-        else:
-            d = serialize_discount(raw)
+        d = raw if isinstance(raw, dict) and "is_personal" in raw else serialize_discount(raw)
         if not _discount_matches(d, product_type, product_id):
             continue
         if best is None or int(d["percent"]) > int(best["percent"]):
             best = d
-        elif best is not None and int(d["percent"]) == int(best["percent"]) and d.get("is_personal") and not best.get("is_personal"):
+        elif (
+            best is not None
+            and int(d["percent"]) == int(best["percent"])
+            and d.get("is_personal")
+            and not best.get("is_personal")
+        ):
             best = d
     return best
 
@@ -369,7 +382,7 @@ def active_promo_summary(
     return {
         "has_sale": True,
         "percent": best["percent"],
-        "badge_text": best.get("badge_text") or f"SALE −{best['percent']}%",
+        "badge_text": best.get("badge_text") or f"−{best['percent']}%",
         "title": best.get("title"),
         "ends_at": min(ends) if ends else best.get("ends_at"),
         "count": len(rows),

@@ -6608,63 +6608,42 @@ label.chat-tool-btn input[type="file"] {
 
 .donate-sale-badge {
     position: absolute;
-    top: 12px;
-    right: -6px;
+    top: 10px;
+    right: 10px;
     z-index: 3;
     display: inline-flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     gap: 1px;
-    min-width: 58px;
-    padding: 7px 12px 8px;
-    border-radius: 8px 0 0 8px;
+    min-width: 54px;
+    padding: 6px 10px;
+    border-radius: 10px;
     background: linear-gradient(180deg, #ff7a18 0%, #e85d04 55%, #c2410c 100%);
     color: #fff;
-    box-shadow:
-        0 3px 0 #9a3412,
-        0 6px 14px color-mix(in srgb, #e85d04 35%, transparent);
-    transform: rotate(8deg);
+    box-shadow: 0 3px 0 #9a3412;
     pointer-events: none;
     line-height: 1.05;
 }
-.donate-sale-badge::after {
-    content: "";
-    position: absolute;
-    right: 0;
-    bottom: -7px;
-    border-style: solid;
-    border-width: 7px 6px 0 0;
-    border-color: #9a3412 transparent transparent transparent;
-}
 .donate-sale-badge-sale {
-    font-size: 0.72rem;
+    font-size: 0.68rem;
     font-weight: 900;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
 }
 .donate-sale-badge-pct {
-    font-size: 0.95rem;
+    font-size: 0.92rem;
     font-weight: 900;
     letter-spacing: 0.01em;
 }
 .donate-tier-card.on-sale,
 .donate-pack-card.on-sale {
     border-color: color-mix(in srgb, #e85d04 65%, var(--border));
-    overflow: visible;
-}
-.donate-tier-card.on-sale .donate-tier-select,
-.donate-pack-card.on-sale .donate-pack-select {
-    border-radius: inherit;
-    overflow: hidden;
 }
 @media (prefers-reduced-motion: no-preference) {
     .donate-sale-badge {
-        animation: donate-sale-wiggle 2.4s ease-in-out infinite;
+        animation: donate-sale-pulse 1.6s ease-in-out infinite;
     }
-}
-@keyframes donate-sale-wiggle {
-    0%, 100% { transform: rotate(8deg) scale(1); }
-    50% { transform: rotate(5deg) scale(1.04); }
 }
 @media (prefers-reduced-motion: reduce) {
     .donate-sale-badge { animation: none; }
@@ -6773,12 +6752,7 @@ label.chat-tool-btn input[type="file"] {
 }
 .donate-sale-badge.is-personal {
     background: linear-gradient(180deg, #a78bfa 0%, #7c3aed 55%, #5b21b6 100%);
-    box-shadow:
-        0 3px 0 #4c1d95,
-        0 6px 14px color-mix(in srgb, #7c3aed 35%, transparent);
-}
-.donate-sale-badge.is-personal::after {
-    border-color: #4c1d95 transparent transparent transparent;
+    box-shadow: 0 3px 0 #4c1d95;
 }
 .donate-discount-actions {
     display: flex;
