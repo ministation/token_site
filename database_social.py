@@ -355,6 +355,50 @@ def _migrate_schema():
         ON support_tickets(status, created_at DESC)
     """)
     cursor.execute("""
+        CREATE TABLE IF NOT EXISTS support_ticket_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ticket_id INTEGER NOT NULL,
+            author_type TEXT NOT NULL,
+            author_id TEXT,
+            author_name TEXT,
+            content TEXT NOT NULL DEFAULT '',
+            image_url TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (ticket_id) REFERENCES support_tickets(id) ON DELETE CASCADE
+        )
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_stm_ticket
+        ON support_ticket_messages(ticket_id, created_at)
+    """)
+    # One-shot backfill: old tickets → first user (+ staff) messages
+    cursor.execute("""
+        SELECT t.id, t.player_id, t.body, t.admin_response, t.reviewed_by,
+               t.created_at, t.updated_at
+        FROM support_tickets t
+        WHERE NOT EXISTS (
+            SELECT 1 FROM support_ticket_messages m WHERE m.ticket_id = t.id
+        )
+    """)
+    for row in cursor.fetchall():
+        tid = row["id"]
+        body = (row["body"] or "").strip()
+        if body:
+            cursor.execute("""
+                INSERT INTO support_ticket_messages
+                    (ticket_id, author_type, author_id, author_name, content, created_at)
+                VALUES (?, 'user', ?, NULL, ?, COALESCE(?, CURRENT_TIMESTAMP))
+            """, (tid, row["player_id"], body, row["created_at"]))
+        admin_resp = (row["admin_response"] or "").strip()
+        if admin_resp:
+            cursor.execute("""
+                INSERT INTO support_ticket_messages
+                    (ticket_id, author_type, author_id, author_name, content, created_at)
+                VALUES (?, 'staff', ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP))
+            """, (tid, row["reviewed_by"], row["reviewed_by"] or "Админ",
+                  admin_resp, row["updated_at"] or row["created_at"]))
+
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS donation_orders (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             transaction_id TEXT NOT NULL UNIQUE,
@@ -1468,12 +1512,18 @@ def update_ban_appeal(appeal_id: int, status: str, admin_response: str, reviewed
 def create_support_ticket(contact: str, subject: str, body: str, player_id: str | None = None) -> int:
     conn = get_db()
     cursor = conn.cursor()
+    body_clean = body.strip()
     cursor.execute("""
         INSERT INTO support_tickets (player_id, contact, subject, body)
         VALUES (?, ?, ?, ?)
-    """, (player_id, contact.strip(), subject.strip(), body.strip()))
-    conn.commit()
+    """, (player_id, contact.strip(), subject.strip(), body_clean))
     ticket_id = cursor.lastrowid
+    cursor.execute("""
+        INSERT INTO support_ticket_messages
+            (ticket_id, author_type, author_id, author_name, content)
+        VALUES (?, 'user', ?, NULL, ?)
+    """, (ticket_id, player_id, body_clean))
+    conn.commit()
     conn.close()
     return ticket_id
 
@@ -1484,13 +1534,38 @@ def list_support_tickets(status: str | None = None, limit: int = 50, offset: int
     st = (status or "").strip()
     if st:
         cursor.execute("""
-            SELECT * FROM support_tickets WHERE status = ?
-            ORDER BY created_at DESC LIMIT ? OFFSET ?
+            SELECT t.*,
+                (SELECT content FROM support_ticket_messages m
+                 WHERE m.ticket_id = t.id ORDER BY m.created_at DESC, m.id DESC LIMIT 1) AS last_message,
+                (SELECT author_type FROM support_ticket_messages m
+                 WHERE m.ticket_id = t.id ORDER BY m.created_at DESC, m.id DESC LIMIT 1) AS last_author_type,
+                (SELECT created_at FROM support_ticket_messages m
+                 WHERE m.ticket_id = t.id ORDER BY m.created_at DESC, m.id DESC LIMIT 1) AS last_message_at
+            FROM support_tickets t
+            WHERE t.status = ?
+            ORDER BY COALESCE(
+                (SELECT created_at FROM support_ticket_messages m
+                 WHERE m.ticket_id = t.id ORDER BY m.created_at DESC, m.id DESC LIMIT 1),
+                t.updated_at, t.created_at
+            ) DESC
+            LIMIT ? OFFSET ?
         """, (st, limit, offset))
     else:
         cursor.execute("""
-            SELECT * FROM support_tickets
-            ORDER BY created_at DESC LIMIT ? OFFSET ?
+            SELECT t.*,
+                (SELECT content FROM support_ticket_messages m
+                 WHERE m.ticket_id = t.id ORDER BY m.created_at DESC, m.id DESC LIMIT 1) AS last_message,
+                (SELECT author_type FROM support_ticket_messages m
+                 WHERE m.ticket_id = t.id ORDER BY m.created_at DESC, m.id DESC LIMIT 1) AS last_author_type,
+                (SELECT created_at FROM support_ticket_messages m
+                 WHERE m.ticket_id = t.id ORDER BY m.created_at DESC, m.id DESC LIMIT 1) AS last_message_at
+            FROM support_tickets t
+            ORDER BY COALESCE(
+                (SELECT created_at FROM support_ticket_messages m
+                 WHERE m.ticket_id = t.id ORDER BY m.created_at DESC, m.id DESC LIMIT 1),
+                t.updated_at, t.created_at
+            ) DESC
+            LIMIT ? OFFSET ?
         """, (limit, offset))
     rows = [dict(r) for r in cursor.fetchall()]
     conn.close()
@@ -1501,8 +1576,21 @@ def list_support_tickets_by_player(player_id: str, limit: int = 30) -> List[Dict
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT * FROM support_tickets WHERE player_id = ?
-        ORDER BY created_at DESC LIMIT ?
+        SELECT t.*,
+            (SELECT content FROM support_ticket_messages m
+             WHERE m.ticket_id = t.id ORDER BY m.created_at DESC, m.id DESC LIMIT 1) AS last_message,
+            (SELECT author_type FROM support_ticket_messages m
+             WHERE m.ticket_id = t.id ORDER BY m.created_at DESC, m.id DESC LIMIT 1) AS last_author_type,
+            (SELECT created_at FROM support_ticket_messages m
+             WHERE m.ticket_id = t.id ORDER BY m.created_at DESC, m.id DESC LIMIT 1) AS last_message_at
+        FROM support_tickets t
+        WHERE t.player_id = ?
+        ORDER BY COALESCE(
+            (SELECT created_at FROM support_ticket_messages m
+             WHERE m.ticket_id = t.id ORDER BY m.created_at DESC, m.id DESC LIMIT 1),
+            t.updated_at, t.created_at
+        ) DESC
+        LIMIT ?
     """, (player_id, limit))
     rows = [dict(r) for r in cursor.fetchall()]
     conn.close()
@@ -1518,6 +1606,65 @@ def get_support_ticket(ticket_id: int) -> Optional[Dict]:
     return dict(row) if row else None
 
 
+def list_support_ticket_messages(ticket_id: int, limit: int = 200) -> List[Dict]:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT id, ticket_id, author_type, author_id, author_name, content, image_url, created_at
+        FROM support_ticket_messages
+        WHERE ticket_id = ?
+        ORDER BY created_at ASC, id ASC
+        LIMIT ?
+    """, (ticket_id, limit))
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return rows
+
+
+def add_support_ticket_message(
+    ticket_id: int,
+    author_type: str,
+    content: str,
+    author_id: str | None = None,
+    author_name: str | None = None,
+    image_url: str | None = None,
+    new_status: str | None = None,
+) -> int:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO support_ticket_messages
+            (ticket_id, author_type, author_id, author_name, content, image_url)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (
+        ticket_id,
+        author_type,
+        author_id,
+        author_name,
+        (content or "").strip(),
+        image_url,
+    ))
+    msg_id = cursor.lastrowid
+    if author_type == "staff":
+        cursor.execute("""
+            UPDATE support_tickets
+            SET admin_response = ?, reviewed_by = COALESCE(?, reviewed_by),
+                status = COALESCE(?, status),
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        """, ((content or "").strip() or None, author_name or author_id, new_status, ticket_id))
+    else:
+        cursor.execute("""
+            UPDATE support_tickets
+            SET status = COALESCE(?, status),
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        """, (new_status or "open", ticket_id))
+    conn.commit()
+    conn.close()
+    return msg_id
+
+
 def update_support_ticket(ticket_id: int, status: str, admin_response: str, reviewed_by: str) -> bool:
     conn = get_db()
     cursor = conn.cursor()
@@ -1526,6 +1673,27 @@ def update_support_ticket(ticket_id: int, status: str, admin_response: str, revi
         SET status = ?, admin_response = ?, reviewed_by = ?, updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
     """, (status, admin_response, reviewed_by, ticket_id))
+    conn.commit()
+    ok = cursor.rowcount > 0
+    conn.close()
+    return ok
+
+
+def set_support_ticket_status(ticket_id: int, status: str, reviewed_by: str | None = None) -> bool:
+    conn = get_db()
+    cursor = conn.cursor()
+    if reviewed_by:
+        cursor.execute("""
+            UPDATE support_tickets
+            SET status = ?, reviewed_by = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        """, (status, reviewed_by, ticket_id))
+    else:
+        cursor.execute("""
+            UPDATE support_tickets
+            SET status = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        """, (status, ticket_id))
     conn.commit()
     ok = cursor.rowcount > 0
     conn.close()

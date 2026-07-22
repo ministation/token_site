@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request, HTTPException, Query
+from fastapi import APIRouter, Request, HTTPException, Query, Form, File, UploadFile
 from pydantic import BaseModel
 from app.dependencies import get_current_admin, get_current_staff
 from app.services.admin import (
@@ -399,6 +399,64 @@ async def admin_support_tickets(
     await get_current_staff(request)
     from app.services import support as support_svc
     return support_svc.list_tickets(status, limit, offset)
+
+
+@router.get("/support-tickets/{ticket_id}")
+async def admin_support_ticket_thread(ticket_id: int, request: Request):
+    await get_current_staff(request)
+    from app.services import support as support_svc
+    data = support_svc.get_ticket_thread(ticket_id)
+    if not data:
+        raise HTTPException(status_code=404, detail="Тикет не найден")
+    return data
+
+
+@router.post("/support-tickets/{ticket_id}/messages")
+async def admin_support_ticket_message(
+    ticket_id: int,
+    request: Request,
+    content: str = Form(""),
+    status: str = Form("answered"),
+    image: UploadFile | None = File(None),
+):
+    staff = await get_current_staff(request)
+    from app.services import support as support_svc
+    from app.services.media_upload import save_upload
+    image_url = None
+    if image and image.filename:
+        try:
+            image_url = save_upload(
+                image, staff.get("social_id") or staff.get("username") or "staff",
+                kind="image", prefix="ticket",
+            )
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+    try:
+        msg_id = support_svc.add_staff_message(
+            ticket_id,
+            content,
+            staff.get("username") or staff.get("display_name") or "Админ",
+            image_url=image_url,
+            status=status or "answered",
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"success": True, "message_id": msg_id, **support_svc.get_ticket_thread(ticket_id)}
+
+
+@router.post("/support-tickets/{ticket_id}/status")
+async def admin_support_ticket_status(ticket_id: int, req: ReviewTicketRequest, request: Request):
+    staff = await get_current_staff(request)
+    from app.services import support as support_svc
+    try:
+        ok = support_svc.set_ticket_status(
+            ticket_id, req.status, staff.get("username", "")
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    if not ok:
+        raise HTTPException(status_code=404, detail="Тикет не найден")
+    return {"success": True}
 
 
 @router.post("/support-tickets/{ticket_id}/review")

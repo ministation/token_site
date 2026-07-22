@@ -3,6 +3,9 @@ const SUPPORT_EMAIL_FALLBACK = 'mini-station-14@yandex.ru';
 let adminInboxType = 'all';
 let adminInboxItems = [];
 let adminInboxSelectedKey = null;
+let supportOpenTicketId = null;
+let supportTicketPollTimer = null;
+let adminTicketPollTimer = null;
 
 async function initSupportSection() {
     await loadSupportContacts();
@@ -14,8 +17,12 @@ async function initSupportSection() {
         if (contact && !contact.value) {
             contact.value = currentUser.username || '';
         }
+        if (typeof setupChatImagePreview === 'function') {
+            setupChatImagePreview('supportChatImage', 'supportChatImagePreview');
+        }
     } else if (wrap) {
         wrap.hidden = true;
+        closeSupportChat();
     }
 }
 
@@ -64,14 +71,15 @@ async function submitSupportTicket(event) {
         const res = await apiCall('POST', '/api/support/tickets', formData);
         if (result) {
             result.className = 'result success';
-            result.textContent = `Тикет #${res.ticket_id} отправлен. Ответим на указанный контакт.`;
+            result.textContent = `Тикет #${res.ticket_id} создан`;
         }
         const form = document.getElementById('supportTicketForm');
         if (form) form.reset();
         if (currentUser?.authenticated) {
             const c = document.getElementById('supportContact');
             if (c && currentUser.username) c.value = currentUser.username;
-            loadMySupportTickets();
+            await loadMySupportTickets();
+            if (res.ticket_id) openSupportTicket(res.ticket_id);
         }
     } catch (e) {
         if (result) {
@@ -81,7 +89,7 @@ async function submitSupportTicket(event) {
     } finally {
         if (btn) {
             btn.disabled = false;
-            btn.innerHTML = '<i class="fa-solid fa-paper-plane" aria-hidden="true"></i> Отправить тикет';
+            btn.innerHTML = '<i class="fa-solid fa-paper-plane" aria-hidden="true"></i> Создать';
         }
     }
 }
@@ -109,6 +117,66 @@ function formatInboxTime(iso) {
     }
 }
 
+function formatTicketChatTime(iso) {
+    if (!iso) return '';
+    try {
+        return new Date(iso).toLocaleString('ru-RU', {
+            day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+        });
+    } catch {
+        return String(iso);
+    }
+}
+
+function renderTicketChatMessage(m, opts = {}) {
+    const isStaff = m.author_type === 'staff';
+    const own = !isStaff;
+    const text = m.content || '';
+    const time = formatTicketChatTime(m.created_at);
+    const imageHtml = m.image_url && typeof renderChatImage === 'function'
+        ? renderChatImage(m.image_url, 'pm-msg-image')
+        : (m.image_url ? `<img src="${escapeHtml(m.image_url)}" class="pm-msg-image" alt="">` : '');
+    const textHtml = text
+        ? `<div class="dc-content">${typeof formatMessageContent === 'function' ? formatMessageContent(text) : escapeHtml(text)}</div>`
+        : '';
+    const compact = !!opts.compact;
+    const name = isStaff
+        ? (m.author_name || 'Поддержка')
+        : (m.author_name || currentUser?.display_name || currentUser?.username || 'Вы');
+    const nameCls = isStaff ? 'dc-name' : 'dc-name dc-name-own';
+    const staffBadge = isStaff
+        ? '<span class="support-staff-badge">SUPPORT</span>'
+        : '';
+    const avatarHtml = compact
+        ? `<div class="dc-avatar-col" aria-hidden="true"><span class="dc-compact-time">${time}</span></div>`
+        : `<div class="dc-avatar-col"><div class="dc-avatar support-chat-avatar ${isStaff ? 'is-staff' : 'is-user'}">${isStaff ? '<i class="fa-solid fa-headset"></i>' : '<i class="fa-solid fa-user"></i>'}</div></div>`;
+
+    if (!textHtml && !imageHtml) return '';
+
+    return `<div class="dc-msg pm-message ${own ? 'own' : 'staff'} ${compact ? 'dc-msg-compact' : ''}">
+        ${avatarHtml}
+        <div class="dc-body">
+            ${compact ? '' : `<div class="dc-header"><span class="${nameCls}">${escapeHtml(name)}</span>${staffBadge}<span class="dc-timestamp">${time}</span></div>`}
+            ${textHtml}
+            ${imageHtml ? `<div class="dc-attach">${imageHtml}</div>` : ''}
+        </div>
+    </div>`;
+}
+
+function renderTicketMessagesHtml(messages) {
+    if (!messages?.length) {
+        return '<p class="empty-state">Пока нет сообщений</p>';
+    }
+    return messages.map((m, i) => {
+        const prev = i > 0 ? messages[i - 1] : null;
+        const sameAuthor = prev && prev.author_type === m.author_type
+            && (prev.author_id || '') === (m.author_id || '');
+        const gapMs = prev ? Math.abs(new Date(m.created_at) - new Date(prev.created_at)) : Infinity;
+        const compact = sameAuthor && gapMs < 7 * 60 * 1000;
+        return renderTicketChatMessage(m, { compact });
+    }).join('');
+}
+
 async function loadMySupportTickets() {
     const box = document.getElementById('supportMyTickets');
     if (!box || !currentUser?.authenticated) return;
@@ -120,29 +188,128 @@ async function loadMySupportTickets() {
         }
         box.innerHTML = items.map(t => {
             const st = ticketStatusMeta(t.status);
+            const preview = (t.last_message || t.body || '').slice(0, 80);
+            const active = Number(t.id) === Number(supportOpenTicketId) ? ' active' : '';
             return `
-            <article class="support-ticket-card">
+            <button type="button" class="support-ticket-card support-ticket-list-item${active}"
+                data-ticket-id="${t.id}" onclick="openSupportTicket(${t.id})">
                 <header class="support-ticket-card-head">
                     <div>
                         <span class="support-ticket-id">#${t.id}</span>
                         <strong>${escapeHtml(t.subject || 'Без темы')}</strong>
                     </div>
-                    <span class="inbox-status-pill ${st.cls}" title="${st.label}">
+                    <span class="inbox-status-pill ${st.cls}">
                         <i class="fa-solid ${st.icon}" aria-hidden="true"></i>
                         <span>${st.label}</span>
                     </span>
                 </header>
-                <p class="support-ticket-card-body">${escapeHtml(t.body || '')}</p>
-                ${t.admin_response ? `
-                    <div class="support-ticket-card-reply">
-                        <strong><i class="fa-solid fa-headset" aria-hidden="true"></i> Ответ поддержки</strong>
-                        <p>${escapeHtml(t.admin_response)}</p>
-                    </div>` : ''}
-                <footer class="support-ticket-card-meta">${formatInboxTime(t.created_at)}</footer>
-            </article>`;
+                <p class="support-ticket-card-body">${escapeHtml(preview)}${(t.last_message || t.body || '').length > 80 ? '…' : ''}</p>
+                <footer class="support-ticket-card-meta">${formatInboxTime(t.last_message_at || t.updated_at || t.created_at)}</footer>
+            </button>`;
         }).join('');
     } catch {
         box.innerHTML = '<p class="error">Не удалось загрузить тикеты</p>';
+    }
+}
+
+function closeSupportChat() {
+    supportOpenTicketId = null;
+    stopSupportTicketPolling();
+    const empty = document.getElementById('supportChatEmpty');
+    const shell = document.getElementById('supportChatShell');
+    if (empty) empty.hidden = false;
+    if (shell) shell.hidden = true;
+    document.querySelectorAll('.support-ticket-list-item').forEach(el => el.classList.remove('active'));
+}
+
+async function openSupportTicket(ticketId) {
+    if (!currentUser?.authenticated) return;
+    supportOpenTicketId = Number(ticketId);
+    document.querySelectorAll('.support-ticket-list-item').forEach(el => {
+        el.classList.toggle('active', Number(el.dataset.ticketId) === supportOpenTicketId);
+    });
+    const empty = document.getElementById('supportChatEmpty');
+    const shell = document.getElementById('supportChatShell');
+    if (empty) empty.hidden = true;
+    if (shell) shell.hidden = false;
+    await refreshSupportChat();
+    startSupportTicketPolling();
+}
+
+async function refreshSupportChat() {
+    if (!supportOpenTicketId) return;
+    const box = document.getElementById('supportChatMessages');
+    if (!box) return;
+    try {
+        const data = await apiCall('GET', `/api/support/tickets/${supportOpenTicketId}`);
+        const ticket = data.ticket || {};
+        const messages = data.messages || [];
+        const st = ticketStatusMeta(ticket.status);
+        const idEl = document.getElementById('supportChatId');
+        const subEl = document.getElementById('supportChatSubject');
+        const stEl = document.getElementById('supportChatStatus');
+        if (idEl) idEl.textContent = `#${ticket.id}`;
+        if (subEl) subEl.textContent = ticket.subject || 'Без темы';
+        if (stEl) {
+            stEl.className = `inbox-status-pill ${st.cls}`;
+            stEl.innerHTML = `<i class="fa-solid ${st.icon}" aria-hidden="true"></i><span>${st.label}</span>`;
+        }
+        const closed = ticket.status === 'closed';
+        const composer = document.getElementById('supportChatComposer');
+        const closedHint = document.getElementById('supportChatClosed');
+        if (composer) composer.hidden = closed;
+        if (closedHint) closedHint.hidden = !closed;
+
+        const wasAtBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 64;
+        box.innerHTML = renderTicketMessagesHtml(messages);
+        if (wasAtBottom || !box.dataset.ready) {
+            box.scrollTop = box.scrollHeight;
+            box.dataset.ready = '1';
+        }
+    } catch (e) {
+        box.innerHTML = `<p class="error">${escapeHtml(e.message || 'Ошибка загрузки')}</p>`;
+    }
+}
+
+async function sendSupportChatMessage() {
+    if (!supportOpenTicketId || !currentUser?.authenticated) return;
+    const input = document.getElementById('supportChatInput');
+    const imageInput = document.getElementById('supportChatImage');
+    const content = input?.value.trim() || '';
+    const file = imageInput?.files?.[0];
+    if (!content && !file) return;
+
+    const formData = new FormData();
+    formData.append('content', content);
+    if (file) formData.append('image', file);
+    try {
+        await apiCall('POST', `/api/support/tickets/${supportOpenTicketId}/messages`, formData);
+        if (input) input.value = '';
+        if (typeof clearChatImagePreview === 'function') {
+            clearChatImagePreview('supportChatImage', 'supportChatImagePreview');
+        } else if (imageInput) {
+            imageInput.value = '';
+            const prev = document.getElementById('supportChatImagePreview');
+            if (prev) { prev.hidden = true; prev.innerHTML = ''; }
+        }
+        await refreshSupportChat();
+        loadMySupportTickets();
+    } catch (e) {
+        alert(e.message || 'Не удалось отправить');
+    }
+}
+
+function startSupportTicketPolling() {
+    stopSupportTicketPolling();
+    supportTicketPollTimer = setInterval(() => {
+        if (supportOpenTicketId) refreshSupportChat();
+    }, 5000);
+}
+
+function stopSupportTicketPolling() {
+    if (supportTicketPollTimer) {
+        clearInterval(supportTicketPollTimer);
+        supportTicketPollTimer = null;
     }
 }
 
@@ -169,12 +336,12 @@ function normalizeTicketItem(t) {
         id: t.id,
         status: t.status || 'open',
         title: t.subject || 'Без темы',
-        body: t.body || '',
+        body: t.last_message || t.body || '',
         contact: t.contact || '',
         player_id: t.player_id || '',
         admin_response: t.admin_response || '',
         reviewed_by: t.reviewed_by || '',
-        created_at: t.created_at,
+        created_at: t.last_message_at || t.created_at,
         updated_at: t.updated_at,
     };
 }
@@ -252,6 +419,7 @@ async function loadAdminInbox() {
                 </div>`;
             }
             adminInboxSelectedKey = null;
+            stopAdminTicketPolling();
             return;
         }
 
@@ -309,27 +477,36 @@ function selectAdminInboxItem(key) {
     const detail = document.getElementById('adminInboxDetail');
     if (!detail) return;
     if (!item) {
+        stopAdminTicketPolling();
         detail.innerHTML = `<div class="inbox-detail-empty">
             <i class="fa-regular fa-envelope-open" aria-hidden="true"></i>
             <p>Выберите обращение слева</p>
         </div>`;
         return;
     }
-    detail.innerHTML = item.kind === 'appeal'
-        ? renderAppealDetail(item)
-        : renderTicketDetail(item);
+    if (item.kind === 'appeal') {
+        stopAdminTicketPolling();
+        detail.innerHTML = renderAppealDetail(item);
+        return;
+    }
+    detail.innerHTML = renderTicketDetailChat(item);
+    if (typeof setupChatImagePreview === 'function') {
+        setupChatImagePreview('adminTicketImage', 'adminTicketImagePreview');
+    }
+    refreshAdminTicketChat(item.id);
+    startAdminTicketPolling(item.id);
 }
 
-function renderTicketDetail(item) {
+function renderTicketDetailChat(item) {
     const st = ticketStatusMeta(item.status);
     return `
-        <article class="inbox-detail-card">
+        <article class="inbox-detail-card inbox-ticket-chat">
             <header class="inbox-detail-head">
                 <div>
                     <span class="inbox-kind-chip"><i class="fa-solid fa-ticket" aria-hidden="true"></i> Тикет #${item.id}</span>
                     <h3>${escapeHtml(item.title)}</h3>
                 </div>
-                <span class="inbox-status-pill ${st.cls}">
+                <span class="inbox-status-pill ${st.cls}" id="adminTicketStatusPill">
                     <i class="fa-solid ${st.icon}" aria-hidden="true"></i>
                     <span>${st.label}</span>
                 </span>
@@ -338,35 +515,136 @@ function renderTicketDetail(item) {
                 <div><dt>Контакт</dt><dd>${escapeHtml(item.contact || '—')}</dd></div>
                 <div><dt>Игрок</dt><dd>${escapeHtml(item.player_id || 'гость')}</dd></div>
                 <div><dt>Создан</dt><dd>${formatInboxTime(item.created_at)}</dd></div>
-                ${item.reviewed_by ? `<div><dt>Ответил</dt><dd>${escapeHtml(item.reviewed_by)}</dd></div>` : ''}
             </dl>
-            <section class="inbox-detail-body">
-                <h4>Сообщение</h4>
-                <p>${escapeHtml(item.body)}</p>
-            </section>
-            ${item.admin_response ? `
-                <section class="inbox-detail-reply-prev">
-                    <h4>Предыдущий ответ</h4>
-                    <p>${escapeHtml(item.admin_response)}</p>
-                </section>` : ''}
-            <form class="inbox-reply-form" onsubmit="submitTicketReply(event, ${item.id})">
-                <label for="inboxReplyText">Ответ поддержки</label>
-                <textarea id="inboxReplyText" rows="4" required maxlength="4000"
-                    placeholder="Текст ответа пользователю…">${escapeHtml(item.admin_response || '')}</textarea>
-                <label for="inboxReplyStatus">Новый статус</label>
-                <select id="inboxReplyStatus">
+            <div class="dc-messages support-chat-messages admin-ticket-messages" id="adminTicketMessages">
+                <p class="empty-state">Загрузка...</p>
+            </div>
+            <div class="chat-composer dc-composer support-chat-composer" id="adminTicketComposer">
+                <div class="chat-composer-tools">
+                    <label class="chat-tool-btn" title="Изображение">
+                        <i class="fa-solid fa-image"></i>
+                        <input type="file" id="adminTicketImage" accept="image/*" hidden>
+                    </label>
+                </div>
+                <div class="chat-composer-main">
+                    <textarea id="adminTicketInput" rows="1" maxlength="4000"
+                        placeholder="Ответ поддержки..."
+                        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAdminTicketMessage(${item.id});}"></textarea>
+                    <div id="adminTicketImagePreview" class="chat-image-preview" hidden></div>
+                </div>
+                <button type="button" class="chat-send-btn" onclick="sendAdminTicketMessage(${item.id})" title="Отправить">
+                    <i class="fa-solid fa-paper-plane"></i>
+                </button>
+            </div>
+            <div class="inbox-reply-actions admin-ticket-status-row">
+                <label for="adminTicketStatus">Статус</label>
+                <select id="adminTicketStatus">
+                    <option value="open" ${item.status === 'open' ? 'selected' : ''}>Открыт</option>
                     <option value="answered" ${item.status === 'answered' ? 'selected' : ''}>Отвечен</option>
                     <option value="closed" ${item.status === 'closed' ? 'selected' : ''}>Закрыт</option>
-                    <option value="open" ${item.status === 'open' ? 'selected' : ''}>Открыт</option>
                 </select>
-                <div class="inbox-reply-actions">
-                    <button type="submit" class="inbox-btn-primary" id="inboxReplyBtn">
-                        <i class="fa-solid fa-paper-plane" aria-hidden="true"></i> Сохранить ответ
-                    </button>
-                </div>
-                <div id="inboxReplyResult" class="result" role="status" aria-live="polite"></div>
-            </form>
+                <button type="button" class="inbox-btn-primary" onclick="saveAdminTicketStatus(${item.id})">
+                    Сохранить статус
+                </button>
+            </div>
+            <div id="inboxReplyResult" class="result" role="status" aria-live="polite"></div>
         </article>`;
+}
+
+async function refreshAdminTicketChat(ticketId) {
+    const box = document.getElementById('adminTicketMessages');
+    if (!box) return;
+    try {
+        const data = await apiCall('GET', `/api/admin/support-tickets/${ticketId}`);
+        const messages = data.messages || [];
+        const ticket = data.ticket || {};
+        const wasAtBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 64;
+        box.innerHTML = renderTicketMessagesHtml(messages);
+        if (wasAtBottom || !box.dataset.ready) {
+            box.scrollTop = box.scrollHeight;
+            box.dataset.ready = '1';
+        }
+        const st = ticketStatusMeta(ticket.status);
+        const pill = document.getElementById('adminTicketStatusPill');
+        if (pill) {
+            pill.className = `inbox-status-pill ${st.cls}`;
+            pill.innerHTML = `<i class="fa-solid ${st.icon}" aria-hidden="true"></i><span>${st.label}</span>`;
+        }
+        const sel = document.getElementById('adminTicketStatus');
+        if (sel && ticket.status) sel.value = ticket.status;
+    } catch (e) {
+        box.innerHTML = `<p class="error">${escapeHtml(e.message || 'Ошибка')}</p>`;
+    }
+}
+
+async function sendAdminTicketMessage(ticketId) {
+    const input = document.getElementById('adminTicketInput');
+    const imageInput = document.getElementById('adminTicketImage');
+    const content = input?.value.trim() || '';
+    const file = imageInput?.files?.[0];
+    if (!content && !file) return;
+    const status = document.getElementById('adminTicketStatus')?.value || 'answered';
+    const formData = new FormData();
+    formData.append('content', content);
+    formData.append('status', status);
+    if (file) formData.append('image', file);
+    const result = document.getElementById('inboxReplyResult');
+    try {
+        await apiCall('POST', `/api/admin/support-tickets/${ticketId}/messages`, formData);
+        if (input) input.value = '';
+        if (typeof clearChatImagePreview === 'function') {
+            clearChatImagePreview('adminTicketImage', 'adminTicketImagePreview');
+        } else if (imageInput) {
+            imageInput.value = '';
+            const prev = document.getElementById('adminTicketImagePreview');
+            if (prev) { prev.hidden = true; prev.innerHTML = ''; }
+        }
+        if (result) {
+            result.className = 'result success';
+            result.textContent = 'Отправлено';
+        }
+        await refreshAdminTicketChat(ticketId);
+        await loadAdminInbox();
+    } catch (e) {
+        if (result) {
+            result.className = 'result error';
+            result.textContent = e.message || 'Ошибка';
+        }
+    }
+}
+
+async function saveAdminTicketStatus(ticketId) {
+    const status = document.getElementById('adminTicketStatus')?.value || 'answered';
+    const result = document.getElementById('inboxReplyResult');
+    try {
+        await apiCall('POST', `/api/admin/support-tickets/${ticketId}/status`, { status, admin_response: '' });
+        if (result) {
+            result.className = 'result success';
+            result.textContent = 'Статус обновлён';
+        }
+        await loadAdminInbox();
+    } catch (e) {
+        if (result) {
+            result.className = 'result error';
+            result.textContent = e.message || 'Ошибка';
+        }
+    }
+}
+
+function startAdminTicketPolling(ticketId) {
+    stopAdminTicketPolling();
+    adminTicketPollTimer = setInterval(() => {
+        if (adminInboxSelectedKey === `ticket-${ticketId}`) {
+            refreshAdminTicketChat(ticketId);
+        }
+    }, 5000);
+}
+
+function stopAdminTicketPolling() {
+    if (adminTicketPollTimer) {
+        clearInterval(adminTicketPollTimer);
+        adminTicketPollTimer = null;
+    }
 }
 
 function renderAppealDetail(item) {
@@ -419,35 +697,6 @@ function renderAppealDetail(item) {
         </article>`;
 }
 
-async function submitTicketReply(event, id) {
-    event.preventDefault();
-    const btn = document.getElementById('inboxReplyBtn');
-    const result = document.getElementById('inboxReplyResult');
-    const admin_response = document.getElementById('inboxReplyText')?.value || '';
-    const status = document.getElementById('inboxReplyStatus')?.value || 'answered';
-    if (btn) {
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i> Сохранение…';
-    }
-    try {
-        await apiCall('POST', `/api/admin/support-tickets/${id}/review`, { status, admin_response });
-        if (result) {
-            result.className = 'result success';
-            result.textContent = 'Ответ сохранён';
-        }
-        await loadAdminInbox();
-    } catch (e) {
-        if (result) {
-            result.className = 'result error';
-            result.textContent = e.message || 'Ошибка';
-        }
-        if (btn) {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fa-solid fa-paper-plane" aria-hidden="true"></i> Сохранить ответ';
-        }
-    }
-}
-
 async function submitAppealDecision(id, status) {
     const comment = document.getElementById('inboxAppealComment')?.value || '';
     const result = document.getElementById('inboxReplyResult');
@@ -484,4 +733,8 @@ async function reviewSupportTicket(id) {
     const admin_response = document.getElementById(`supportReply_${id}`)?.value || '';
     await apiCall('POST', `/api/admin/support-tickets/${id}/review`, { status, admin_response });
     loadAdminInbox();
+}
+async function submitTicketReply(event, id) {
+    event.preventDefault();
+    return sendAdminTicketMessage(id);
 }

@@ -1,4 +1,4 @@
-<div class="card legal-card">
+<div class="card legal-card support-page-card">
     <h2><i class="fa-solid fa-life-ring"></i> Обращения</h2>
     <p class="legal-updated">Тикет, почта или Discord.</p>
 
@@ -26,35 +26,68 @@
         </div>
     </div>
 
-    <div class="support-form-wrap">
-        <h3><i class="fa-solid fa-ticket" aria-hidden="true"></i> Новый тикет</h3>
-        <p class="admin-hint">Оплата Boosty, привилегии, баги сайта. Ответ придёт на указанный контакт.</p>
-        <form id="supportTicketForm" class="support-form" onsubmit="submitSupportTicket(event)">
-            <label for="supportContact">Контакт для ответа</label>
-            <input type="text" id="supportContact" name="contact" required maxlength="200"
-                autocomplete="email"
-                placeholder="mini-station-14@yandex.ru или Discord username"
-                aria-describedby="supportContactHint">
-            <p id="supportContactHint" class="field-hint">Куда ответить: почта или Discord</p>
+    <div class="support-workspace" id="supportWorkspace">
+        <aside class="support-sidebar">
+            <div class="support-form-wrap" id="supportNewTicketWrap">
+                <h3><i class="fa-solid fa-ticket" aria-hidden="true"></i> Новый тикет</h3>
+                <form id="supportTicketForm" class="support-form" onsubmit="submitSupportTicket(event)">
+                    <label for="supportContact">Контакт для ответа</label>
+                    <input type="text" id="supportContact" name="contact" required maxlength="200"
+                        autocomplete="email"
+                        placeholder="почта или Discord">
+                    <label for="supportSubject">Тема</label>
+                    <input type="text" id="supportSubject" name="subject" required maxlength="200"
+                        autocomplete="off"
+                        placeholder="Кратко о проблеме">
+                    <label for="supportBody">Сообщение</label>
+                    <textarea id="supportBody" name="body" rows="4" required maxlength="4000"
+                        placeholder="Суть проблемы..."></textarea>
+                    <button type="submit" class="support-submit" id="supportSubmitBtn">
+                        <i class="fa-solid fa-paper-plane" aria-hidden="true"></i> Создать
+                    </button>
+                    <div id="supportFormResult" class="result" role="status" aria-live="polite"></div>
+                </form>
+            </div>
 
-            <label for="supportSubject">Тема</label>
-            <input type="text" id="supportSubject" name="subject" required maxlength="200"
-                autocomplete="off"
-                placeholder="Например: не пришла подписка Boosty">
+            <div class="support-my-tickets" id="supportMyTicketsWrap" hidden>
+                <h3>Мои обращения</h3>
+                <div id="supportMyTickets" class="support-ticket-list"><p class="empty-state">Загрузка...</p></div>
+            </div>
+        </aside>
 
-            <label for="supportBody">Сообщение</label>
-            <textarea id="supportBody" name="body" rows="5" required maxlength="4000"
-                placeholder="Суть проблемы, Discord, дата оплаты..."></textarea>
-
-            <button type="submit" class="support-submit" id="supportSubmitBtn">
-                <i class="fa-solid fa-paper-plane" aria-hidden="true"></i> Отправить тикет
-            </button>
-            <div id="supportFormResult" class="result" role="status" aria-live="polite"></div>
-        </form>
-    </div>
-
-    <div class="support-my-tickets" id="supportMyTicketsWrap" hidden>
-        <h3>Мои обращения</h3>
-        <div id="supportMyTickets" class="support-ticket-list"><p class="empty-state">Загрузка...</p></div>
+        <section class="support-chat-pane" id="supportChatPane">
+            <div class="support-chat-empty" id="supportChatEmpty">
+                <i class="fa-regular fa-comments" aria-hidden="true"></i>
+                <p>Выберите обращение слева или создайте новое</p>
+            </div>
+            <div class="support-chat-shell" id="supportChatShell" hidden>
+                <header class="support-chat-header" id="supportChatHeader">
+                    <div>
+                        <span class="support-chat-id" id="supportChatId"></span>
+                        <strong id="supportChatSubject"></strong>
+                    </div>
+                    <span class="inbox-status-pill" id="supportChatStatus"></span>
+                </header>
+                <div class="dc-messages support-chat-messages" id="supportChatMessages"></div>
+                <div class="chat-composer dc-composer support-chat-composer" id="supportChatComposer">
+                    <div class="chat-composer-tools">
+                        <label class="chat-tool-btn" title="Изображение">
+                            <i class="fa-solid fa-image"></i>
+                            <input type="file" id="supportChatImage" accept="image/*" hidden>
+                        </label>
+                    </div>
+                    <div class="chat-composer-main">
+                        <textarea id="supportChatInput" rows="1" maxlength="4000"
+                            placeholder="Написать в тикет..."
+                            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendSupportChatMessage();}"></textarea>
+                        <div id="supportChatImagePreview" class="chat-image-preview" hidden></div>
+                    </div>
+                    <button type="button" class="chat-send-btn" onclick="sendSupportChatMessage()" title="Отправить">
+                        <i class="fa-solid fa-paper-plane"></i>
+                    </button>
+                </div>
+                <p class="support-chat-closed" id="supportChatClosed" hidden>Тикет закрыт. Создайте новый при необходимости.</p>
+            </div>
+        </section>
     </div>
 </div>

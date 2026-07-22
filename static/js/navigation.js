@@ -195,6 +195,8 @@ function showSection(sectionId) {
     if (sectionId !== 'messages' && typeof stopPmPolling === 'function') stopPmPolling();
     if (sectionId !== 'chat' && typeof stopGlobalChatPolling === 'function') stopGlobalChatPolling();
     if (sectionId !== 'chat' && typeof stopChatUsersPolling === 'function') stopChatUsersPolling();
+    if (sectionId !== 'support' && typeof stopSupportTicketPolling === 'function') stopSupportTicketPolling();
+    if (sectionId !== 'admin' && typeof stopAdminTicketPolling === 'function') stopAdminTicketPolling();
 }
 
 function syncPanelHeightToSidebar(sectionId) {
