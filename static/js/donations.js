@@ -90,8 +90,209 @@ async function loadDonateCatalog() {
         renderDonateMethods();
         switchDonateTab(donateActiveTab);
         updateDonateCheckoutUI();
+        renderDonatePromoBanner(donateCatalog.promo);
     } catch (e) {
         if (box) box.innerHTML = `<p class="error">${escapeHtml(e.message || 'Ошибка загрузки')}</p>`;
+    }
+}
+
+let donatePromoTimer = null;
+
+function renderDonatePromoBanner(promo) {
+    const banner = document.getElementById('donatePromoBanner');
+    if (!banner) return;
+    if (!promo || !promo.has_sale) {
+        banner.hidden = true;
+        if (donatePromoTimer) {
+            clearInterval(donatePromoTimer);
+            donatePromoTimer = null;
+        }
+        return;
+    }
+    banner.hidden = false;
+    const badge = document.getElementById('donatePromoBadge');
+    const title = document.getElementById('donatePromoTitle');
+    const lead = document.getElementById('donatePromoLead');
+    if (badge) badge.textContent = promo.badge_text || `−${promo.percent}%`;
+    if (title) title.textContent = promo.title || 'Скидка на донат';
+    if (lead) {
+        lead.textContent = promo.count > 1
+            ? `Сейчас ${promo.count} акции · лучшая −${promo.percent}%. Успейте до конца таймера.`
+            : `Скидка −${promo.percent}% на выбранные товары. Успейте купить до конца акции.`;
+    }
+    const endsAt = promo.ends_at;
+    const tick = () => {
+        const el = document.getElementById('donatePromoCountdown');
+        if (!el) return;
+        el.textContent = formatPromoCountdown(endsAt);
+    };
+    tick();
+    if (donatePromoTimer) clearInterval(donatePromoTimer);
+    donatePromoTimer = setInterval(tick, 1000);
+}
+
+function formatPromoCountdown(endsAt) {
+    if (!endsAt) return 'скоро';
+    const end = new Date(String(endsAt).replace(' ', 'T'));
+    if (Number.isNaN(end.getTime())) return 'скоро';
+    let ms = end.getTime() - Date.now();
+    if (ms <= 0) return '00:00:00';
+    const h = Math.floor(ms / 3600000);
+    ms %= 3600000;
+    const m = Math.floor(ms / 60000);
+    const s = Math.floor((ms % 60000) / 1000);
+    const pad = (n) => String(n).padStart(2, '0');
+    if (h >= 48) {
+        const d = Math.floor(h / 24);
+        return `${d}д ${pad(h % 24)}:${pad(m)}:${pad(s)}`;
+    }
+    return `${pad(h)}:${pad(m)}:${pad(s)}`;
+}
+
+function applyDonateSaleChips(promo) {
+    const text = promo?.has_sale ? (promo.badge_text || `−${promo.percent}%`) : '';
+    ['homeDonateSaleChip', 'navDonateSaleChip', 'profileDonateSaleChip'].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (text) {
+            el.hidden = false;
+            el.textContent = text;
+        } else {
+            el.hidden = true;
+            el.textContent = '';
+        }
+    });
+}
+
+async function refreshDonateSaleBadges() {
+    try {
+        const promo = await apiCall('GET', '/api/donations/promo');
+        applyDonateSaleChips(promo);
+    } catch (_) { /* ignore */ }
+}
+
+/* ---- Admin discounts panel ---- */
+async function initDonateDiscountsAdmin() {
+    onDiscountScopeChange();
+    const ends = document.getElementById('ddEnds');
+    if (ends && !ends.value) {
+        const d = new Date(Date.now() + 3 * 24 * 3600 * 1000);
+        ends.value = toLocalInputValue(d);
+    }
+    await loadDonateDiscountsAdmin();
+}
+
+function toLocalInputValue(date) {
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function onDiscountScopeChange() {
+    const scope = document.getElementById('ddScope')?.value || 'all';
+    const wrap = document.getElementById('ddTargetWrap');
+    const sel = document.getElementById('ddTargetId');
+    if (!wrap || !sel) return;
+    const need = scope === 'tier' || scope === 'pack';
+    wrap.hidden = !need;
+    if (!need) return;
+    const items = scope === 'tier'
+        ? (donateCatalog?.tiers || []).map(t => ({ id: t.id, label: `Ур.${t.id} · ${t.name}` }))
+        : (donateCatalog?.coin_packs || []).map(p => ({ id: p.id, label: p.name }));
+    sel.innerHTML = items.map(i => `<option value="${i.id}">${escapeHtml(i.label)}</option>`).join('')
+        || '<option value="">Нет товаров</option>';
+}
+
+async function loadDonateDiscountsAdmin() {
+    const box = document.getElementById('donateDiscountList');
+    if (!box) return;
+    try {
+        const list = await apiCall('GET', '/api/donations/discounts?all=1');
+        if (!list.length) {
+            box.innerHTML = '<p class="empty-state">Скидок пока нет</p>';
+            return;
+        }
+        const now = Date.now();
+        box.innerHTML = list.map(d => {
+            const end = new Date(String(d.ends_at || '').replace(' ', 'T')).getTime();
+            const start = new Date(String(d.starts_at || '').replace(' ', 'T')).getTime();
+            let status = 'неактивна';
+            let cls = 'is-off';
+            if (d.active && end > now && start <= now) { status = 'идёт'; cls = 'is-live'; }
+            else if (d.active && start > now) { status = 'скоро'; cls = 'is-soon'; }
+            else if (d.active && end <= now) { status = 'истекла'; cls = 'is-ended'; }
+            const scopeLabel = ({
+                all: 'Все товары',
+                tiers: 'Все подписки',
+                coins: 'Все монетки',
+                tier: `Подписка #${d.target_id}`,
+                pack: `Пакет #${d.target_id}`,
+            })[d.scope] || d.scope;
+            return `<article class="donate-discount-row ${cls}">
+                <div>
+                    <strong>${escapeHtml(d.title)}</strong>
+                    <div class="donate-discount-meta">−${d.percent}% · ${escapeHtml(scopeLabel)} · до ${escapeHtml(String(d.ends_at || ''))}</div>
+                    <span class="donate-discount-status">${status}</span>
+                </div>
+                <div class="donate-discount-actions">
+                    ${d.active && end > now ? `<button type="button" class="btn-sm" onclick="deactivateDonateDiscount(${d.id})">Остановить</button>` : ''}
+                    <button type="button" class="btn-sm" onclick="deleteDonateDiscount(${d.id})">Удалить</button>
+                </div>
+            </article>`;
+        }).join('');
+    } catch (e) {
+        box.innerHTML = `<p class="error">${escapeHtml(e.message || 'Ошибка')}</p>`;
+    }
+}
+
+async function createDonateDiscount(event) {
+    event.preventDefault();
+    const result = document.getElementById('donateDiscountFormResult');
+    const formData = new FormData();
+    formData.append('title', document.getElementById('ddTitle')?.value.trim() || '');
+    formData.append('percent', document.getElementById('ddPercent')?.value || '0');
+    formData.append('scope', document.getElementById('ddScope')?.value || 'all');
+    formData.append('target_id', document.getElementById('ddTargetId')?.value || '0');
+    formData.append('badge_text', document.getElementById('ddBadge')?.value.trim() || '');
+    formData.append('starts_at', document.getElementById('ddStarts')?.value || '');
+    formData.append('ends_at', document.getElementById('ddEnds')?.value || '');
+    try {
+        await apiCall('POST', '/api/donations/discounts', formData);
+        if (result) {
+            result.className = 'result success';
+            result.textContent = 'Скидка запущена';
+        }
+        document.getElementById('donateDiscountForm')?.reset();
+        await loadDonateDiscountsAdmin();
+        await loadDonateCatalog();
+        await refreshDonateSaleBadges();
+    } catch (e) {
+        if (result) {
+            result.className = 'result error';
+            result.textContent = e.message || 'Не удалось создать';
+        }
+    }
+}
+
+async function deactivateDonateDiscount(id) {
+    try {
+        await apiCall('POST', `/api/donations/discounts/${id}/deactivate`);
+        await loadDonateDiscountsAdmin();
+        await loadDonateCatalog();
+        await refreshDonateSaleBadges();
+    } catch (e) {
+        alert(e.message || 'Ошибка');
+    }
+}
+
+async function deleteDonateDiscount(id) {
+    if (!confirm('Удалить скидку?')) return;
+    try {
+        await apiCall('DELETE', `/api/donations/discounts/${id}`);
+        await loadDonateDiscountsAdmin();
+        await loadDonateCatalog();
+        await refreshDonateSaleBadges();
+    } catch (e) {
+        alert(e.message || 'Ошибка');
     }
 }
 
@@ -102,9 +303,21 @@ function renderDonateTierCard(t) {
     const perks = (t.perks || []).map(p => `<li><span>${escapeHtml(p)}</span></li>`).join('');
     const active = selectedDonateTierId === t.id ? ' active' : '';
     const featured = t.featured ? ' featured' : '';
+    const onSale = !!t.on_sale && t.discount;
+    const saleClass = onSale ? ' on-sale' : '';
+    const saleBadge = onSale
+        ? `<span class="donate-sale-badge">${escapeHtml(t.discount.badge_text || ('−' + t.discount.percent + '%'))}</span>`
+        : (t.featured ? '<span class="donate-tier-badge">Популярный</span>' : '');
+    const priceHtml = onSale
+        ? `<div class="donate-tier-price donate-price-sale">
+                <span class="donate-price-old">${escapeHtml(t.base_price_label || '')}</span>
+                <span class="donate-price-new">${escapeHtml(t.price_label)}</span>
+                <span class="donate-price-period">/ мес</span>
+           </div>`
+        : `<div class="donate-tier-price">${escapeHtml(t.price_label)} <span>/ мес</span></div>`;
     return `
-        <article class="donate-tier-card${active}${featured}" data-tier="${t.id}">
-            ${t.featured ? '<span class="donate-tier-badge">Популярный</span>' : ''}
+        <article class="donate-tier-card${active}${featured}${saleClass}" data-tier="${t.id}">
+            ${saleBadge}
             <button type="button" class="donate-tier-select" onclick="selectDonateTier(${t.id})" aria-pressed="${active ? 'true' : 'false'}">
                 <div class="donate-tier-media">
                     <img src="${escapeHtml(t.icon)}" alt="" class="donate-tier-icon" width="140" height="140"
@@ -115,7 +328,7 @@ function renderDonateTierCard(t) {
                         <span class="donate-tier-level">Ур. ${t.id}</span>
                         <h3>${escapeHtml(t.name)}</h3>
                     </div>
-                    <div class="donate-tier-price">${escapeHtml(t.price_label)} <span>/ мес</span></div>
+                    ${priceHtml}
                     <ul class="donate-tier-perks">${coinLine}${perks}</ul>
                 </div>
             </button>
@@ -181,10 +394,20 @@ function startToolboxAnimations(root) {
 function renderDonatePackCard(p) {
     const active = selectedDonatePackId === p.id ? ' active' : '';
     const featured = p.featured ? ' featured' : '';
-    const badge = p.badge ? `<span class="donate-tier-badge">${escapeHtml(p.badge)}</span>` : '';
+    const onSale = !!p.on_sale && p.discount;
+    const saleClass = onSale ? ' on-sale' : '';
+    const badge = onSale
+        ? `<span class="donate-sale-badge">${escapeHtml(p.discount.badge_text || ('−' + p.discount.percent + '%'))}</span>`
+        : (p.badge ? `<span class="donate-tier-badge">${escapeHtml(p.badge)}</span>` : '');
     const visualMeta = packVisual(p);
+    const priceHtml = onSale
+        ? `<div class="donate-pack-price donate-price-sale">
+                <span class="donate-price-old">${escapeHtml(p.base_price_label || '')}</span>
+                <span class="donate-price-new">${escapeHtml(p.price_label)}</span>
+           </div>`
+        : `<div class="donate-pack-price">${escapeHtml(p.price_label)}</div>`;
     return `
-        <article class="donate-pack-card${active}${featured}" data-pack="${p.id}">
+        <article class="donate-pack-card${active}${featured}${saleClass}" data-pack="${p.id}">
             ${badge}
             <button type="button" class="donate-pack-select" onclick="selectDonatePack(${p.id})" aria-pressed="${active ? 'true' : 'false'}">
                 <div class="donate-pack-visual${visualMeta ? ' has-crate' : ''}">
@@ -195,7 +418,7 @@ function renderDonatePackCard(p) {
                     <div class="donate-pack-amount">
                         <span class="donate-pack-coins coin-qty">${p.coins}<img src="/static/coin.png" class="coin-icon-result donate-coin-inline" alt=""></span>
                     </div>
-                    <div class="donate-pack-price">${escapeHtml(p.price_label)}</div>
+                    ${priceHtml}
                 </div>
             </button>
         </article>`;
@@ -321,7 +544,14 @@ function updateDonateCheckoutUI() {
             icon.alt = tier.name;
         }
         if (name) name.textContent = tier.name;
-        if (price) price.textContent = `${tier.price_label} / мес`;
+        if (price) {
+            if (tier.on_sale) {
+                price.innerHTML = `<span class="donate-price-old">${escapeHtml(tier.base_price_label || '')}</span> `
+                    + `<span class="donate-price-new">${escapeHtml(tier.price_label)}</span> / мес`;
+            } else {
+                price.textContent = `${tier.price_label} / мес`;
+            }
+        }
     } else if (pack) {
         if (icon) {
             const visual = packVisual(pack);
@@ -346,7 +576,14 @@ function updateDonateCheckoutUI() {
             }
         }
         if (name) name.textContent = pack.name;
-        if (price) price.textContent = pack.price_label;
+        if (price) {
+            if (pack.on_sale) {
+                price.innerHTML = `<span class="donate-price-old">${escapeHtml(pack.base_price_label || '')}</span> `
+                    + `<span class="donate-price-new">${escapeHtml(pack.price_label)}</span>`;
+            } else {
+                price.textContent = pack.price_label;
+            }
+        }
     }
 
     const contact = document.getElementById('donateContact');

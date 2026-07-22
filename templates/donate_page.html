@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="/static/js/theme.js"></script>
     <script src="/static/js/ambient.js" defer></script>
-    <link rel="stylesheet" href="/static/style.css?v=legal2">
+    <link rel="stylesheet" href="/static/style.css?v=sale1">
     <link rel="stylesheet" href="/static/chat-discord.css">
     <link rel="icon" type="image/png" href="/static/coin.png">
 </head>
@@ -58,6 +58,10 @@
                     onclick="showDonatePanel('support', this)">
                     <i class="fa-solid fa-life-ring"></i> Обращения
                 </button>
+                <button type="button" class="side-link donate-nav-btn" data-donate-panel="discounts" id="donateNavDiscounts"
+                    hidden onclick="showDonatePanel('discounts', this)">
+                    <i class="fa-solid fa-tags"></i> Скидки
+                </button>
             </div>
             <div class="side-group side-group-fill">
                 <div class="side-group-title"><i class="fa-solid fa-link"></i> Ссылки</div>
@@ -76,6 +80,9 @@
             <div id="donatePanelSupport" class="donate-panel" hidden>
                 {% include 'partials/support.html' %}
             </div>
+            <div id="donatePanelDiscounts" class="donate-panel" hidden>
+                {% include 'partials/donate_discounts_admin.html' %}
+            </div>
         </main>
     </div>
 
@@ -86,7 +93,7 @@
 
     <script src="/static/js/common.js"></script>
     <script src="/static/js/chat.js"></script>
-    <script src="/static/js/donations.js?v=platega3"></script>
+    <script src="/static/js/donations.js?v=sale1"></script>
     <script src="/static/js/support.js"></script>
     <script>
         function setDonateNavOpen(open) {
@@ -120,6 +127,7 @@
             const map = {
                 shop: 'donatePanelShop',
                 support: 'donatePanelSupport',
+                discounts: 'donatePanelDiscounts',
             };
             const key = map[name] ? name : 'shop';
             Object.entries(map).forEach(([panel, id]) => {
@@ -140,8 +148,16 @@
             if (key === 'shop' && typeof initDonateSection === 'function' && !donateCatalog) {
                 initDonateSection();
             }
+            if (key === 'discounts' && typeof initDonateDiscountsAdmin === 'function') {
+                if (!donateCatalog && typeof initDonateSection === 'function') {
+                    initDonateSection().then(() => initDonateDiscountsAdmin());
+                } else {
+                    initDonateDiscountsAdmin();
+                }
+            }
             try {
-                history.replaceState(null, '', key === 'shop' ? '/donate' : `/donate#${key}`);
+                const hash = key === 'shop' ? '/donate' : `/donate#${key}`;
+                history.replaceState(null, '', hash);
             } catch (e) {}
             setDonateNavOpen(false);
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -162,6 +178,8 @@
                         <button type="button" onclick="window.location.href='/logout'">Выйти</button>
                     `;
                 }
+                const discNav = document.getElementById('donateNavDiscounts');
+                if (discNav) discNav.hidden = !data.is_admin;
             } catch (e) {}
         }
 
@@ -171,10 +189,13 @@
             const hash = (location.hash || '').replace(/^#/, '');
             if (hash === 'support') {
                 showDonatePanel('support');
+            } else if (hash === 'discounts' && currentUser?.is_admin) {
+                showDonatePanel('discounts');
             } else {
                 showDonatePanel('shop');
                 if (typeof initDonateSection === 'function') initDonateSection();
             }
+            if (typeof refreshDonateSaleBadges === 'function') refreshDonateSaleBadges();
         });
     </script>
 </body>

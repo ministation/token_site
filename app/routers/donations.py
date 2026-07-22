@@ -4,7 +4,7 @@ from fastapi import APIRouter, Request, HTTPException, Form
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse
 
 from app.config import PLATEGA_MERCHANT_ID, PLATEGA_SECRET
-from app.dependencies import get_optional_social_user
+from app.dependencies import get_optional_social_user, get_current_admin
 from app.services import donations as donations_svc
 from app.services import robokassa
 from app.core.ratelimit import enforce_cooldown, enforce_rate
@@ -16,6 +16,13 @@ router = APIRouter(prefix="/api/donations", tags=["donations"])
 @router.get("/catalog")
 async def donation_catalog():
     return donations_svc.catalog_payload()
+
+
+@router.get("/promo")
+async def donation_promo():
+    """Лёгкий endpoint для бейджа скидки на главной / в меню."""
+    promo = donations_svc.active_promo_summary()
+    return promo or {"has_sale": False}
 
 
 @router.get("/order/{transaction_id}")
@@ -264,3 +271,88 @@ async def platega_callback(request: Request):
         {"ok": True, **{k: result[k] for k in ("transaction_id", "status") if k in result}},
         status_code=200,
     )
+
+
+def _parse_ends_at(raw: str) -> str:
+    """Принимает datetime-local / ISO, возвращает строку для SQLite."""
+    s = (raw or "").strip().replace("T", " ")
+    if not s:
+        raise ValueError("Укажите дату окончания скидки")
+    # datetime-local: 2026-07-22 23:59 or with seconds
+    if len(s) == 16:
+        s = s + ":00"
+    return s
+
+
+@router.get("/discounts")
+async def list_discounts(request: Request, all: int = 0):
+    """Публично — только активные; админ с all=1 — полный список."""
+    user = await get_optional_social_user(request)
+    is_admin = bool(user and user.get("is_admin"))
+    if all and is_admin:
+        rows = social_db.list_donation_discounts(include_inactive=True)
+    else:
+        rows = social_db.get_active_donation_discounts()
+    return [donations_svc.serialize_discount(r) for r in rows]
+
+
+@router.post("/discounts")
+async def create_discount(
+    request: Request,
+    title: str = Form(...),
+    percent: int = Form(...),
+    scope: str = Form("all"),
+    target_id: int = Form(0),
+    badge_text: str = Form(""),
+    starts_at: str = Form(""),
+    ends_at: str = Form(...),
+):
+    admin = await get_current_admin(request)
+    title = (title or "").strip()[:120]
+    if not title:
+        raise HTTPException(status_code=400, detail="Укажите название акции")
+    percent = int(percent)
+    if percent < 1 or percent > 90:
+        raise HTTPException(status_code=400, detail="Скидка от 1% до 90%")
+    scope = (scope or "all").strip().lower()
+    allowed_scopes = {"all", "tiers", "coins", "tier", "pack"}
+    if scope not in allowed_scopes:
+        raise HTTPException(status_code=400, detail="Некорректная область скидки")
+    tid = int(target_id or 0) or None
+    if scope in ("tier", "pack") and not tid:
+        raise HTTPException(status_code=400, detail="Выберите конкретный товар")
+    if scope in ("all", "tiers", "coins"):
+        tid = None
+    try:
+        ends = _parse_ends_at(ends_at)
+        starts = _parse_ends_at(starts_at) if (starts_at or "").strip() else None
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    badge = (badge_text or "").strip()[:32] or None
+    row = social_db.create_donation_discount(
+        title=title,
+        percent=percent,
+        scope=scope,
+        target_id=tid,
+        badge_text=badge,
+        starts_at=starts,
+        ends_at=ends,
+        created_by=str(admin.get("username") or admin.get("discord_id") or "admin"),
+    )
+    return {"ok": True, "discount": donations_svc.serialize_discount(row)}
+
+
+@router.post("/discounts/{discount_id}/deactivate")
+async def deactivate_discount(discount_id: int, request: Request):
+    await get_current_admin(request)
+    if not social_db.deactivate_donation_discount(discount_id):
+        raise HTTPException(status_code=404, detail="Скидка не найдена")
+    return {"ok": True}
+
+
+@router.delete("/discounts/{discount_id}")
+async def delete_discount(discount_id: int, request: Request):
+    await get_current_admin(request)
+    if not social_db.delete_donation_discount(discount_id):
+        raise HTTPException(status_code=404, detail="Скидка не найдена")
+    return {"ok": True}

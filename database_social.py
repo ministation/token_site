@@ -458,6 +458,25 @@ def _migrate_schema():
         ON sponsorships(player_id, ends_at DESC)
     """)
     cursor.execute("""
+        CREATE TABLE IF NOT EXISTS donation_discounts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            percent INTEGER NOT NULL,
+            scope TEXT NOT NULL DEFAULT 'all',
+            target_id INTEGER,
+            badge_text TEXT,
+            starts_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            ends_at TIMESTAMP NOT NULL,
+            active INTEGER NOT NULL DEFAULT 1,
+            created_by TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_donation_discounts_active
+        ON donation_discounts(active, starts_at, ends_at)
+    """)
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS site_bans (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             discord_id TEXT NOT NULL,
@@ -1880,6 +1899,110 @@ def list_donation_orders(
     rows = [dict(r) for r in cursor.fetchall()]
     conn.close()
     return rows
+
+
+def create_donation_discount(
+    *,
+    title: str,
+    percent: int,
+    scope: str = "all",
+    target_id: int | None = None,
+    badge_text: str | None = None,
+    starts_at: str | None = None,
+    ends_at: str,
+    created_by: str | None = None,
+) -> dict:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        INSERT INTO donation_discounts (
+            title, percent, scope, target_id, badge_text, starts_at, ends_at, active, created_by
+        ) VALUES (?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP), ?, 1, ?)
+        """,
+        (
+            title,
+            int(percent),
+            scope,
+            target_id,
+            badge_text,
+            starts_at,
+            ends_at,
+            created_by,
+        ),
+    )
+    conn.commit()
+    did = cursor.lastrowid
+    cursor.execute("SELECT * FROM donation_discounts WHERE id = ?", (did,))
+    row = dict(cursor.fetchone())
+    conn.close()
+    return row
+
+
+def list_donation_discounts(*, include_inactive: bool = True, limit: int = 100) -> list[dict]:
+    conn = get_db()
+    cursor = conn.cursor()
+    limit = min(max(int(limit), 1), 200)
+    if include_inactive:
+        cursor.execute(
+            """
+            SELECT * FROM donation_discounts
+            ORDER BY active DESC, ends_at DESC, id DESC
+            LIMIT ?
+            """,
+            (limit,),
+        )
+    else:
+        cursor.execute(
+            """
+            SELECT * FROM donation_discounts
+            WHERE active = 1
+              AND datetime(starts_at) <= datetime('now')
+              AND datetime(ends_at) > datetime('now')
+            ORDER BY percent DESC, ends_at ASC
+            LIMIT ?
+            """,
+            (limit,),
+        )
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return rows
+
+
+def get_active_donation_discounts() -> list[dict]:
+    return list_donation_discounts(include_inactive=False, limit=50)
+
+
+def get_donation_discount(discount_id: int) -> Optional[Dict]:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM donation_discounts WHERE id = ?", (int(discount_id),))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def deactivate_donation_discount(discount_id: int) -> bool:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE donation_discounts SET active = 0 WHERE id = ?",
+        (int(discount_id),),
+    )
+    conn.commit()
+    ok = cursor.rowcount > 0
+    conn.close()
+    return ok
+
+
+def delete_donation_discount(discount_id: int) -> bool:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM donation_discounts WHERE id = ?", (int(discount_id),))
+    conn.commit()
+    ok = cursor.rowcount > 0
+    conn.close()
+    return ok
 
 
 def create_sponsorship(

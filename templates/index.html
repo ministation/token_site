@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="/static/js/theme.js"></script>
     <script src="/static/js/ambient.js" defer></script>
-    <link rel="stylesheet" href="/static/style.css?v=legal1">
+    <link rel="stylesheet" href="/static/style.css?v=sale1">
     <link rel="stylesheet" href="/static/chat-discord.css">
     <link rel="icon" type="image/png" href="/static/coin.png">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
@@ -55,6 +55,10 @@
                 <button class="nav-btn" data-section="messages"><i class="fa-solid fa-envelope"></i> Сообщения<span class="nav-notify" id="navNotifyMessages" hidden></span></button>
                 <button class="nav-btn" data-section="inventory" id="profileNavBtn" style="display:none;"><i class="fa-solid fa-user"></i> Профиль</button>
                 <button class="nav-btn" data-section="economy"><i class="fa-solid fa-coins"></i> Монетки</button>
+                <a class="nav-btn" href="/donate" id="navDonateLink" style="text-decoration:none">
+                    <i class="fa-solid fa-heart"></i> Донат
+                    <span class="donate-sale-chip nav-donate-chip" id="navDonateSaleChip" hidden></span>
+                </a>
                 <button class="nav-btn" data-section="bans"><i class="fa-solid fa-gavel"></i> Наказания</button>
                 <button class="nav-btn" data-section="online"><i class="fa-solid fa-chart-line"></i> Статистика</button>
                 <button class="nav-btn" data-section="admin" id="adminNavBtn" style="display:none;"><i class="fa-solid fa-shield-halved"></i> Админ</button>
@@ -189,6 +193,24 @@
 
     loadServerStatus();
     setInterval(loadServerStatus, 30000);
+
+    (async function loadDonateSaleChip() {
+        try {
+            const res = await fetch('/api/donations/promo');
+            const promo = await res.json();
+            const text = promo?.has_sale ? (promo.badge_text || `−${promo.percent}%`) : '';
+            ['homeDonateSaleChip', 'navDonateSaleChip'].forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                if (text) {
+                    el.hidden = false;
+                    el.textContent = text;
+                } else {
+                    el.hidden = true;
+                }
+            });
+        } catch (e) {}
+    })();
     </script>
 </body>
 </html>

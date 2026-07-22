@@ -6496,3 +6496,232 @@ label.chat-tool-btn input[type="file"] {
     .donate-pack-card,
     .donate-pack-coin-art { transition: none; }
 }
+
+/* === Donate sale / promo === */
+.donate-sale-chip {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 8px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #e85d04;
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    line-height: 1.2;
+    animation: donate-sale-pulse 1.6s ease-in-out infinite;
+    vertical-align: middle;
+}
+.nav-donate-chip {
+    margin-left: 6px;
+    font-size: 0.68rem;
+    padding: 2px 7px;
+}
+.link-btn.boosty {
+    position: relative;
+}
+@keyframes donate-sale-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.06); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .donate-sale-chip { animation: none; }
+}
+
+.donate-promo-banner {
+    position: relative;
+    overflow: hidden;
+    border: 2px solid color-mix(in srgb, #e85d04 55%, var(--border));
+    border-radius: var(--radius);
+    background:
+        linear-gradient(135deg,
+            color-mix(in srgb, #e85d04 18%, var(--panel)) 0%,
+            var(--panel) 55%,
+            color-mix(in srgb, var(--accent) 12%, var(--panel)) 100%);
+    box-shadow: var(--shadow-hard);
+}
+.donate-promo-banner-glow {
+    position: absolute;
+    inset: -40% auto auto -10%;
+    width: 55%;
+    height: 160%;
+    background: radial-gradient(circle, color-mix(in srgb, #ffba08 35%, transparent), transparent 70%);
+    pointer-events: none;
+    opacity: 0.7;
+}
+.donate-promo-banner-body {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px 18px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+}
+.donate-promo-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 36px;
+    padding: 6px 12px;
+    border-radius: 10px;
+    background: #e85d04;
+    color: #fff;
+    font-weight: 900;
+    font-size: 0.95rem;
+    letter-spacing: 0.03em;
+    box-shadow: 0 3px 0 #9a3412;
+}
+.donate-promo-copy {
+    flex: 1 1 180px;
+    min-width: 0;
+}
+.donate-promo-copy strong {
+    display: block;
+    font-size: 1.05rem;
+    margin-bottom: 2px;
+}
+.donate-promo-copy p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+.donate-promo-timer {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    min-width: 110px;
+}
+.donate-promo-timer-label {
+    font-size: 0.75rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.donate-promo-timer strong {
+    font-variant-numeric: tabular-nums;
+    font-size: 1.25rem;
+    color: #c2410c;
+}
+
+.donate-sale-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 2;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: #e85d04;
+    color: #fff;
+    font-size: 0.78rem;
+    font-weight: 800;
+    box-shadow: 0 2px 0 #9a3412;
+}
+.donate-tier-card.on-sale,
+.donate-pack-card.on-sale {
+    border-color: color-mix(in srgb, #e85d04 65%, var(--border));
+}
+.donate-price-sale {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 8px;
+}
+.donate-price-old {
+    text-decoration: line-through;
+    color: var(--muted);
+    font-size: 0.92em;
+    font-weight: 600;
+}
+.donate-price-new {
+    color: #c2410c;
+    font-weight: 900;
+    font-size: 1.12em;
+}
+.donate-price-period {
+    color: var(--muted);
+    font-size: 0.85em;
+}
+.donate-selected-price .donate-price-old { margin-right: 6px; }
+
+.donate-discounts-admin { max-width: 920px; }
+.donate-discount-form { margin: 12px 0 22px; }
+.donate-discount-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+    margin-bottom: 14px;
+}
+.donate-discount-grid label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 0.88rem;
+    color: var(--muted);
+    font-weight: 600;
+}
+.donate-discount-grid input,
+.donate-discount-grid select {
+    min-height: 42px;
+    padding: 8px 10px;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    background: var(--panel);
+    color: var(--ink);
+    font: inherit;
+}
+.donate-discount-submit {
+    width: auto;
+    min-width: 220px;
+    margin-top: 0;
+}
+.donate-discount-list-title {
+    margin: 8px 0 10px;
+    font-size: 1.05rem;
+}
+.donate-discount-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.donate-discount-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 14px;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    background: var(--panel-2);
+}
+.donate-discount-row.is-live {
+    border-color: color-mix(in srgb, #e85d04 50%, var(--border));
+}
+.donate-discount-meta {
+    margin-top: 4px;
+    font-size: 0.85rem;
+    color: var(--muted);
+}
+.donate-discount-status {
+    display: inline-block;
+    margin-top: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+}
+.donate-discount-row.is-live .donate-discount-status { color: #c2410c; }
+.donate-discount-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+@media (max-width: 700px) {
+    .donate-promo-banner-body { align-items: flex-start; }
+    .donate-promo-timer { align-items: flex-start; }
+}

@@ -1,0 +1,52 @@
+<div class="card legal-card donate-discounts-admin">
+    <h2><i class="fa-solid fa-tags"></i> Скидки на донат</h2>
+    <p class="legal-updated">Временные акции: бейдж на кнопке «Донат», зачёркнутые цены и таймер на витрине.</p>
+
+    <form id="donateDiscountForm" class="donate-discount-form" onsubmit="createDonateDiscount(event)">
+        <div class="donate-discount-grid">
+            <label>
+                Название акции
+                <input type="text" id="ddTitle" maxlength="120" required placeholder="Весенняя распродажа">
+            </label>
+            <label>
+                Скидка, %
+                <input type="number" id="ddPercent" min="1" max="90" value="20" required>
+            </label>
+            <label>
+                Область
+                <select id="ddScope" onchange="onDiscountScopeChange()">
+                    <option value="all">Все товары</option>
+                    <option value="tiers">Все подписки</option>
+                    <option value="coins">Все пакеты монет</option>
+                    <option value="tier">Конкретная подписка</option>
+                    <option value="pack">Конкретный пакет монет</option>
+                </select>
+            </label>
+            <label id="ddTargetWrap" hidden>
+                Товар
+                <select id="ddTargetId"></select>
+            </label>
+            <label>
+                Бейдж (опционально)
+                <input type="text" id="ddBadge" maxlength="32" placeholder="−20% · SALE">
+            </label>
+            <label>
+                Начало
+                <input type="datetime-local" id="ddStarts">
+            </label>
+            <label>
+                Окончание
+                <input type="datetime-local" id="ddEnds" required>
+            </label>
+        </div>
+        <button type="submit" class="donate-pay-btn donate-discount-submit">
+            <i class="fa-solid fa-plus"></i> Запустить скидку
+        </button>
+        <div id="donateDiscountFormResult" class="result" role="status"></div>
+    </form>
+
+    <h3 class="donate-discount-list-title">Активные и недавние</h3>
+    <div id="donateDiscountList" class="donate-discount-list">
+        <p class="empty-state">Загрузка…</p>
+    </div>
+</div>

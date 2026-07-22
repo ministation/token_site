@@ -191,45 +191,139 @@ def _rub_label(amount: int) -> str:
     return f"{amount:,} ₽".replace(",", " ")
 
 
-def serialize_tier(tier: dict) -> dict:
+def serialize_discount(row: dict) -> dict:
+    percent = max(1, min(int(row.get("percent") or 0), 90))
     return {
+        "id": row["id"],
+        "title": row.get("title") or "Скидка",
+        "percent": percent,
+        "scope": row.get("scope") or "all",
+        "target_id": row.get("target_id"),
+        "badge_text": row.get("badge_text") or f"−{percent}%",
+        "starts_at": row.get("starts_at"),
+        "ends_at": row.get("ends_at"),
+        "active": bool(row.get("active")),
+        "created_by": row.get("created_by"),
+        "created_at": row.get("created_at"),
+    }
+
+
+def _discount_matches(d: dict, product_type: str, product_id: int) -> bool:
+    scope = (d.get("scope") or "all").strip().lower()
+    tid = d.get("target_id")
+    if scope == "all":
+        return True
+    if scope == "tiers" and product_type == "tier":
+        return True
+    if scope == "coins" and product_type == "coins":
+        return True
+    if scope == "tier" and product_type == "tier" and tid is not None and int(tid) == int(product_id):
+        return True
+    if scope in ("pack", "coins_pack") and product_type == "coins" and tid is not None and int(tid) == int(product_id):
+        return True
+    return False
+
+
+def best_discount_for(product_type: str, product_id: int, discounts: list[dict] | None = None) -> dict | None:
+    rows = discounts if discounts is not None else social_db.get_active_donation_discounts()
+    best = None
+    for raw in rows:
+        d = serialize_discount(raw) if "percent" in raw and "title" in raw else raw
+        if not _discount_matches(d, product_type, product_id):
+            continue
+        if best is None or int(d["percent"]) > int(best["percent"]):
+            best = d
+    return best
+
+
+def apply_price_discount(base_price: int, percent: int) -> int:
+    base = max(0, int(base_price))
+    pct = max(0, min(int(percent), 90))
+    if pct <= 0:
+        return base
+    # минимум 1 ₽ если база > 0
+    discounted = int(round(base * (100 - pct) / 100.0))
+    if base > 0:
+        return max(1, discounted)
+    return 0
+
+
+def serialize_tier(tier: dict, discounts: list[dict] | None = None) -> dict:
+    base = int(tier["price_rub"])
+    disc = best_discount_for("tier", int(tier["id"]), discounts)
+    price = apply_price_discount(base, disc["percent"]) if disc else base
+    out = {
         "id": tier["id"],
         "name": tier["name"],
-        "price_rub": tier["price_rub"],
-        "price_label": _rub_label(tier["price_rub"]),
+        "price_rub": price,
+        "price_label": _rub_label(price),
+        "base_price_rub": base,
+        "base_price_label": _rub_label(base),
         "period": "мес",
         "icon": icon_url(tier["icon"]),
         "coins": tier.get("coins"),
         "featured": bool(tier.get("featured")),
         "perks": list(tier.get("perks") or []),
+        "discount": disc,
+        "on_sale": bool(disc),
     }
+    return out
 
 
-def serialize_coin_pack(pack: dict) -> dict:
+def serialize_coin_pack(pack: dict, discounts: list[dict] | None = None) -> dict:
     coins = int(pack["coins"])
-    price = int(pack["price_rub"])
+    base = int(pack["price_rub"])
+    disc = best_discount_for("coins", int(pack["id"]), discounts)
+    price = apply_price_discount(base, disc["percent"]) if disc else base
     per = price / coins if coins else 0
-    discount = max(0, int(round((1 - per / _COIN_BASE_RATE) * 100))) if _COIN_BASE_RATE else 0
+    unit_discount = max(0, int(round((1 - per / _COIN_BASE_RATE) * 100))) if _COIN_BASE_RATE else 0
     return {
         "id": pack["id"],
         "name": pack["name"],
         "coins": coins,
         "price_rub": price,
         "price_label": _rub_label(price),
+        "base_price_rub": base,
+        "base_price_label": _rub_label(base),
         "unit_price": round(per, 2),
         "unit_label": f"{per:.2f} ₽/шт".replace(".", ","),
-        "discount_pct": discount,
+        "discount_pct": unit_discount,
         "badge": pack.get("badge"),
         "featured": bool(pack.get("featured")),
+        "discount": disc,
+        "on_sale": bool(disc),
     }
 
 
-def list_tiers() -> list[dict]:
-    return [serialize_tier(DONATION_TIERS[i]) for i in sorted(DONATION_TIERS)]
+def list_tiers(discounts: list[dict] | None = None) -> list[dict]:
+    active = discounts if discounts is not None else social_db.get_active_donation_discounts()
+    active_s = [serialize_discount(d) for d in active]
+    return [serialize_tier(DONATION_TIERS[i], active_s) for i in sorted(DONATION_TIERS)]
 
 
-def list_coin_packs() -> list[dict]:
-    return [serialize_coin_pack(COIN_PACKS[i]) for i in sorted(COIN_PACKS)]
+def list_coin_packs(discounts: list[dict] | None = None) -> list[dict]:
+    active = discounts if discounts is not None else social_db.get_active_donation_discounts()
+    active_s = [serialize_discount(d) for d in active]
+    return [serialize_coin_pack(COIN_PACKS[i], active_s) for i in sorted(COIN_PACKS)]
+
+
+def active_promo_summary() -> dict | None:
+    """Лучшая текущая акция для бейджа на кнопке «Донат»."""
+    rows = [serialize_discount(d) for d in social_db.get_active_donation_discounts()]
+    if not rows:
+        return None
+    best = max(rows, key=lambda d: int(d["percent"]))
+    # ближайший конец среди активных
+    ends = [d.get("ends_at") for d in rows if d.get("ends_at")]
+    return {
+        "has_sale": True,
+        "percent": best["percent"],
+        "badge_text": best.get("badge_text") or f"−{best['percent']}%",
+        "title": best.get("title"),
+        "ends_at": min(ends) if ends else best.get("ends_at"),
+        "count": len(rows),
+        "discounts": rows,
+    }
 
 
 def _platega_headers() -> dict[str, str]:
@@ -314,33 +408,40 @@ def _prepare_product(
     game_user_uuid: str | None,
 ) -> dict:
     product_type = (product_type or "tier").strip().lower()
+    active = [serialize_discount(d) for d in social_db.get_active_donation_discounts()]
     if product_type == "coins":
         raw_pack = COIN_PACKS.get(int(pack_id or 0))
         if not raw_pack:
             raise ValueError("Неизвестный пакет монет")
         if not game_user_uuid:
             raise ValueError("Для покупки монет войдите через Discord с привязанным игровым аккаунтом")
+        item = serialize_coin_pack(raw_pack, active)
         return {
             "product_type": "coins",
             "tier_db_id": int(raw_pack["id"]),
             "tier_name": f"Монетки · {raw_pack['coins']}",
             "coins_amount": int(raw_pack["coins"]),
-            "amount_rub": int(raw_pack["price_rub"]),
+            "amount_rub": int(item["price_rub"]),
+            "base_amount_rub": int(item["base_price_rub"]),
+            "discount": item.get("discount"),
             "description": f"Мини-станция · {raw_pack['coins']} монет",
-            "item": serialize_coin_pack(raw_pack),
+            "item": item,
         }
     if product_type == "tier":
         raw = DONATION_TIERS.get(int(tier_id or 0))
         if not raw:
             raise ValueError("Неизвестный тариф")
+        item = serialize_tier(raw, active)
         return {
             "product_type": "tier",
             "tier_db_id": int(raw["id"]),
             "tier_name": raw["name"],
             "coins_amount": int(raw.get("coins") or 0),
-            "amount_rub": int(raw["price_rub"]),
+            "amount_rub": int(item["price_rub"]),
+            "base_amount_rub": int(item["base_price_rub"]),
+            "discount": item.get("discount"),
             "description": f"Мини-станция · {raw['name']} (мес.)",
-            "item": serialize_tier(raw),
+            "item": item,
         }
     raise ValueError("Неизвестный тип товара")
 
@@ -406,6 +507,8 @@ async def create_payment(
             "coins_amount": coins_amount,
             "mode": mode,
             "payment_method": method,
+            "base_amount_rub": prepared.get("base_amount_rub"),
+            "discount": prepared.get("discount"),
         },
         ensure_ascii=False,
     )
@@ -771,6 +874,9 @@ async def apply_callback(payload: dict) -> dict:
 
 def catalog_payload() -> dict:
     mode = payment_mode()
+    active_raw = social_db.get_active_donation_discounts()
+    active = [serialize_discount(d) for d in active_raw]
+    promo = active_promo_summary()
     urls = {
         "callback": f"{SITE_PUBLIC_URL}/platega/callback",
         "callback_api": f"{SITE_PUBLIC_URL}/api/donations/platega/callback",
@@ -787,13 +893,15 @@ def catalog_payload() -> dict:
         "configured": payments_available(),
         "mode": mode,
         "currency": "RUB",
-        "tiers": list_tiers(),
-        "coin_packs": list_coin_packs(),
+        "tiers": list_tiers(active),
+        "coin_packs": list_coin_packs(active),
         "methods": PAYMENT_METHODS,
         "default_method": int(PLATEGA_DEFAULT_METHOD or 2),
         "sbp": sbp_payment_info() if mode == "manual_sbp" else None,
         "smtp_ready": smtp_configured(),
         "urls": urls,
+        "promo": promo,
+        "discounts": active,
     }
 
 
