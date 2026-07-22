@@ -135,7 +135,7 @@ body {
     transition: background-color 0.25s ease, color 0.25s ease;
 }
 
-/* Декоративный фон: мягкие статичные пятна + анимированные частицы (.bg-ambient) */
+/* Декоративный фон: атмосфера станции + частицы */
 body::before {
     content: '';
     position: fixed;
@@ -143,17 +143,21 @@ body::before {
     z-index: -2;
     pointer-events: none;
     background:
-        radial-gradient(680px 400px at 8% -2%, rgba(255, 200, 46, 0.16), transparent 68%),
-        radial-gradient(600px 380px at 94% 4%, rgba(240, 120, 10, 0.12), transparent 68%);
+        radial-gradient(900px 520px at 12% -8%, rgba(255, 200, 46, 0.18), transparent 70%),
+        radial-gradient(720px 480px at 92% 8%, rgba(240, 120, 10, 0.14), transparent 68%),
+        radial-gradient(640px 400px at 50% 110%, rgba(255, 160, 40, 0.08), transparent 60%),
+        linear-gradient(180deg, transparent 0%, rgba(20, 28, 48, 0.03) 100%);
 }
 
 html[data-theme="dark"] body::before {
     background:
-        radial-gradient(640px 400px at 12% -6%, rgba(255, 176, 32, 0.12), transparent 68%),
-        radial-gradient(520px 360px at 90% 2%, rgba(255, 140, 40, 0.10), transparent 68%);
+        radial-gradient(860px 500px at 10% -10%, rgba(255, 176, 32, 0.14), transparent 70%),
+        radial-gradient(700px 440px at 94% 6%, rgba(255, 140, 40, 0.12), transparent 68%),
+        radial-gradient(600px 380px at 48% 108%, rgba(80, 120, 200, 0.06), transparent 62%),
+        linear-gradient(180deg, #0a1020 0%, transparent 40%, rgba(8, 12, 24, 0.4) 100%);
 }
 
-/* === Animated ambient particles === */
+/* === Animated ambient particles (sci-fi depth, amber brand) === */
 .bg-ambient {
     position: fixed;
     inset: 0;
@@ -193,7 +197,9 @@ html[data-theme="dark"] body::before {
     animation: glowDrift2 38s ease-in-out infinite;
 }
 
-.bg-dust-field {
+.bg-dust-field,
+.bg-stars-far,
+.bg-stars-near {
     position: absolute;
     inset: 0;
     overflow: hidden;
@@ -205,21 +211,55 @@ html[data-theme="dark"] body::before {
     pointer-events: none;
     will-change: transform, opacity;
     box-shadow: 0 0 10px rgba(255, 180, 60, 0.35);
-    animation: dustParticleFloat var(--dur, 36s) ease-in-out infinite;
-    animation-delay: var(--delay, 0s);
+    animation:
+        dustParticleFloat var(--dur, 36s) ease-in-out infinite,
+        dustTwinkle var(--twinkle, 4s) ease-in-out infinite;
+    animation-delay: var(--delay, 0s), calc(var(--delay, 0s) * 0.4);
+}
+.dust-particle--far {
+    box-shadow: 0 0 4px rgba(255, 220, 140, 0.25);
+    filter: blur(0.2px);
+}
+.dust-particle--mid {
+    box-shadow: 0 0 8px rgba(255, 180, 60, 0.4);
+}
+.dust-particle--near {
+    box-shadow:
+        0 0 12px rgba(255, 200, 80, 0.55),
+        0 0 2px rgba(255, 255, 220, 0.9);
+}
+.dust-particle--near::after {
+    content: '';
+    position: absolute;
+    inset: -40%;
+    background:
+        linear-gradient(90deg, transparent 46%, rgba(255, 240, 180, 0.55) 50%, transparent 54%),
+        linear-gradient(0deg, transparent 46%, rgba(255, 240, 180, 0.45) 50%, transparent 54%);
+    opacity: 0.55;
+    pointer-events: none;
 }
 
 html[data-theme="dark"] .bg-glow--1 { background: rgba(255, 176, 32, 0.20); opacity: 0.7; }
 html[data-theme="dark"] .bg-glow--2 { background: rgba(255, 140, 40, 0.16); }
 html[data-theme="dark"] .dust-particle {
-    box-shadow: 0 0 6px rgba(255, 200, 80, 0.25);
+    box-shadow: 0 0 8px rgba(255, 200, 80, 0.3);
+}
+html[data-theme="dark"] .dust-particle--near {
+    box-shadow:
+        0 0 14px rgba(255, 200, 80, 0.45),
+        0 0 2px rgba(255, 255, 230, 0.85);
 }
 
 @keyframes dustParticleFloat {
-    0% { transform: translate(0, 0); opacity: 0; }
-    12% { opacity: var(--op, 0.45); }
-    88% { opacity: var(--op, 0.45); }
-    100% { transform: translate(var(--tx), var(--ty)); opacity: 0; }
+    0% { transform: translate3d(0, 0, 0); opacity: 0; }
+    10% { opacity: var(--op, 0.45); }
+    90% { opacity: var(--op, 0.45); }
+    100% { transform: translate3d(var(--tx), var(--ty), 0); opacity: 0; }
+}
+
+@keyframes dustTwinkle {
+    0%, 100% { filter: brightness(0.85); }
+    50% { filter: brightness(1.35); }
 }
 
 @keyframes glowDrift1 {
@@ -234,8 +274,12 @@ html[data-theme="dark"] .dust-particle {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .bg-ambient .bg-glow {
+    .bg-ambient .bg-glow,
+    .bg-ambient .dust-particle {
         animation: none !important;
+    }
+    .bg-ambient .dust-particle {
+        opacity: 0.35;
     }
     *,
     *::before,
