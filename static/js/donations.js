@@ -306,7 +306,10 @@ function renderDonateTierCard(t) {
     const onSale = !!t.on_sale && t.discount;
     const saleClass = onSale ? ' on-sale' : '';
     const saleBadge = onSale
-        ? `<span class="donate-sale-badge">${escapeHtml(t.discount.badge_text || ('−' + t.discount.percent + '%'))}</span>`
+        ? `<span class="donate-sale-badge" aria-label="Скидка ${escapeHtml(String(t.discount.percent))}%">
+                <span class="donate-sale-badge-sale">SALE</span>
+                <span class="donate-sale-badge-pct">−${escapeHtml(String(t.discount.percent))}%</span>
+           </span>`
         : (t.featured ? '<span class="donate-tier-badge">Популярный</span>' : '');
     const priceHtml = onSale
         ? `<div class="donate-tier-price donate-price-sale">
@@ -397,7 +400,10 @@ function renderDonatePackCard(p) {
     const onSale = !!p.on_sale && p.discount;
     const saleClass = onSale ? ' on-sale' : '';
     const badge = onSale
-        ? `<span class="donate-sale-badge">${escapeHtml(p.discount.badge_text || ('−' + p.discount.percent + '%'))}</span>`
+        ? `<span class="donate-sale-badge" aria-label="Скидка ${escapeHtml(String(p.discount.percent))}%">
+                <span class="donate-sale-badge-sale">SALE</span>
+                <span class="donate-sale-badge-pct">−${escapeHtml(String(p.discount.percent))}%</span>
+           </span>`
         : (p.badge ? `<span class="donate-tier-badge">${escapeHtml(p.badge)}</span>` : '');
     const visualMeta = packVisual(p);
     const priceHtml = onSale

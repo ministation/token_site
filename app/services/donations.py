@@ -199,7 +199,7 @@ def serialize_discount(row: dict) -> dict:
         "percent": percent,
         "scope": row.get("scope") or "all",
         "target_id": row.get("target_id"),
-        "badge_text": row.get("badge_text") or f"−{percent}%",
+        "badge_text": row.get("badge_text") or f"SALE −{percent}%",
         "starts_at": row.get("starts_at"),
         "ends_at": row.get("ends_at"),
         "active": bool(row.get("active")),
@@ -318,7 +318,7 @@ def active_promo_summary() -> dict | None:
     return {
         "has_sale": True,
         "percent": best["percent"],
-        "badge_text": best.get("badge_text") or f"−{best['percent']}%",
+        "badge_text": best.get("badge_text") or f"SALE −{best['percent']}%",
         "title": best.get("title"),
         "ends_at": min(ends) if ends else best.get("ends_at"),
         "count": len(rows),

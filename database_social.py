@@ -1901,6 +1901,62 @@ def list_donation_orders(
     return rows
 
 
+def ensure_donation_discounts_table():
+    """Идемпотентная миграция — таблица могла появиться после старого init_social_db."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS donation_discounts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            percent INTEGER NOT NULL,
+            scope TEXT NOT NULL DEFAULT 'all',
+            target_id INTEGER,
+            badge_text TEXT,
+            starts_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            ends_at TIMESTAMP NOT NULL,
+            active INTEGER NOT NULL DEFAULT 1,
+            created_by TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_donation_discounts_active
+        ON donation_discounts(active, starts_at, ends_at)
+    """)
+    conn.commit()
+    conn.close()
+
+
+def _parse_discount_dt(value) -> Optional[datetime.datetime]:
+    if value is None:
+        return None
+    s = str(value).strip()
+    if not s:
+        return None
+    s = s.replace("T", " ")
+    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%d"):
+        try:
+            return datetime.datetime.strptime(s, fmt)
+        except ValueError:
+            continue
+    try:
+        return datetime.datetime.fromisoformat(str(value).replace("Z", "+00:00")).replace(tzinfo=None)
+    except ValueError:
+        return None
+
+
+def _is_discount_currently_active(row: dict, now: Optional[datetime.datetime] = None) -> bool:
+    if not int(row.get("active") or 0):
+        return False
+    now = now or datetime.datetime.now()
+    start = _parse_discount_dt(row.get("starts_at")) or datetime.datetime.min
+    end = _parse_discount_dt(row.get("ends_at"))
+    if end is None:
+        return False
+    return start <= now < end
+
+
 def create_donation_discount(
     *,
     title: str,
@@ -1912,13 +1968,16 @@ def create_donation_discount(
     ends_at: str,
     created_by: str | None = None,
 ) -> dict:
+    ensure_donation_discounts_table()
+    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    start_val = starts_at or now
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute(
         """
         INSERT INTO donation_discounts (
             title, percent, scope, target_id, badge_text, starts_at, ends_at, active, created_by
-        ) VALUES (?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP), ?, 1, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)
         """,
         (
             title,
@@ -1926,7 +1985,7 @@ def create_donation_discount(
             scope,
             target_id,
             badge_text,
-            starts_at,
+            start_val,
             ends_at,
             created_by,
         ),
@@ -1940,33 +1999,26 @@ def create_donation_discount(
 
 
 def list_donation_discounts(*, include_inactive: bool = True, limit: int = 100) -> list[dict]:
+    ensure_donation_discounts_table()
     conn = get_db()
     cursor = conn.cursor()
     limit = min(max(int(limit), 1), 200)
-    if include_inactive:
-        cursor.execute(
-            """
-            SELECT * FROM donation_discounts
-            ORDER BY active DESC, ends_at DESC, id DESC
-            LIMIT ?
-            """,
-            (limit,),
-        )
-    else:
-        cursor.execute(
-            """
-            SELECT * FROM donation_discounts
-            WHERE active = 1
-              AND datetime(starts_at) <= datetime('now')
-              AND datetime(ends_at) > datetime('now')
-            ORDER BY percent DESC, ends_at ASC
-            LIMIT ?
-            """,
-            (limit,),
-        )
+    cursor.execute(
+        """
+        SELECT * FROM donation_discounts
+        ORDER BY active DESC, ends_at DESC, id DESC
+        LIMIT ?
+        """,
+        (limit,),
+    )
     rows = [dict(r) for r in cursor.fetchall()]
     conn.close()
-    return rows
+    if include_inactive:
+        return rows
+    now = datetime.datetime.now()
+    active = [r for r in rows if _is_discount_currently_active(r, now)]
+    active.sort(key=lambda r: (-int(r.get("percent") or 0), str(r.get("ends_at") or "")))
+    return active[:limit]
 
 
 def get_active_donation_discounts() -> list[dict]:
@@ -1974,6 +2026,7 @@ def get_active_donation_discounts() -> list[dict]:
 
 
 def get_donation_discount(discount_id: int) -> Optional[Dict]:
+    ensure_donation_discounts_table()
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM donation_discounts WHERE id = ?", (int(discount_id),))
@@ -1983,6 +2036,7 @@ def get_donation_discount(discount_id: int) -> Optional[Dict]:
 
 
 def deactivate_donation_discount(discount_id: int) -> bool:
+    ensure_donation_discounts_table()
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute(
@@ -1996,6 +2050,7 @@ def deactivate_donation_discount(discount_id: int) -> bool:
 
 
 def delete_donation_discount(discount_id: int) -> bool:
+    ensure_donation_discounts_table()
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("DELETE FROM donation_discounts WHERE id = ?", (int(discount_id),))
@@ -2116,9 +2171,6 @@ def get_global_chat_messages(limit: int = 100, after_id: int = 0) -> List[Dict]:
     rows = cursor.fetchall()
     conn.close()
     return [dict(r) for r in rows]
-
-import json
-from datetime import datetime, timedelta
 
 def load_sessions_from_db() -> dict:
     """Загружает все активные сессии в словарь."""
@@ -2286,7 +2338,7 @@ def cleanup_expired_sessions(max_age_days: int = 30):
 # ---------- Компенсация за падение сервера ----------
 
 def create_compensation_giveaway(amount: int, duration_minutes: int, created_by: str) -> Dict:
-    ends_at = datetime.utcnow() + timedelta(minutes=duration_minutes)
+    ends_at = datetime.datetime.utcnow() + datetime.timedelta(minutes=duration_minutes)
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute(
@@ -2311,7 +2363,7 @@ def get_compensation_giveaway_by_id(giveaway_id: int) -> Optional[Dict]:
 
 
 def get_active_compensation_giveaway() -> Optional[Dict]:
-    now = datetime.utcnow().replace(microsecond=0).isoformat()
+    now = datetime.datetime.utcnow().replace(microsecond=0).isoformat()
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute(
@@ -2409,7 +2461,7 @@ def get_compensation_summary() -> Dict:
 
 
 def get_compensation_history(limit: int = 100) -> List[Dict]:
-    now = datetime.utcnow().replace(microsecond=0).isoformat()
+    now = datetime.datetime.utcnow().replace(microsecond=0).isoformat()
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute(
