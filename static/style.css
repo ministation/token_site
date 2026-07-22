@@ -6129,7 +6129,66 @@ label.chat-tool-btn input[type="file"] {
 
 @media (max-width: 900px) {
     .donate-shell { grid-template-columns: 1fr; }
-    .donate-checkout { position: static; width: 100%; }
+    .donate-checkout { position: static; width: 100%; top: auto; }
+}
+
+@media (max-width: 768px) {
+    /* .donate-standalone .sidebar { position: sticky } перебивал mobile fixed и толкал контент вниз */
+    .donate-standalone .sidebar {
+        position: static;
+        top: auto;
+        width: 100%;
+        height: auto;
+        min-height: 0;
+        transform: none;
+        padding: 0;
+        overflow: visible;
+        gap: 8px;
+        box-shadow: none;
+        border-radius: 0;
+        z-index: 1;
+    }
+    .donate-standalone .sidebar .side-group-fill {
+        display: none;
+    }
+    .donate-standalone .sidebar .side-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        padding: 8px;
+        margin: 0;
+    }
+    .donate-standalone .sidebar .side-group-title {
+        display: none;
+    }
+    .donate-standalone .sidebar .side-link,
+    .donate-standalone .sidebar .donate-nav-btn {
+        flex: 1 1 calc(33.333% - 6px);
+        min-width: 5.5rem;
+        justify-content: center;
+        text-align: center;
+        padding: 10px 8px;
+        font-size: 0.8rem;
+        margin: 0;
+    }
+    .donate-standalone .layout {
+        padding-top: 10px;
+        gap: 10px;
+    }
+    .donate-standalone .content {
+        width: 100%;
+        align-self: stretch;
+    }
+    .donate-hero {
+        padding: 12px 14px !important;
+    }
+    .donate-hero .donate-back {
+        display: none;
+    }
+    .donate-page {
+        gap: 12px;
+        padding-bottom: 16px;
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
