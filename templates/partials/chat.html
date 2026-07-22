@@ -1,12 +1,23 @@
 <div class="card global-chat-card dc-shell">
     <div class="global-chat-header dc-channel-header">
         <h2><i class="fa-solid fa-hashtag"></i> общий-чат</h2>
-        <p class="chat-hint-inline">Участники слева · эмодзи и картинки</p>
+        <p class="chat-hint-inline">Эмодзи и картинки</p>
+        <button type="button" class="chat-members-toggle" id="chatMembersToggle"
+            aria-controls="chatUsersSidebar" aria-expanded="false" title="Участники">
+            <i class="fa-solid fa-users"></i>
+            <span>Участники</span>
+        </button>
     </div>
 
     <div class="chat-with-users-layout dc-layout" id="chatLayout">
-        <aside class="chat-users-sidebar dc-members" id="chatUsersSidebar">
-            <div class="dc-members-title">Участники</div>
+        <div class="chat-members-backdrop" id="chatMembersBackdrop" aria-hidden="true"></div>
+        <aside class="chat-users-sidebar dc-members" id="chatUsersSidebar" aria-label="Участники чата">
+            <div class="dc-members-head">
+                <div class="dc-members-title">Участники</div>
+                <button type="button" class="chat-members-close" id="chatMembersClose" aria-label="Закрыть список участников">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
             <div class="pm-search-box">
                 <i class="fa-solid fa-magnifying-glass"></i>
                 <input type="text" id="chatUserSearch" placeholder="Поиск..." autocomplete="off">

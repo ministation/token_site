@@ -9,11 +9,45 @@ function initGlobalChat() {
         globalChatInitialized = true;
         loadGlobalChat(true);
         setupChatUserSearch();
+        setupChatMembersDrawer();
         setupChatImagePreview('globalChatImage', 'globalChatImagePreview');
     }
     loadChatUsers('');
     startGlobalChatPolling();
     startChatUsersPolling();
+}
+
+function setChatMembersOpen(open) {
+    const layout = document.getElementById('chatLayout');
+    const toggle = document.getElementById('chatMembersToggle');
+    const backdrop = document.getElementById('chatMembersBackdrop');
+    if (layout) layout.classList.toggle('members-open', open);
+    if (toggle) toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (backdrop) backdrop.setAttribute('aria-hidden', open ? 'false' : 'true');
+}
+
+function setupChatMembersDrawer() {
+    const toggle = document.getElementById('chatMembersToggle');
+    const closeBtn = document.getElementById('chatMembersClose');
+    const backdrop = document.getElementById('chatMembersBackdrop');
+    const layout = document.getElementById('chatLayout');
+    if (!layout || layout.dataset.membersBound) return;
+    layout.dataset.membersBound = '1';
+
+    if (toggle) {
+        toggle.addEventListener('click', () => {
+            setChatMembersOpen(!layout.classList.contains('members-open'));
+        });
+    }
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => setChatMembersOpen(false));
+    }
+    if (backdrop) {
+        backdrop.addEventListener('click', () => setChatMembersOpen(false));
+    }
+    window.addEventListener('resize', () => {
+        if (window.innerWidth > 900) setChatMembersOpen(false);
+    });
 }
 
 function setupChatImagePreview(inputId, previewId) {
@@ -126,6 +160,7 @@ function stopGlobalChatPolling() {
         clearInterval(globalChatPollInterval);
         globalChatPollInterval = null;
     }
+    setChatMembersOpen(false);
 }
 
 function startChatUsersPolling() {
