@@ -1,10 +1,11 @@
 import json
-from fastapi import APIRouter, Request, HTTPException, Form
+from fastapi import APIRouter, Request, HTTPException, Form, Query
 from fastapi.responses import JSONResponse
 
 from app.config import PLATEGA_MERCHANT_ID, PLATEGA_SECRET
-from app.dependencies import get_optional_social_user
+from app.dependencies import get_optional_social_user, get_current_admin
 from app.services import donations as donations_svc
+from app.core.ratelimit import enforce_cooldown, enforce_rate
 import database_social as social_db
 
 router = APIRouter(prefix="/api/donations", tags=["donations"])
@@ -20,17 +21,7 @@ async def donation_order(transaction_id: str):
     order = social_db.get_donation_order_by_tx(transaction_id)
     if not order:
         raise HTTPException(status_code=404, detail="Заказ не найден")
-    return {
-        "transaction_id": order["transaction_id"],
-        "product_type": order.get("product_type") or "tier",
-        "tier_id": order["tier_id"],
-        "tier_name": order["tier_name"],
-        "coins_amount": order.get("coins_amount") or 0,
-        "amount_rub": order["amount_rub"],
-        "status": order["status"],
-        "fulfilled": bool(order.get("fulfilled")),
-        "created_at": order["created_at"],
-    }
+    return donations_svc.serialize_order(order)
 
 
 @router.post("/checkout")
@@ -42,6 +33,7 @@ async def donation_checkout(
     payment_method: int = Form(2),
     contact: str = Form(""),
 ):
+    enforce_rate(request, "donate_checkout", limit=10, window=60.0, detail="Слишком много заказов.")
     user = await get_optional_social_user(request)
     game_uuid = donations_svc._resolve_game_uuid(user)
     try:
@@ -58,8 +50,23 @@ async def donation_checkout(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Платёжный шлюз недоступен: {e}")
+        raise HTTPException(status_code=502, detail=f"Не удалось создать заказ: {e}")
     return result
+
+
+@router.post("/mark-paid/{transaction_id}")
+async def donation_mark_paid(transaction_id: str, request: Request):
+    enforce_rate(request, "donate_mark_paid", limit=12, window=60.0)
+    enforce_cooldown(f"donate_paid:{transaction_id}", 5.0, detail="Уже отправлено, подождите.")
+    try:
+        order = await donations_svc.mark_order_paid(transaction_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {
+        "ok": True,
+        **donations_svc.serialize_order(order),
+        "message": "Заявка отправлена. Ожидайте подтверждения оплаты администратором.",
+    }
 
 
 @router.get("/status/{transaction_id}")
@@ -68,7 +75,18 @@ async def donation_status(transaction_id: str):
     if not order:
         raise HTTPException(status_code=404, detail="Заказ не найден")
     remote = None
-    if donations_svc.platega_configured() and order.get("status") == "pending":
+    # Platega только если заказ не в ручном режиме
+    mode = "manual_sbp"
+    try:
+        if order.get("payload"):
+            mode = (json.loads(order["payload"]) or {}).get("mode") or mode
+    except Exception:
+        pass
+    if (
+        mode != "manual_sbp"
+        and donations_svc.platega_configured()
+        and order.get("status") == "pending"
+    ):
         try:
             remote = await donations_svc.fetch_payment_status(transaction_id)
             st = str((remote or {}).get("status") or "").upper()
@@ -85,16 +103,9 @@ async def donation_status(transaction_id: str):
             order = await donations_svc.fulfill_order_if_needed(order) or order
         except Exception:
             pass
-    return {
-        "transaction_id": order["transaction_id"],
-        "status": order["status"],
-        "product_type": order.get("product_type") or "tier",
-        "tier_name": order["tier_name"],
-        "coins_amount": order.get("coins_amount") or 0,
-        "amount_rub": order["amount_rub"],
-        "fulfilled": bool(order.get("fulfilled")),
-        "remote": remote,
-    }
+    data = donations_svc.serialize_order(order)
+    data["remote"] = remote
+    return data
 
 
 @router.post("/platega/callback")

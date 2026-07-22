@@ -24,7 +24,6 @@ from app.config import (
 from app.services.bank import add_tokens
 from app.services.mail import send_email, smtp_configured
 
-# Цены в рублях (месяц). Иконки - /static/icons/
 DONATION_TIERS: dict[int, dict[str, Any]] = {
     1: {
         "id": 1,
@@ -178,16 +177,6 @@ def list_coin_packs() -> list[dict]:
     return [serialize_coin_pack(COIN_PACKS[i]) for i in sorted(COIN_PACKS)]
 
 
-def get_tier(tier_id: int) -> dict | None:
-    tier = DONATION_TIERS.get(int(tier_id))
-    return serialize_tier(tier) if tier else None
-
-
-def get_coin_pack(pack_id: int) -> dict | None:
-    pack = COIN_PACKS.get(int(pack_id))
-    return serialize_coin_pack(pack) if pack else None
-
-
 def _platega_headers() -> dict[str, str]:
     return {
         "Content-Type": "application/json",
@@ -206,38 +195,363 @@ def _resolve_game_uuid(user: dict | None) -> str | None:
     return None
 
 
-def _build_product(
+def _prepare_product(
     *,
     product_type: str,
     tier_id: int | None,
     pack_id: int | None,
     game_user_uuid: str | None,
-) -> tuple[str, int, str, int, dict]:
+) -> dict:
     product_type = (product_type or "tier").strip().lower()
-    coins_amount = 0
     if product_type == "coins":
         raw_pack = COIN_PACKS.get(int(pack_id or 0))
         if not raw_pack:
             raise ValueError("Неизвестный пакет монет")
         if not game_user_uuid:
             raise ValueError("Для покупки монет войдите через Discord с привязанным игровым аккаунтом")
-        amount_rub = raw_pack["price_rub"]
-        tier_db_id = int(raw_pack["id"])
-        tier_name = f"Монетки · {raw_pack['coins']}"
-        coins_amount = int(raw_pack["coins"])
-        serialized = serialize_coin_pack(raw_pack)
-    elif product_type == "tier":
+        return {
+            "product_type": "coins",
+            "tier_db_id": int(raw_pack["id"]),
+            "tier_name": f"Монетки · {raw_pack['coins']}",
+            "coins_amount": int(raw_pack["coins"]),
+            "amount_rub": int(raw_pack["price_rub"]),
+            "description": f"Мини-станция · {raw_pack['coins']} монет",
+            "item": serialize_coin_pack(raw_pack),
+        }
+    if product_type == "tier":
         raw = DONATION_TIERS.get(int(tier_id or 0))
         if not raw:
             raise ValueError("Неизвестный тариф")
-        amount_rub = raw["price_rub"]
-        tier_db_id = int(raw["id"])
-        tier_name = raw["name"]
-        coins_amount = int(raw.get("coins") or 0)
-        serialized = serialize_tier(raw)
-    else:
-        raise ValueError("Неизвестный тип товара")
-    return product_type, tier_db_id, tier_name, coins_amount, amount_rub, serialized  # type: wrong
+        return {
+            "product_type": "tier",
+            "tier_db_id": int(raw["id"]),
+            "tier_name": raw["name"],
+            "coins_amount": int(raw.get("coins") or 0),
+            "amount_rub": int(raw["price_rub"]),
+            "description": f"Мини-станция · {raw['name']} (мес.)",
+            "item": serialize_tier(raw),
+        }
+    raise ValueError("Неизвестный тип товара")
 
 
-# Fix return type - I made a mistake with tuple unpacking. Let me rewrite create_payment cleanly.
+def sbp_payment_info(amount_rub: int | None = None) -> dict:
+    return {
+        "link": SBP_PAY_LINK,
+        "qr": SBP_QR_PATH,
+        "amount_rub": amount_rub,
+        "amount_label": _rub_label(amount_rub) if amount_rub is not None else None,
+        "hint": "Отсканируйте QR в банковском приложении или откройте ссылку СБП. В комментарии укажите номер заказа.",
+    }
+
+
+async def create_payment(
+    *,
+    product_type: str = "tier",
+    tier_id: int | None = None,
+    pack_id: int | None = None,
+    payment_method: int | None = None,
+    player_id: str | None = None,
+    discord_id: str | None = None,
+    game_user_uuid: str | None = None,
+    contact: str | None = None,
+) -> dict:
+    if not payments_available():
+        raise ValueError("Платежи временно недоступны")
+
+    method = int(payment_method or 2)
+    if method not in {m["id"] for m in PAYMENT_METHODS}:
+        raise ValueError("Сейчас доступна только оплата через СБП")
+
+    prepared = _prepare_product(
+        product_type=product_type,
+        tier_id=tier_id,
+        pack_id=pack_id,
+        game_user_uuid=game_user_uuid,
+    )
+    product_type = prepared["product_type"]
+    amount_rub = prepared["amount_rub"]
+    tier_db_id = prepared["tier_db_id"]
+    tier_name = prepared["tier_name"]
+    coins_amount = prepared["coins_amount"]
+    serialized = prepared["item"]
+    description = prepared["description"]
+
+    tx_id = str(uuid.uuid4())
+    payload = json.dumps(
+        {
+            "product_type": product_type,
+            "tier_id": tier_id,
+            "pack_id": pack_id,
+            "player_id": player_id or "",
+            "game_user_uuid": game_user_uuid or "",
+            "coins_amount": coins_amount,
+            "mode": "manual_sbp" if MANUAL_SBP_ENABLED else "platega",
+        },
+        ensure_ascii=False,
+    )
+
+    # Ручной СБП — основной режим
+    if MANUAL_SBP_ENABLED:
+        social_db.create_donation_order(
+            transaction_id=tx_id,
+            tier_id=tier_db_id,
+            tier_name=tier_name,
+            amount_rub=amount_rub,
+            payment_method=method,
+            player_id=player_id,
+            discord_id=discord_id,
+            contact=contact,
+            payload=payload,
+            product_type=product_type,
+            coins_amount=coins_amount,
+            game_user_uuid=game_user_uuid,
+            redirect_url=SBP_PAY_LINK,
+        )
+        return {
+            "transaction_id": tx_id,
+            "mode": "manual_sbp",
+            "status": "pending",
+            "product_type": product_type,
+            "item": serialized,
+            "amount_rub": amount_rub,
+            "amount_label": _rub_label(amount_rub),
+            "sbp": sbp_payment_info(amount_rub),
+            "wait_path": f"/donate?order={tx_id}&wait=1",
+        }
+
+    # Fallback: Platega (если ручной режим выключен)
+    if not platega_configured():
+        raise ValueError("Платежи временно недоступны")
+
+    return_url = f"{SITE_PUBLIC_URL}/donate?order={tx_id}&result=success"
+    fail_url = f"{SITE_PUBLIC_URL}/donate?order={tx_id}&result=fail"
+    social_db.create_donation_order(
+        transaction_id=tx_id,
+        tier_id=tier_db_id,
+        tier_name=tier_name,
+        amount_rub=amount_rub,
+        payment_method=method,
+        player_id=player_id,
+        discord_id=discord_id,
+        contact=contact,
+        payload=payload,
+        product_type=product_type,
+        coins_amount=coins_amount,
+        game_user_uuid=game_user_uuid,
+    )
+    body = {
+        "paymentMethod": method,
+        "id": tx_id,
+        "paymentDetails": {"amount": amount_rub, "currency": "RUB"},
+        "description": description,
+        "return": return_url,
+        "failedUrl": fail_url,
+        "payload": payload,
+    }
+    url = f"{PLATEGA_API_BASE}/transaction/process"
+    timeout = aiohttp.ClientTimeout(total=30)
+    async with aiohttp.ClientSession(timeout=timeout) as session:
+        async with session.post(url, headers=_platega_headers(), json=body) as resp:
+            data = await resp.json(content_type=None)
+            if resp.status >= 400:
+                msg = data.get("message") if isinstance(data, dict) else None
+                social_db.update_donation_order(
+                    tx_id, status="failed", raw_callback=json.dumps(data, ensure_ascii=False)
+                )
+                raise ValueError(msg or "Ошибка платёжного сервиса")
+    redirect = (data or {}).get("redirect")
+    if redirect:
+        social_db.update_donation_order(tx_id, redirect_url=redirect)
+    return {
+        "transaction_id": (data or {}).get("transactionId") or tx_id,
+        "redirect": redirect,
+        "mode": "platega",
+        "status": (data or {}).get("status") or "PENDING",
+        "expires_in": (data or {}).get("expiresIn"),
+        "product_type": product_type,
+        "item": serialized,
+        "amount_rub": amount_rub,
+    }
+
+
+async def mark_order_paid(transaction_id: str) -> dict:
+    """Пользователь подтвердил, что перевёл деньги — ждём ручной проверки."""
+    order = social_db.get_donation_order_by_tx(transaction_id)
+    if not order:
+        raise ValueError("Заказ не найден")
+    status = order.get("status") or ""
+    if status == "confirmed":
+        return order
+    if status in ("canceled", "failed", "chargebacked"):
+        raise ValueError("Этот заказ уже закрыт")
+    if status != "awaiting_confirmation":
+        social_db.update_donation_order(transaction_id, status="awaiting_confirmation")
+        order = social_db.get_donation_order_by_tx(transaction_id) or order
+        _notify_admin_pending(order)
+    return order
+
+
+def _notify_admin_pending(order: dict) -> None:
+    tx = order.get("transaction_id") or ""
+    amount = order.get("amount_rub") or 0
+    name = order.get("tier_name") or "заказ"
+    contact = order.get("contact") or "—"
+    discord_id = order.get("discord_id") or "—"
+    player_id = order.get("player_id") or "—"
+    product = order.get("product_type") or "tier"
+    admin_url = f"{SITE_PUBLIC_URL}/#admin"
+    subject = f"[Мини-станция] Оплата ожидает подтверждения · {amount} ₽"
+    body = (
+        f"Новая оплата СБП ожидает подтверждения.\n\n"
+        f"Заказ: {tx}\n"
+        f"Товар: {name} ({product})\n"
+        f"Сумма: {amount} ₽\n"
+        f"Контакт: {contact}\n"
+        f"Discord ID: {discord_id}\n"
+        f"Player ID: {player_id}\n\n"
+        f"После проверки перевода в банке подтвердите заказ в админ-панели:\n"
+        f"{admin_url}\n"
+        f"Или API: POST /api/admin/donations/{tx}/confirm\n"
+    )
+    send_email(subject=subject, body=body, to=DONATION_NOTIFY_EMAIL)
+
+
+async def fetch_payment_status(transaction_id: str) -> dict:
+    if not platega_configured():
+        raise ValueError("Платежи временно недоступны")
+    url = f"{PLATEGA_API_BASE}/transaction/{transaction_id}"
+    timeout = aiohttp.ClientTimeout(total=20)
+    async with aiohttp.ClientSession(timeout=timeout) as session:
+        async with session.get(url, headers=_platega_headers()) as resp:
+            data = await resp.json(content_type=None)
+            if resp.status >= 400:
+                raise ValueError((data or {}).get("message") or f"Ошибка статуса ({resp.status})")
+            return data if isinstance(data, dict) else {"raw": data}
+
+
+async def fulfill_order_if_needed(order: dict | None) -> dict | None:
+    """Идемпотентно выдаёт спонсорство и/или монеты за confirmed заказ."""
+    if not order:
+        return order
+    if order.get("status") != "confirmed":
+        return order
+    if order.get("fulfilled"):
+        return order
+
+    tx_id = order["transaction_id"]
+    product_type = order.get("product_type") or "tier"
+    coins = int(order.get("coins_amount") or 0)
+    game_uuid = order.get("game_user_uuid") or ""
+    if not game_uuid and order.get("payload"):
+        try:
+            meta = json.loads(order["payload"])
+            game_uuid = meta.get("game_user_uuid") or ""
+            coins = coins or int(meta.get("coins_amount") or 0)
+        except Exception:
+            pass
+
+    if not social_db.mark_donation_fulfilled(tx_id):
+        return social_db.get_donation_order_by_tx(tx_id)
+
+    try:
+        if product_type == "tier":
+            social_db.create_sponsorship(
+                order_transaction_id=tx_id,
+                tier_id=int(order.get("tier_id") or 0),
+                tier_name=order.get("tier_name") or "Спонсор",
+                amount_rub=int(order.get("amount_rub") or 0),
+                days=SPONSORSHIP_DAYS,
+                player_id=order.get("player_id"),
+                discord_id=order.get("discord_id"),
+                game_user_uuid=game_uuid or None,
+                contact=order.get("contact"),
+                coins_granted=coins if game_uuid and not str(game_uuid).startswith("discord_") else 0,
+                notes="manual_sbp",
+            )
+            if coins > 0 and game_uuid and not str(game_uuid).startswith("discord_"):
+                await add_tokens(str(game_uuid), coins)
+        elif product_type == "coins":
+            if not game_uuid or str(game_uuid).startswith("discord_") or coins <= 0:
+                social_db.update_donation_order(tx_id, fulfilled=0)
+                return social_db.get_donation_order_by_tx(tx_id)
+            await add_tokens(str(game_uuid), coins)
+    except Exception:
+        social_db.update_donation_order(tx_id, fulfilled=0)
+        raise
+    return social_db.get_donation_order_by_tx(tx_id)
+
+
+async def confirm_order_manual(transaction_id: str, *, admin_name: str = "") -> dict:
+    order = social_db.get_donation_order_by_tx(transaction_id)
+    if not order:
+        raise ValueError("Заказ не найден")
+    if order.get("status") == "confirmed" and order.get("fulfilled"):
+        return order
+    social_db.update_donation_order(
+        transaction_id,
+        status="confirmed",
+        raw_callback=json.dumps(
+            {"manual_confirm": True, "by": admin_name or "admin"},
+            ensure_ascii=False,
+        ),
+    )
+    order = social_db.get_donation_order_by_tx(transaction_id)
+    return await fulfill_order_if_needed(order) or order
+
+
+async def apply_callback(payload: dict) -> dict:
+    tx_id = str(payload.get("id") or "")
+    status_raw = str(payload.get("status") or "").upper()
+    if not tx_id:
+        raise ValueError("Нет id транзакции")
+
+    status_map = {
+        "CONFIRMED": "confirmed",
+        "CANCELED": "canceled",
+        "CANCELLED": "canceled",
+        "PENDING": "pending",
+        "CHARGEBACKED": "chargebacked",
+    }
+    status = status_map.get(status_raw, status_raw.lower() or "pending")
+    social_db.update_donation_order(
+        tx_id,
+        status=status,
+        raw_callback=json.dumps(payload, ensure_ascii=False),
+    )
+    order = social_db.get_donation_order_by_tx(tx_id)
+    if status == "confirmed":
+        order = await fulfill_order_if_needed(order)
+    return {"ok": True, "transaction_id": tx_id, "status": status, "order": order}
+
+
+def catalog_payload() -> dict:
+    return {
+        "configured": payments_available(),
+        "mode": "manual_sbp" if MANUAL_SBP_ENABLED else ("platega" if platega_configured() else "off"),
+        "currency": "RUB",
+        "tiers": list_tiers(),
+        "coin_packs": list_coin_packs(),
+        "methods": PAYMENT_METHODS,
+        "default_method": 2,
+        "sbp": sbp_payment_info(),
+        "smtp_ready": smtp_configured(),
+    }
+
+
+def serialize_order(order: dict) -> dict:
+    return {
+        "transaction_id": order["transaction_id"],
+        "status": order["status"],
+        "product_type": order.get("product_type") or "tier",
+        "tier_id": order.get("tier_id"),
+        "tier_name": order.get("tier_name"),
+        "coins_amount": order.get("coins_amount") or 0,
+        "amount_rub": order["amount_rub"],
+        "amount_label": _rub_label(int(order["amount_rub"] or 0)),
+        "contact": order.get("contact"),
+        "discord_id": order.get("discord_id"),
+        "player_id": order.get("player_id"),
+        "fulfilled": bool(order.get("fulfilled")),
+        "created_at": order.get("created_at"),
+        "sbp": sbp_payment_info(int(order["amount_rub"] or 0)),
+    }

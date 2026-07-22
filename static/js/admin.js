@@ -15,6 +15,7 @@ function showAdminTab(tab, btn) {
         appeals: 'adminInboxTab', tickets: 'adminInboxTab',
         compensation: 'adminCompensationTab',
         game: 'adminGameTab', playtime: 'adminPlaytimeTab',
+        donations: 'adminDonationsTab',
         admins: 'adminAdminsTab'
     };
     const target = document.getElementById(map[tab]);
@@ -29,6 +30,7 @@ function showAdminTab(tab, btn) {
     if (tab === 'compensation') loadAdminCompensation();
     if (tab === 'game') initGameModerationTab();
     if (tab === 'playtime' && typeof initPlaytimeTransfer === 'function') initPlaytimeTransfer();
+    if (tab === 'donations') loadAdminDonations();
     if (tab === 'admins') loadAdminList();
 }
 
@@ -1045,6 +1047,55 @@ async function revokeAdmin(discordId) {
     try {
         await apiCall('DELETE', '/api/admin/admins/' + discordId);
         loadAdminList();
+    } catch (e) {
+        alert(e.message);
+    }
+}
+
+async function loadAdminDonations() {
+    const container = document.getElementById('adminDonationsList');
+    if (!container) return;
+    container.innerHTML = '<p class="empty-state">Загрузка...</p>';
+    const status = document.getElementById('adminDonationsStatus')?.value ?? 'awaiting_confirmation';
+    const qs = status ? `?status=${encodeURIComponent(status)}&limit=50` : '?limit=50';
+    try {
+        const orders = await apiCall('GET', '/api/admin/donations' + qs);
+        if (!orders.length) {
+            container.innerHTML = '<p class="empty-state">Заказов нет</p>';
+            return;
+        }
+        container.innerHTML = orders.map(o => {
+            const canConfirm = o.status === 'awaiting_confirmation' || o.status === 'pending';
+            return `
+            <div class="admin-user-row">
+                <div class="admin-user-info">
+                    <div class="admin-user-name">${escapeHtml(o.tier_name || '')} · ${o.amount_rub || 0} ₽
+                        <span class="admin-badge">${escapeHtml(o.status || '')}</span>
+                        ${o.fulfilled ? '<span class="admin-badge">OK</span>' : ''}
+                    </div>
+                    <div class="admin-user-sub">
+                        ${escapeHtml(o.product_type || '')}
+                        · ${escapeHtml(o.contact || '—')}
+                        · ${o.created_at ? new Date(o.created_at).toLocaleString('ru-RU') : ''}
+                        · <code>${escapeHtml((o.transaction_id || '').slice(0, 8))}…</code>
+                    </div>
+                </div>
+                ${canConfirm ? `
+                    <button type="button" class="btn-sm" onclick='adminConfirmDonation(${JSON.stringify(o.transaction_id)})'>
+                        <i class="fa-solid fa-check"></i> Оплата подтверждена
+                    </button>` : ''}
+            </div>`;
+        }).join('');
+    } catch (e) {
+        container.innerHTML = `<p class="error">${escapeHtml(e.message)}</p>`;
+    }
+}
+
+async function adminConfirmDonation(txId) {
+    if (!confirm('Подтвердить оплату и выдать привилегии/монеты?')) return;
+    try {
+        await apiCall('POST', `/api/admin/donations/${encodeURIComponent(txId)}/confirm`);
+        loadAdminDonations();
     } catch (e) {
         alert(e.message);
     }

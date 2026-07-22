@@ -540,3 +540,33 @@ async def admin_lift_site_ban(req: SiteUnbanRequest, request: Request):
     if not ok:
         raise HTTPException(status_code=404, detail="Активный бан не найден")
     return {"success": True}
+
+
+@router.get("/donations")
+async def admin_list_donations(
+    request: Request,
+    status: str = Query(""),
+    limit: int = 50,
+    offset: int = 0,
+):
+    await get_current_admin(request)
+    from app.services import donations as donations_svc
+    st = status.strip() or None
+    orders = social_db.list_donation_orders(st, limit=min(limit, 100), offset=offset)
+    return [donations_svc.serialize_order(o) for o in orders]
+
+
+@router.post("/donations/{transaction_id}/confirm")
+async def admin_confirm_donation(transaction_id: str, request: Request):
+    admin = await get_current_admin(request)
+    from app.services import donations as donations_svc
+    try:
+        order = await donations_svc.confirm_order_manual(
+            transaction_id,
+            admin_name=admin.get("username") or admin.get("discord_id") or "admin",
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Не удалось выдать награду: {e}")
+    return {"success": True, "order": donations_svc.serialize_order(order)}

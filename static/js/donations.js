@@ -3,6 +3,8 @@ let selectedDonateTierId = null;
 let selectedDonatePackId = null;
 let selectedDonateMethod = 2;
 let donateActiveTab = 'tiers';
+let currentDonateOrderId = null;
+let donateStatusPoll = null;
 
 const COIN_IMG = '<img src="/static/coin.png" class="coin-icon-result donate-coin-inline" alt="">';
 
@@ -345,24 +347,28 @@ async function startDonationCheckout() {
     formData.append('product_type', isCoins ? 'coins' : 'tier');
     formData.append('tier_id', String(selectedDonateTierId || 0));
     formData.append('pack_id', String(selectedDonatePackId || 0));
-    formData.append('payment_method', String(selectedDonateMethod || 2));
+    formData.append('payment_method', '2');
     formData.append('contact', document.getElementById('donateContact')?.value.trim() || '');
 
     if (btn) {
         btn.disabled = true;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Создание платежа…';
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Создание заказа…';
     }
     try {
         const data = await apiCall('POST', '/api/donations/checkout', formData);
-        if (result) {
-            result.className = 'result success';
-            result.textContent = 'Перенаправляем на оплату…';
+        if (data.mode === 'manual_sbp' || data.sbp) {
+            showDonateWaitPanel(data);
+            return;
         }
         if (data.redirect) {
+            if (result) {
+                result.className = 'result success';
+                result.textContent = 'Перенаправляем на оплату…';
+            }
             window.location.href = data.redirect;
             return;
         }
-        throw new Error('Платёжный шлюз не вернул ссылку');
+        throw new Error('Не удалось открыть оплату');
     } catch (e) {
         if (result) {
             result.className = 'result error';
@@ -371,22 +377,169 @@ async function startDonationCheckout() {
     } finally {
         if (btn) {
             btn.disabled = !(selectedDonateTierId || selectedDonatePackId);
-            btn.innerHTML = '<i class="fa-solid fa-credit-card"></i> Купить';
+            btn.innerHTML = '<i class="fa-solid fa-qrcode"></i> Оплатить СБП';
         }
     }
+}
+
+function showDonateWaitPanel(data) {
+    currentDonateOrderId = data.transaction_id;
+    const wait = document.getElementById('donateWaitPanel');
+    const shop = document.getElementById('donateShopMain');
+    if (shop) shop.hidden = true;
+    if (wait) wait.hidden = false;
+
+    const sbp = data.sbp || donateCatalog?.sbp || {};
+    const item = data.item || {};
+    const qr = document.getElementById('donateWaitQr');
+    if (qr) qr.src = sbp.qr || '/static/payment/sbp-qr.png';
+    const link = document.getElementById('donateWaitLink');
+    if (link) link.href = sbp.link || '#';
+    const txEl = document.getElementById('donateWaitTx');
+    if (txEl) txEl.textContent = (data.transaction_id || '').slice(0, 8) + '…';
+    const amountEl = document.getElementById('donateWaitAmount');
+    if (amountEl) amountEl.textContent = data.amount_label || `${data.amount_rub || ''} ₽`;
+    const itemEl = document.getElementById('donateWaitItem');
+    if (itemEl) itemEl.textContent = item.name || data.tier_name || 'Заказ';
+    const statusEl = document.getElementById('donateWaitStatus');
+    if (statusEl) statusEl.textContent = statusLabel(data.status || 'pending');
+    const markBtn = document.getElementById('donateMarkPaidBtn');
+    if (markBtn) {
+        markBtn.disabled = (data.status === 'awaiting_confirmation' || data.status === 'confirmed');
+        markBtn.innerHTML = data.status === 'awaiting_confirmation'
+            ? '<i class="fa-solid fa-hourglass-half"></i> Ожидает подтверждения'
+            : '<i class="fa-solid fa-check"></i> Я оплатил';
+    }
+    const res = document.getElementById('donateWaitResult');
+    if (res) { res.className = 'result'; res.textContent = ''; }
+    history.replaceState({}, '', `/donate?order=${encodeURIComponent(data.transaction_id)}&wait=1`);
+    startDonateStatusPoll();
+}
+
+function hideDonateWaitPanel() {
+    stopDonateStatusPoll();
+    currentDonateOrderId = null;
+    const wait = document.getElementById('donateWaitPanel');
+    const shop = document.getElementById('donateShopMain');
+    if (wait) wait.hidden = true;
+    if (shop) shop.hidden = false;
+    history.replaceState({}, '', '/donate');
+}
+
+function statusLabel(st) {
+    const map = {
+        pending: 'ожидание оплаты',
+        awaiting_confirmation: 'ожидает подтверждения админом',
+        confirmed: 'оплата подтверждена',
+        canceled: 'отменён',
+        failed: 'ошибка',
+    };
+    return map[st] || st;
+}
+
+async function markDonationPaid() {
+    if (!currentDonateOrderId) return;
+    const btn = document.getElementById('donateMarkPaidBtn');
+    const res = document.getElementById('donateWaitResult');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Отправка…';
+    }
+    try {
+        const data = await apiCall('POST', `/api/donations/mark-paid/${encodeURIComponent(currentDonateOrderId)}`);
+        if (res) {
+            res.className = 'result success';
+            res.textContent = data.message || 'Заявка отправлена администратору.';
+        }
+        const statusEl = document.getElementById('donateWaitStatus');
+        if (statusEl) statusEl.textContent = statusLabel(data.status || 'awaiting_confirmation');
+        if (btn) btn.innerHTML = '<i class="fa-solid fa-hourglass-half"></i> Ожидает подтверждения';
+        startDonateStatusPoll();
+    } catch (e) {
+        if (res) {
+            res.className = 'result error';
+            res.textContent = e.message || 'Не удалось отправить заявку';
+        }
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-check"></i> Я оплатил';
+        }
+    }
+}
+
+function startDonateStatusPoll() {
+    stopDonateStatusPoll();
+    if (!currentDonateOrderId) return;
+    donateStatusPoll = setInterval(refreshDonateOrderStatus, 8000);
+    refreshDonateOrderStatus();
+}
+
+function stopDonateStatusPoll() {
+    if (donateStatusPoll) {
+        clearInterval(donateStatusPoll);
+        donateStatusPoll = null;
+    }
+}
+
+async function refreshDonateOrderStatus() {
+    if (!currentDonateOrderId) return;
+    try {
+        const data = await apiCall('GET', `/api/donations/status/${encodeURIComponent(currentDonateOrderId)}`);
+        const statusEl = document.getElementById('donateWaitStatus');
+        if (statusEl) statusEl.textContent = statusLabel(data.status || '');
+        const markBtn = document.getElementById('donateMarkPaidBtn');
+        if (markBtn && (data.status === 'awaiting_confirmation' || data.status === 'confirmed')) {
+            markBtn.disabled = true;
+            markBtn.innerHTML = data.status === 'confirmed'
+                ? '<i class="fa-solid fa-check-double"></i> Готово'
+                : '<i class="fa-solid fa-hourglass-half"></i> Ожидает подтверждения';
+        }
+        if (data.status === 'confirmed') {
+            stopDonateStatusPoll();
+            const banner = document.getElementById('donatePayStatus');
+            if (banner) {
+                banner.hidden = false;
+                banner.className = 'donate-pay-banner ok';
+                if ((data.product_type || '') === 'coins') {
+                    banner.textContent = data.fulfilled
+                        ? `Оплата подтверждена: ${data.coins_amount || ''} монет зачислено.`
+                        : `Оплата подтверждена (${data.amount_rub || ''} ₽).`;
+                } else {
+                    banner.textContent = `Оплата подтверждена: спонсорство «${data.tier_name || ''}» активировано.`;
+                }
+            }
+            const res = document.getElementById('donateWaitResult');
+            if (res) {
+                res.className = 'result success';
+                res.textContent = 'Готово! Привилегии выданы.';
+            }
+        }
+    } catch (_) { /* ignore poll errors */ }
 }
 
 async function handleDonateReturnQuery() {
     const params = new URLSearchParams(window.location.search || '');
     let order = params.get('order');
     let result = params.get('result');
+    let wait = params.get('wait');
     if (!order && location.hash.includes('?')) {
         const hq = new URLSearchParams(location.hash.split('?')[1] || '');
         order = hq.get('order');
         result = hq.get('result');
+        wait = hq.get('wait');
     }
+    if (!order) return;
+
+    if (wait === '1' || !result) {
+        try {
+            const data = await apiCall('GET', `/api/donations/order/${encodeURIComponent(order)}`);
+            showDonateWaitPanel(data);
+            return;
+        } catch (_) { /* fall through */ }
+    }
+
     const banner = document.getElementById('donatePayStatus');
-    if (!banner || !order) return;
+    if (!banner) return;
     banner.hidden = false;
     banner.className = 'donate-pay-banner';
     banner.textContent = 'Проверяем статус оплаты…';
@@ -398,20 +551,22 @@ async function handleDonateReturnQuery() {
             if ((data.product_type || '') === 'coins') {
                 banner.textContent = data.fulfilled
                     ? `Оплата получена: ${data.coins_amount || ''} монет зачислено.`
-                    : `Оплата получена (${data.amount_rub || ''} ₽). Монеты зачислятся чуть позже.`;
+                    : `Оплата получена (${data.amount_rub || ''} ₽).`;
             } else {
-                banner.textContent = `Оплата получена: ${data.tier_name || 'тариф'} (${data.amount_rub || ''} ₽). Подписка активируется автоматически.`;
+                banner.textContent = `Оплата подтверждена: ${data.tier_name || 'тариф'} (${data.amount_rub || ''} ₽).`;
             }
+        } else if (st === 'awaiting_confirmation') {
+            showDonateWaitPanel(data);
+            banner.hidden = true;
         } else if (st === 'canceled' || result === 'fail') {
             banner.classList.add('fail');
             banner.textContent = 'Оплата не завершена. Попробуйте снова.';
         } else {
-            banner.textContent = 'Платёж в обработке. Обновите страницу через минуту.';
+            showDonateWaitPanel(data);
+            banner.hidden = true;
         }
     } catch {
         banner.classList.add('fail');
-        banner.textContent = result === 'success'
-            ? 'Оплата принята. Если привилегии не появились, напишите в поддержку.'
-            : 'Не удалось проверить статус заказа.';
+        banner.textContent = 'Не удалось проверить статус заказа.';
     }
 }

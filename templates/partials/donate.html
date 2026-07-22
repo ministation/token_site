@@ -2,62 +2,89 @@
     <header class="donate-hero card">
         <a href="/" class="donate-back"><i class="fa-solid fa-arrow-left"></i> На главную</a>
         <h1><i class="fa-solid fa-heart"></i> Поддержка</h1>
-        <p>Подписки и монетки. Оплата на сайте (СБП / карта).</p>
+        <p>Подписки и монетки. Оплата через СБП (QR).</p>
     </header>
 
     <div id="donatePayStatus" class="donate-pay-banner" hidden role="status" aria-live="polite"></div>
 
-    <div class="donate-tabs" role="tablist" aria-label="Тип покупки">
-        <button type="button" class="donate-tab active" role="tab" aria-selected="true"
-            data-tab="tiers" id="donateTabTiers" onclick="switchDonateTab('tiers')">Подписки</button>
-        <button type="button" class="donate-tab" role="tab" aria-selected="false"
-            data-tab="coins" id="donateTabCoins" onclick="switchDonateTab('coins')">Монетки</button>
+    <div id="donateWaitPanel" class="card donate-wait-panel" hidden>
+        <h2><i class="fa-solid fa-qrcode"></i> Оплата СБП</h2>
+        <p class="donate-wait-lead" id="donateWaitLead">Переведите сумму по QR или ссылке, затем нажмите «Я оплатил».</p>
+        <div class="donate-wait-grid">
+            <div class="donate-wait-qr-wrap">
+                <img id="donateWaitQr" class="donate-wait-qr" src="/static/payment/sbp-qr.png" alt="QR СБП">
+            </div>
+            <div class="donate-wait-meta">
+                <div class="donate-wait-row"><span>Заказ</span><strong id="donateWaitTx">—</strong></div>
+                <div class="donate-wait-row"><span>Сумма</span><strong id="donateWaitAmount">—</strong></div>
+                <div class="donate-wait-row"><span>Товар</span><strong id="donateWaitItem">—</strong></div>
+                <div class="donate-wait-row"><span>Статус</span><strong id="donateWaitStatus">ожидание оплаты</strong></div>
+                <a id="donateWaitLink" class="donate-wait-link" href="#" target="_blank" rel="noopener">
+                    <i class="fa-solid fa-mobile-screen"></i> Открыть оплату СБП
+                </a>
+                <p class="donate-hint">В комментарии к переводу укажите номер заказа (первые символы).</p>
+                <button type="button" class="donate-pay-btn" id="donateMarkPaidBtn" onclick="markDonationPaid()">
+                    <i class="fa-solid fa-check"></i> Я оплатил
+                </button>
+                <button type="button" class="btn-sm" onclick="hideDonateWaitPanel()">Назад к каталогу</button>
+                <div id="donateWaitResult" class="result" role="status" aria-live="polite"></div>
+            </div>
+        </div>
     </div>
 
-    <div class="donate-shell">
-        <section class="donate-catalog" aria-label="Каталог">
-            <div class="donate-tiers" id="donateTiers" data-panel="tiers">
-                <p class="empty-state">Загрузка тарифов...</p>
-            </div>
-            <div class="donate-coin-packs" id="donateCoinPacks" data-panel="coins" hidden>
-                <p class="empty-state">Загрузка пакетов...</p>
-            </div>
-        </section>
+    <div id="donateShopMain">
+        <div class="donate-tabs" role="tablist" aria-label="Тип покупки">
+            <button type="button" class="donate-tab active" role="tab" aria-selected="true"
+                data-tab="tiers" id="donateTabTiers" onclick="switchDonateTab('tiers')">Подписки</button>
+            <button type="button" class="donate-tab" role="tab" aria-selected="false"
+                data-tab="coins" id="donateTabCoins" onclick="switchDonateTab('coins')">Монетки</button>
+        </div>
 
-        <aside class="donate-checkout" id="donateCheckout" aria-label="Оформление">
-            <h2>Оформление</h2>
-            <div id="donateSelectedEmpty" class="donate-selected-empty">
-                Выберите товар слева
-            </div>
-            <div id="donateSelected" class="donate-selected" hidden>
-                <img id="donateSelectedIcon" src="" alt="" class="donate-selected-icon" width="72" height="72">
-                <div class="donate-selected-meta">
-                    <div class="donate-selected-name" id="donateSelectedName"></div>
-                    <div class="donate-selected-price" id="donateSelectedPrice"></div>
+        <div class="donate-shell">
+            <section class="donate-catalog" aria-label="Каталог">
+                <div class="donate-tiers" id="donateTiers" data-panel="tiers">
+                    <p class="empty-state">Загрузка тарифов...</p>
                 </div>
-            </div>
+                <div class="donate-coin-packs" id="donateCoinPacks" data-panel="coins" hidden>
+                    <p class="empty-state">Загрузка пакетов...</p>
+                </div>
+            </section>
 
-            <fieldset class="donate-methods" id="donateMethods" hidden>
-                <legend>Способ оплаты</legend>
-                <div id="donateMethodList" class="donate-method-list"></div>
-            </fieldset>
+            <aside class="donate-checkout" id="donateCheckout" aria-label="Оформление">
+                <h2>Оформление</h2>
+                <div id="donateSelectedEmpty" class="donate-selected-empty">
+                    Выберите товар слева
+                </div>
+                <div id="donateSelected" class="donate-selected" hidden>
+                    <img id="donateSelectedIcon" src="" alt="" class="donate-selected-icon" width="72" height="72">
+                    <div class="donate-selected-meta">
+                        <div class="donate-selected-name" id="donateSelectedName"></div>
+                        <div class="donate-selected-price" id="donateSelectedPrice"></div>
+                    </div>
+                </div>
 
-            <label class="donate-contact-label" for="donateContact" id="donateContactWrap" hidden>
-                Контакт (Discord / почта)
-                <input type="text" id="donateContact" maxlength="200" autocomplete="username"
-                    placeholder="ник Discord или email">
-            </label>
+                <fieldset class="donate-methods" id="donateMethods" hidden>
+                    <legend>Способ оплаты</legend>
+                    <div id="donateMethodList" class="donate-method-list"></div>
+                </fieldset>
 
-            <button type="button" class="donate-pay-btn" id="donatePayBtn" disabled onclick="startDonationCheckout()">
-                <i class="fa-solid fa-credit-card"></i> Купить
-            </button>
-            <p class="donate-hint" id="donateHint">После оплаты подписка и монетки активируются автоматически.</p>
-            <div id="donateCheckoutResult" class="result" role="status" aria-live="polite"></div>
+                <label class="donate-contact-label" for="donateContact" id="donateContactWrap" hidden>
+                    Контакт (Discord / почта)
+                    <input type="text" id="donateContact" maxlength="200" autocomplete="username"
+                        placeholder="ник Discord или email">
+                </label>
 
-            <p class="donate-alt">
-                Альтернатива:
-                <a href="https://boosty.to/mini-station/" target="_blank" rel="noopener">Boosty</a>
-            </p>
-        </aside>
+                <button type="button" class="donate-pay-btn" id="donatePayBtn" disabled onclick="startDonationCheckout()">
+                    <i class="fa-solid fa-qrcode"></i> Оплатить СБП
+                </button>
+                <p class="donate-hint" id="donateHint">После перевода нажмите «Я оплатил» — привилегии выдаст администратор после проверки.</p>
+                <div id="donateCheckoutResult" class="result" role="status" aria-live="polite"></div>
+
+                <p class="donate-alt">
+                    Альтернатива:
+                    <a href="https://boosty.to/mini-station/" target="_blank" rel="noopener">Boosty</a>
+                </p>
+            </aside>
+        </div>
     </div>
 </div>
