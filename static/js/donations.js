@@ -302,7 +302,7 @@ function updateDonateCheckoutUI() {
                 icon.alt = visual ? visual.alt : 'Монетки';
             }
         }
-        if (name) name.textContent = `${pack.name}: ${pack.coins}`;
+        if (name) name.textContent = pack.name;
         if (price) price.textContent = pack.price_label;
     }
 
