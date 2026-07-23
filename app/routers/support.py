@@ -2,8 +2,6 @@ from fastapi import APIRouter, Request, HTTPException, Form, File, UploadFile
 
 from app.config import (
     SUPPORT_EMAIL,
-    SUPPORT_PHONE,
-    SUPPORT_PHONE_TEL,
     SUPPORT_DISCORD_USERNAME,
     SUPPORT_TELEGRAM_USERNAME,
     BOOSTY_URL,
@@ -25,8 +23,6 @@ router = APIRouter(prefix="/api/support", tags=["support"])
 async def support_contacts():
     return {
         "email": SUPPORT_EMAIL,
-        "phone": SUPPORT_PHONE,
-        "phone_tel": SUPPORT_PHONE_TEL,
         "discord_username": SUPPORT_DISCORD_USERNAME,
         "telegram_username": SUPPORT_TELEGRAM_USERNAME,
         "boosty_url": BOOSTY_URL,

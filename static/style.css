@@ -6513,6 +6513,9 @@ label.chat-tool-btn input[type="file"] {
     animation: donate-sale-pulse 1.6s ease-in-out infinite;
     vertical-align: middle;
 }
+.donate-sale-chip[hidden] {
+    display: none !important;
+}
 .nav-donate-chip {
     margin-left: 6px;
     font-size: 0.68rem;

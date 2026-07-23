@@ -35,11 +35,6 @@ async function loadSupportContacts() {
             emailLink.href = `mailto:${email}`;
             emailLink.textContent = email;
         }
-        const phoneLink = document.getElementById('supportPhoneLink');
-        if (phoneLink && (data.phone || data.phone_tel)) {
-            phoneLink.href = `tel:${data.phone_tel || String(data.phone).replace(/[^\d+]/g, '')}`;
-            phoneLink.textContent = data.phone || data.phone_tel;
-        }
         const discordEl = document.getElementById('supportDiscordName');
         if (discordEl && data.discord_username) {
             discordEl.textContent = data.discord_username;

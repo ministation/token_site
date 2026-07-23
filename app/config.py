@@ -62,8 +62,6 @@ TRANSFER_COOLDOWN = int(os.getenv("TRANSFER_COOLDOWN", "60"))
 MAX_CHAT_MESSAGES = int(os.getenv("MAX_CHAT_MESSAGES", "100"))
 
 SUPPORT_EMAIL = os.getenv("SUPPORT_EMAIL", "mini-station-14@yandex.ru")
-SUPPORT_PHONE = os.getenv("SUPPORT_PHONE", "+7 (965) 197-54-12")
-SUPPORT_PHONE_TEL = os.getenv("SUPPORT_PHONE_TEL", "+79651975412")
 SUPPORT_DISCORD_USERNAME = os.getenv("SUPPORT_DISCORD_USERNAME", "dotnet_build")
 SUPPORT_TELEGRAM_USERNAME = os.getenv("SUPPORT_TELEGRAM_USERNAME", "mini_station_support")
 BOOSTY_URL = os.getenv("BOOSTY_URL", "https://boosty.to/mini-station/")
