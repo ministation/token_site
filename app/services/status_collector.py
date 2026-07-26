@@ -4,14 +4,15 @@ import sqlite3
 import os
 from datetime import datetime, timezone
 
-STATUS_URL = "http://85.198.118.85:1214/status"
+from app.config import GAME_STATUS_URL
+
 SOCIAL_DB_PATH = os.getenv("SOCIAL_DB_PATH", "social.db")
 
 
 async def fetch_player_count() -> int | None:
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.get(STATUS_URL, timeout=aiohttp.ClientTimeout(total=5)) as resp:
+            async with session.get(GAME_STATUS_URL, timeout=aiohttp.ClientTimeout(total=5)) as resp:
                 if resp.status == 200:
                     data = await resp.json()
                     return data.get("players", 0)

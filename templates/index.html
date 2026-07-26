@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="/static/js/theme.js"></script>
     <script src="/static/js/ambient.js" defer></script>
-    <link rel="stylesheet" href="/static/style.css?v=sale5">
+    <link rel="stylesheet" href="/static/style.css?v=connect1">
     <link rel="stylesheet" href="/static/chat-discord.css">
     <link rel="icon" type="image/png" href="/static/coin.png">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
@@ -179,6 +179,12 @@
 
             const presetEl = document.getElementById('statusPreset');
             if (presetEl) presetEl.textContent = data.preset || '—';
+
+            const connectEl = document.getElementById('statusConnect');
+            if (connectEl && data.connect) {
+                connectEl.dataset.addr = data.connect;
+                connectEl.textContent = data.connect;
+            }
 
             const percent = Math.min(100, (players / maxPlayers) * 100);
             const ring = document.getElementById('playersRing');

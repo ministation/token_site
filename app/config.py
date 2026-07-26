@@ -73,6 +73,10 @@ SELLER_STATUS = os.getenv("SELLER_STATUS", "Самозанятый")
 
 SITE_PUBLIC_URL = os.getenv("SITE_PUBLIC_URL", "https://ministation.ru").rstrip("/")
 
+# SS14: статус онлайна и адрес прямого подключения (лаунчер)
+GAME_STATUS_URL = os.getenv("GAME_STATUS_URL", "http://ss14.ministation.ru:1214/status").rstrip("/")
+GAME_CONNECT_ADDRESS = os.getenv("GAME_CONNECT_ADDRESS", "ss14://ss14.ministation.ru:1214")
+
 # Platega.io — ключи выдаёт менеджер / ЛК «Настройки»
 # По умолчанию выключена (сомнительный провайдер); код/callback остаются на случай включения.
 PLATEGA_ENABLED = os.getenv("PLATEGA_ENABLED", "0").strip().lower() in ("1", "true", "yes")

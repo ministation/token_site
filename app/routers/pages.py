@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 import aiohttp
+from app.config import GAME_STATUS_URL, GAME_CONNECT_ADDRESS
 from app.services.social import get_social_user_by_player_id
 
 router = APIRouter(tags=["pages"])
@@ -24,10 +25,19 @@ async def profile_page(player_id: str):
 
 @router.get("/api/server-status")
 async def server_status():
+    offline = {
+        "online": False,
+        "players": 0,
+        "max_players": 100,
+        "name": "Мини-станция",
+        "map": "Offline",
+        "preset": "",
+        "connect": GAME_CONNECT_ADDRESS,
+    }
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(
-                "http://85.198.118.85:1214/status",
+                GAME_STATUS_URL,
                 timeout=aiohttp.ClientTimeout(total=5)
             ) as resp:
                 if resp.status == 200:
@@ -40,15 +50,9 @@ async def server_status():
                         "map": data.get("map", "Unknown"),
                         "preset": data.get("preset", ""),
                         "round_id": data.get("round_id", 0),
-                        "tags": data.get("tags", [])
+                        "tags": data.get("tags", []),
+                        "connect": GAME_CONNECT_ADDRESS,
                     }
     except Exception:
         pass
-    return {
-        "online": False,
-        "players": 0,
-        "max_players": 100,
-        "name": "Мини-станция",
-        "map": "Offline",
-        "preset": ""
-    }
+    return offline

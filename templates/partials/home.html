@@ -93,6 +93,16 @@
                     <span class="detail-value" id="statusPreset">—</span>
                 </div>
             </div>
+            <div class="server-detail server-detail-connect">
+                <i class="fa-solid fa-plug"></i>
+                <div>
+                    <span class="detail-label">Прямое подключение</span>
+                    <button type="button" class="detail-value server-connect-addr" id="statusConnect"
+                            title="Нажмите, чтобы скопировать"
+                            onclick="navigator.clipboard.writeText(this.dataset.addr || this.textContent).then(() => { const t = this.textContent; this.textContent = 'Скопировано'; setTimeout(() => this.textContent = t, 1200); }).catch(() => {})"
+                            data-addr="ss14://ss14.ministation.ru:1214">ss14://ss14.ministation.ru:1214</button>
+                </div>
+            </div>
         </div>
     </div>
     <div class="server-bar-wrap">

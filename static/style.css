@@ -2903,6 +2903,23 @@ html[data-theme="dark"] .status-meta {
     font-size: 0.65rem;
     text-align: right;
 }
+.server-connect-addr {
+    display: inline;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.82em;
+    text-align: left;
+    cursor: pointer;
+    word-break: break-all;
+}
+.server-connect-addr:hover {
+    text-decoration: underline;
+}
 .server-widget-body {
     display: grid;
     grid-template-columns: auto 1fr;
