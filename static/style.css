@@ -415,13 +415,13 @@ body {
 }
 .login-btn--discord:hover { background: #6b76ff; color: #fff; }
 .login-btn--ss14 {
-    background: var(--panel-2);
+    background: var(--panel-3);
     color: var(--ink);
     border-color: var(--border-strong);
     box-shadow: var(--shadow-btn);
 }
 .login-btn--ss14:hover {
-    background: var(--panel-3);
+    background: color-mix(in srgb, var(--border-strong) 28%, var(--panel-3));
     color: var(--ink);
     border-color: var(--border-strong);
 }
