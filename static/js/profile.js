@@ -96,12 +96,20 @@ async function loadProfile(playerId) {
                     <div><strong>Забанен на сайте.</strong> ${escapeHtml(p.site_ban_reason || 'Причина не указана')}</div>
                 </div>
             ` : ''}
+            ${isOwn && typeof renderReferralCard === 'function' && currentUser?.referral
+                ? renderReferralCard(currentUser.referral)
+                : ''}
+            ${isOwn ? `<div id="profileGameLinkCard"></div>` : ''}
             <div class="profile-bio-block" id="profileBioBlock">
                 ${p.bio
                     ? `<div class="profile-bio">${formatMessageContent(p.bio)}</div>`
                     : `<p class="empty-state profile-bio-empty">${isOwn ? 'Расскажите о себе — нажмите «Изменить био»' : 'Биография пуста'}</p>`}
             </div>
         `;
+
+        if (isOwn && typeof refreshLinkStatus === 'function') {
+            refreshLinkStatus();
+        }
 
         const sectionRoot = document.getElementById('inventorySection') || container.parentElement;
         let postsCard = document.getElementById('profilePostsCard');

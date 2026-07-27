@@ -2,8 +2,8 @@ import datetime
 import secrets
 import aiohttp
 from fastapi import APIRouter, Request, HTTPException
-from fastapi.responses import RedirectResponse
-from app.config import ADMIN_DISCORD_IDS, DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, DISCORD_REDIRECT_URI
+from fastapi.responses import RedirectResponse, HTMLResponse
+from app.config import ADMIN_DISCORD_IDS, DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, DISCORD_REDIRECT_URI, SITE_PUBLIC_URL
 from app.services.roles import apply_roles, ROLE_ADMIN
 from app.services.game_staff import sync_game_moderator_site_role
 from app.services.discord_badges import sync_member_badges
@@ -11,6 +11,8 @@ from app.core.sessions import (
     get_session, set_session, delete_session, generate_session_token, user_sessions
 )
 from app.services.bank import find_player_by_discord
+from app.services.game_link import link_discord_account
+from app.services.referral import apply_referral_code, ensure_referral_code
 from app.services.social import get_or_create_social_user
 from app.services.avatars import sync_discord_avatar_for_user, resolve_avatar_url
 from app.services.site_bans import get_active_ban
@@ -46,6 +48,7 @@ async def login(
     d: str = "",
     s: str = "",
     c: str = "",
+    ref: str = "",
 ):
     from app.core.ratelimit import enforce_rate, verify_pow_challenge
     enforce_rate(request, "login", limit=8, window=60.0, detail="Слишком много попыток входа.")
@@ -55,7 +58,11 @@ async def login(
             detail="Проверка антибота не пройдена. Обновите страницу и войдите снова.",
         )
     state = secrets.token_urlsafe(16)
-    user_sessions[state] = {"created": datetime.datetime.now().isoformat()}
+    state_data = {"created": datetime.datetime.now().isoformat(), "purpose": "login"}
+    ref_code = (ref or request.query_params.get("ref") or "").strip().upper()
+    if ref_code:
+        state_data["referral_code"] = ref_code
+    user_sessions[state] = state_data
     discord_auth_url = (
         f"https://discord.com/api/oauth2/authorize"
         f"?client_id={DISCORD_CLIENT_ID}"
@@ -78,6 +85,9 @@ async def callback(request: Request, code: str, state: str):
     enforce_rate(request, "oauth_callback", limit=15, window=60.0)
     if state not in user_sessions:
         raise HTTPException(status_code=400, detail="Invalid state")
+
+    pending = user_sessions.pop(state)
+    purpose = pending.get("purpose", "login")
 
     # Обмен кода на токен
     async with aiohttp.ClientSession() as session:
@@ -102,6 +112,32 @@ async def callback(request: Request, code: str, state: str):
             username = user_data['username']
             avatar = user_data.get('avatar')
 
+    if purpose == "game_link":
+        ss14_user_id = pending.get("ss14_user_id")
+        if not ss14_user_id:
+            raise HTTPException(status_code=400, detail="Не указан игровой аккаунт")
+        ok, err = await link_discord_account(ss14_user_id, discord_id)
+        if not ok:
+            return HTMLResponse(
+                f"<h2>Ошибка привязки</h2><p>{err or 'Не удалось привязать аккаунт'}</p>"
+                f"<p><a href=\"{SITE_PUBLIC_URL}\">На сайт</a></p>",
+                status_code=400,
+            )
+        player = await find_player_by_discord(discord_id)
+        if player:
+            get_or_create_social_user(
+                player_id=player['player_id'],
+                user_uuid=player['user_uuid'],
+                discord_id=discord_id,
+                discord_username=username,
+                discord_avatar=avatar,
+                game_nickname=player['last_seen_user_name'],
+            )
+        return HTMLResponse(
+            f"<h2>Готово!</h2><p>Discord успешно привязан к игровому аккаунту.</p>"
+            f"<p><a href=\"{SITE_PUBLIC_URL}\">Перейти на сайт</a></p>",
+        )
+
     session_token = generate_session_token()
     session_data = {
         'discord_id': discord_id,
@@ -111,25 +147,40 @@ async def callback(request: Request, code: str, state: str):
 
     # Привязка к игроку и создание профиля соцсети для всех авторизованных
     player = await find_player_by_discord(discord_id)
+    created = False
     if player:
-        session_data['player'] = player
-        get_or_create_social_user(
+        _, created = get_or_create_social_user(
             player_id=player['player_id'],
             user_uuid=player['user_uuid'],
             discord_id=discord_id,
             discord_username=username,
             discord_avatar=avatar,
-            game_nickname=player['last_seen_user_name']
+            game_nickname=player['last_seen_user_name'],
+            return_created=True,
         )
+        session_data['player'] = player
     else:
-        get_or_create_social_user(
+        _, created = get_or_create_social_user(
             player_id=f"discord_{discord_id}",
             user_uuid=f"discord_{discord_id}",
             discord_id=discord_id,
             discord_username=username,
             discord_avatar=avatar,
-            game_nickname=username
+            game_nickname=username,
+            return_created=True,
         )
+
+    try:
+        ensure_referral_code(discord_id)
+    except Exception:
+        pass
+
+    ref_code = pending.get("referral_code")
+    if ref_code and created:
+        await apply_referral_code(discord_id, ref_code)
+        social_db.complete_referral_prompt(discord_id)
+    elif created:
+        session_data['needs_referral'] = True
 
     cached_avatar = await sync_discord_avatar_for_user(discord_id, avatar)
     session_data['avatar'] = cached_avatar or resolve_avatar_url(
@@ -141,13 +192,11 @@ async def callback(request: Request, code: str, state: str):
 
     ban = get_active_ban(discord_id)
     if ban:
-        response = RedirectResponse("/?site_banned=1")
-        user_sessions.pop(state, None)
-        return response
+        return RedirectResponse("/?site_banned=1")
 
     set_session(session_token, session_data)
 
-    response = RedirectResponse("/")
+    response = RedirectResponse("/?welcome=1" if session_data.get("needs_referral") else "/")
     response.set_cookie(
         key="session_token",
         value=session_token,
@@ -155,7 +204,6 @@ async def callback(request: Request, code: str, state: str):
         samesite="lax",
         max_age=30 * 24 * 3600
     )
-    user_sessions.pop(state, None)
     return response
 
 
@@ -242,6 +290,12 @@ async def api_me(request: Request):
         social_db.add_site_staff(
             session["discord_id"], session.get("username", ""), "config", ROLE_ADMIN
         )
+
+    from app.services.referral import get_referral_info
+    try:
+        result["referral"] = get_referral_info(session["discord_id"])
+    except Exception:
+        result["referral"] = None
 
     ban = get_active_ban(session.get("discord_id"))
     if ban:

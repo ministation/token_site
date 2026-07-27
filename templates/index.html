@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="/static/js/theme.js"></script>
     <script src="/static/js/ambient.js" defer></script>
-    <link rel="stylesheet" href="/static/style.css?v=connect1">
+    <link rel="stylesheet" href="/static/style.css?v=referral1">
     <link rel="stylesheet" href="/static/chat-discord.css">
     <link rel="icon" type="image/png" href="/static/coin.png">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
@@ -122,9 +122,24 @@
     {% set footer_support = '#/support' %}
     {% include 'partials/site_footer.html' %}
 
+    <div id="referralModal" class="referral-modal" hidden>
+        <div class="referral-modal-backdrop" onclick="skipReferralPrompt()"></div>
+        <div class="referral-modal-card" role="dialog" aria-labelledby="referralModalTitle">
+            <h2 id="referralModalTitle"><i class="fa-solid fa-gift"></i> Добро пожаловать!</h2>
+            <p>Есть реферальный код друга? Введите его и получите <b>3 монеты</b>. Друг получит <b>5 монет</b>.</p>
+            <input type="text" id="referralCodeInput" placeholder="Реферальный код" maxlength="32" autocomplete="off">
+            <div id="referralApplyResult" class="referral-apply-result"></div>
+            <div class="referral-modal-actions">
+                <button type="button" onclick="submitReferralCode()">Применить</button>
+                <button type="button" class="btn-ghost" onclick="skipReferralPrompt()">Пропустить</button>
+            </div>
+        </div>
+    </div>
+
     <script src="/static/js/common.js"></script>
     <script src="/static/js/badges.js"></script>
     <script src="/static/js/auth.js"></script>
+    <script src="/static/js/referral.js"></script>
     <script src="/static/js/navigation.js"></script>
     <script src="/static/js/bank.js"></script>
     <script src="/static/js/compensation.js"></script>

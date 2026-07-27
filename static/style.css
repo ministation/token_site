@@ -6784,3 +6784,94 @@ label.chat-tool-btn input[type="file"] {
     .donate-promo-banner-body { align-items: flex-start; }
     .donate-promo-timer { align-items: flex-start; }
 }
+
+/* Referral & game link */
+.referral-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    display: grid;
+    place-items: center;
+    padding: 16px;
+}
+.referral-modal[hidden] { display: none !important; }
+.referral-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(8, 12, 20, 0.55);
+    backdrop-filter: blur(2px);
+}
+.referral-modal-card {
+    position: relative;
+    width: min(440px, 100%);
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 22px;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.25);
+}
+.referral-modal-card h2 {
+    margin: 0 0 10px;
+    font-size: 1.15rem;
+}
+.referral-modal-card p { margin: 0 0 14px; color: var(--muted); }
+.referral-modal-card input {
+    width: 100%;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 700;
+}
+.referral-modal-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+}
+.referral-apply-result {
+    min-height: 1.2em;
+    font-size: 0.9rem;
+    color: var(--success);
+}
+.referral-card,
+.game-link-card {
+    margin-top: 16px;
+    padding: 16px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: color-mix(in srgb, var(--card) 90%, var(--accent) 10%);
+}
+.game-link-card--ok {
+    border-color: color-mix(in srgb, var(--success) 40%, var(--border));
+}
+.referral-card h3,
+.game-link-card h3 {
+    margin: 0 0 8px;
+    font-size: 1rem;
+}
+.referral-hint,
+.referral-meta,
+.referral-link-preview,
+.game-link-card p {
+    margin: 0 0 8px;
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+.referral-code-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin: 10px 0;
+}
+.referral-code {
+    display: inline-flex;
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: var(--bg);
+    border: 1px dashed var(--border);
+    font-weight: 800;
+    letter-spacing: 0.12em;
+}
+.game-link-btn { margin-top: 8px; }
+body.modal-open { overflow: hidden; }

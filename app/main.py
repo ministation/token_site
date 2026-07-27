@@ -5,7 +5,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader
 
-from app.routers import auth, bank, social, chat, pages, messages, bans, online, stats, inventory, admin, playtime, compensation, presence, support, donations
+from app.routers import auth, bank, social, chat, pages, messages, bans, online, stats, inventory, admin, playtime, compensation, presence, support, donations, referral, game_link
 from app.db.database import get_pg_pool, close_pg_pool
 from app.core.sessions import load_sessions, get_session
 from app.services.status_collector import collector_loop
@@ -127,6 +127,8 @@ app.include_router(inventory.router)
 app.include_router(admin.router)
 app.include_router(playtime.router)
 app.include_router(compensation.router)
+app.include_router(referral.router)
+app.include_router(game_link.router)
 
 
 @app.post("/platega/callback")

@@ -506,6 +506,31 @@ def _migrate_schema():
         CREATE INDEX IF NOT EXISTS idx_site_bans_discord_active
         ON site_bans(discord_id, active)
     """)
+    user_cols = _table_columns(cursor, "social_users")
+    if "referral_code" not in user_cols:
+        cursor.execute("ALTER TABLE social_users ADD COLUMN referral_code TEXT")
+    if "referred_by_code" not in user_cols:
+        cursor.execute("ALTER TABLE social_users ADD COLUMN referred_by_code TEXT")
+    if "referral_prompt_done" not in user_cols:
+        cursor.execute("ALTER TABLE social_users ADD COLUMN referral_prompt_done INTEGER DEFAULT 0")
+    cursor.execute("""
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_social_users_referral_code
+        ON social_users(referral_code)
+        WHERE referral_code IS NOT NULL AND referral_code != ''
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS referral_pending_coins (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            discord_id TEXT NOT NULL,
+            amount INTEGER NOT NULL,
+            reason TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_referral_pending_discord
+        ON referral_pending_coins(discord_id)
+    """)
     conn.commit()
     conn.close()
 
@@ -533,8 +558,9 @@ def _migrate_user_id_refs(old_id: str, new_id: str):
     conn.close()
 
 
-def get_or_create_social_user(player_id: str, user_uuid: str, discord_id: str, 
-                              discord_username: str, discord_avatar: str, game_nickname: str) -> Dict:
+def get_or_create_social_user(player_id: str, user_uuid: str, discord_id: str,
+                              discord_username: str, discord_avatar: str, game_nickname: str,
+                              *, return_created: bool = False):
     conn = get_db()
     cursor = conn.cursor()
 
@@ -559,7 +585,8 @@ def get_or_create_social_user(player_id: str, user_uuid: str, discord_id: str,
         cursor.execute("SELECT * FROM social_users WHERE discord_id = ?", (discord_id,))
         updated = cursor.fetchone()
         conn.close()
-        return dict(updated)
+        result = dict(updated)
+        return (result, False) if return_created else result
 
     cursor.execute("SELECT * FROM social_users WHERE player_id = ?", (player_id,))
     row = cursor.fetchone()
@@ -572,7 +599,8 @@ def get_or_create_social_user(player_id: str, user_uuid: str, discord_id: str,
         """, (discord_id, user_uuid, discord_username, discord_avatar, game_nickname, player_id))
         conn.commit()
         conn.close()
-        return dict(row)
+        result = dict(row)
+        return (result, False) if return_created else result
 
     cursor.execute("""
         INSERT INTO social_users (player_id, user_uuid, discord_id, discord_username, discord_avatar, game_nickname)
@@ -583,7 +611,132 @@ def get_or_create_social_user(player_id: str, user_uuid: str, discord_id: str,
     cursor.execute("SELECT * FROM social_users WHERE id = ?", (user_id,))
     new_row = cursor.fetchone()
     conn.close()
-    return dict(new_row)
+    result = dict(new_row)
+    return (result, True) if return_created else result
+
+
+def set_referral_code(discord_id: str, code: str) -> bool:
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "UPDATE social_users SET referral_code = ?, updated_at = CURRENT_TIMESTAMP "
+            "WHERE discord_id = ? AND (referral_code IS NULL OR referral_code = '')",
+            (code, discord_id),
+        )
+        conn.commit()
+        return cursor.rowcount > 0
+    except sqlite3.IntegrityError:
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
+
+
+def get_social_user_by_referral_code(code: str) -> Optional[Dict]:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT * FROM social_users WHERE UPPER(referral_code) = UPPER(?) LIMIT 1",
+        (code.strip(),),
+    )
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def mark_referral_used(referred_discord_id: str, code: str, referrer_discord_id: str) -> bool:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT referred_by_code FROM social_users WHERE discord_id = ?",
+        (referred_discord_id,),
+    )
+    row = cursor.fetchone()
+    if not row or row["referred_by_code"]:
+        conn.close()
+        return False
+    cursor.execute(
+        """
+        UPDATE social_users
+        SET referred_by_code = ?, referral_prompt_done = 1, updated_at = CURRENT_TIMESTAMP
+        WHERE discord_id = ? AND referred_by_code IS NULL
+        """,
+        (code.upper(), referred_discord_id),
+    )
+    ok = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return ok
+
+
+def needs_referral_prompt(discord_id: str) -> bool:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT referred_by_code, referral_prompt_done FROM social_users WHERE discord_id = ?",
+        (discord_id,),
+    )
+    row = cursor.fetchone()
+    conn.close()
+    if not row:
+        return False
+    return not row["referred_by_code"] and not row["referral_prompt_done"]
+
+
+def complete_referral_prompt(discord_id: str) -> None:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE social_users SET referral_prompt_done = 1, updated_at = CURRENT_TIMESTAMP "
+        "WHERE discord_id = ?",
+        (discord_id,),
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_referral_stats(discord_id: str) -> Dict[str, Any]:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT COUNT(*) AS cnt FROM social_users WHERE referred_by_code IN "
+        "(SELECT referral_code FROM social_users WHERE discord_id = ?)",
+        (discord_id,),
+    )
+    row = cursor.fetchone()
+    conn.close()
+    return {"count": int(row["cnt"]) if row else 0}
+
+
+def add_pending_referral_coins(discord_id: str, amount: int, reason: str) -> None:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO referral_pending_coins (discord_id, amount, reason) VALUES (?, ?, ?)",
+        (discord_id, amount, reason),
+    )
+    conn.commit()
+    conn.close()
+
+
+def pop_pending_referral_coins(discord_id: str) -> List[Dict]:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT id, amount, reason FROM referral_pending_coins WHERE discord_id = ? ORDER BY id",
+        (discord_id,),
+    )
+    rows = [dict(r) for r in cursor.fetchall()]
+    if rows:
+        ids = [r["id"] for r in rows]
+        cursor.execute(
+            f"DELETE FROM referral_pending_coins WHERE id IN ({','.join('?' * len(ids))})",
+            ids,
+        )
+        conn.commit()
+    conn.close()
+    return rows
 
 def get_social_user_by_player_id(player_id: str) -> Optional[Dict]:
     conn = get_db()

@@ -49,6 +49,8 @@ async function checkAuth() {
             if (typeof refreshAdminRatingIfVisible === 'function') refreshAdminRatingIfVisible();
             if (typeof startNotificationPolling === 'function') startNotificationPolling();
             if (typeof loadCompensation === 'function') loadCompensation();
+            if (typeof maybeShowReferralWelcome === 'function') maybeShowReferralWelcome();
+            if (typeof refreshLinkStatus === 'function') refreshLinkStatus();
         } else {
             document.getElementById('loginBtn').style.display = '';
             document.getElementById('userPanel').style.display = 'none';
@@ -118,6 +120,8 @@ async function login() {
             s: challenge.sig,
             c: counter,
         });
+        const ref = typeof getStoredReferralCode === 'function' ? getStoredReferralCode() : '';
+        if (ref) params.set('ref', ref);
         window.location.href = `${API_BASE}/login?${params.toString()}`;
     } catch (e) {
         alert(e.message || 'Не удалось войти');

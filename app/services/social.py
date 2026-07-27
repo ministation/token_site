@@ -4,7 +4,7 @@ from typing import Optional
 
 def get_or_create_social_user(player_id: int, user_uuid: str, discord_id: str,
                               discord_username: str, discord_avatar: Optional[str],
-                              game_nickname: str):
+                              game_nickname: str, *, return_created: bool = False):
     """Создать или обновить пользователя соцсети."""
     return social_db.get_or_create_social_user(
         player_id=player_id,
@@ -12,7 +12,8 @@ def get_or_create_social_user(player_id: int, user_uuid: str, discord_id: str,
         discord_id=discord_id,
         discord_username=discord_username,
         discord_avatar=discord_avatar,
-        game_nickname=game_nickname
+        game_nickname=game_nickname,
+        return_created=return_created,
     )
 
 
