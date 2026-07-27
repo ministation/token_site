@@ -709,6 +709,37 @@ def get_referral_stats(discord_id: str) -> Dict[str, Any]:
     return {"count": int(row["cnt"]) if row else 0}
 
 
+def get_global_referral_stats() -> Dict[str, Any]:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT COUNT(*) AS cnt FROM social_users "
+        "WHERE referred_by_code IS NOT NULL AND referred_by_code != ''"
+    )
+    referrals_total = int(cursor.fetchone()["cnt"])
+    cursor.execute(
+        """
+        SELECT COUNT(DISTINCT u.discord_id) AS cnt
+        FROM social_users u
+        WHERE EXISTS (
+            SELECT 1 FROM social_users r
+            WHERE r.referred_by_code = u.referral_code
+              AND r.referred_by_code IS NOT NULL
+              AND r.referred_by_code != ''
+        )
+        """
+    )
+    referrers_active = int(cursor.fetchone()["cnt"])
+    cursor.execute("SELECT COALESCE(SUM(amount), 0) AS s FROM referral_pending_coins")
+    pending_coins = int(cursor.fetchone()["s"])
+    conn.close()
+    return {
+        "referrals_total": referrals_total,
+        "referrers_active": referrers_active,
+        "pending_coins": pending_coins,
+    }
+
+
 def add_pending_referral_coins(discord_id: str, amount: int, reason: str) -> None:
     conn = get_db()
     cursor = conn.cursor()

@@ -89,3 +89,18 @@ def get_referral_info(account_id: str) -> dict:
         "referrer_reward": REFERRAL_REFERRER_COINS,
         "referee_reward": REFERRAL_REFEREE_COINS,
     }
+
+
+def get_global_referral_metrics() -> dict:
+    stats = social_db.get_global_referral_stats()
+    referrals_total = stats["referrals_total"]
+    coins_to_referrers = referrals_total * REFERRAL_REFERRER_COINS
+    coins_to_referees = referrals_total * REFERRAL_REFEREE_COINS
+    return {
+        **stats,
+        "coins_to_referrers": coins_to_referrers,
+        "coins_to_referees": coins_to_referees,
+        "coins_distributed": coins_to_referrers + coins_to_referees,
+        "referrer_reward": REFERRAL_REFERRER_COINS,
+        "referee_reward": REFERRAL_REFEREE_COINS,
+    }

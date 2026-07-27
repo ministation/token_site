@@ -203,6 +203,7 @@ async function loadAdminStats() {
         const s = data.social || {};
         const v = data.visits || {};
         const g = data.game || {};
+        const r = data.referral || {};
         const dailyRows = (v.daily || []).map(d => `
             <tr>
                 <td>${escapeHtml(d.day || '')}</td>
@@ -227,6 +228,15 @@ async function loadAdminStats() {
                     <tbody>${dailyRows}</tbody>
                 </table>
             </div>` : ''}
+            <h3 class="admin-stats-heading"><i class="fa-solid fa-user-group"></i> Реферальная программа</h3>
+            <div class="stats-grid admin-stats-grid">
+                <div class="stat-item"><div class="stat-value">${r.referrals_total ?? 0}</div><div class="stat-label">Друзей приглашено</div></div>
+                <div class="stat-item"><div class="stat-value">${r.referrers_active ?? 0}</div><div class="stat-label">Активных рефереров</div></div>
+                <div class="stat-item"><div class="stat-value">${r.coins_distributed ?? 0}</div><div class="stat-label">Монет раздано</div></div>
+                <div class="stat-item"><div class="stat-value">${r.coins_to_referrers ?? 0}</div><div class="stat-label">Пригласившим (+${r.referrer_reward ?? 5})</div></div>
+                <div class="stat-item"><div class="stat-value">${r.coins_to_referees ?? 0}</div><div class="stat-label">Новым игрокам (+${r.referee_reward ?? 3})</div></div>
+                ${(r.pending_coins ?? 0) > 0 ? `<div class="stat-item"><div class="stat-value">${r.pending_coins}</div><div class="stat-label">В очереди (без привязки)</div></div>` : ''}
+            </div>
             <h3 class="admin-stats-heading"><i class="fa-solid fa-database"></i> Платформа</h3>
             <div class="stats-grid admin-stats-grid">
                 <div class="stat-item"><div class="stat-value">${s.users ?? 0}</div><div class="stat-label">Пользователей</div></div>

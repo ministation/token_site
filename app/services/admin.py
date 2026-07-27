@@ -1,10 +1,12 @@
 import database_social as social_db
 from app.services.bank import get_total_stats
+from app.services.referral import get_global_referral_metrics
 
 
 async def get_site_statistics() -> dict:
     social = social_db.get_site_stats()
     visits = social_db.get_visit_stats()
+    referral = get_global_referral_metrics()
     try:
         game_stats = await get_total_stats()
     except Exception:
@@ -12,6 +14,7 @@ async def get_site_statistics() -> dict:
     return {
         "social": social,
         "visits": visits,
+        "referral": referral,
         "game": game_stats,
     }
 
