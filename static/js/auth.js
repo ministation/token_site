@@ -18,7 +18,8 @@ async function checkAuth() {
         currentUser = data;
 
         if (data.site_banned) {
-            document.getElementById('loginBtn').style.display = '';
+            const loginBtns = document.getElementById('loginBtns');
+            if (loginBtns) loginBtns.style.display = '';
             document.getElementById('userPanel').style.display = 'none';
             updateAuthUI();
             const reason = data.ban_reason || 'Нарушение правил';
@@ -27,7 +28,8 @@ async function checkAuth() {
         }
 
         if (data.authenticated) {
-            document.getElementById('loginBtn').style.display = 'none';
+            const loginBtns = document.getElementById('loginBtns');
+            if (loginBtns) loginBtns.style.display = 'none';
             const panel = document.getElementById('userPanel');
             panel.style.display = 'flex';
             panel.innerHTML = `
@@ -52,7 +54,8 @@ async function checkAuth() {
             if (typeof maybeShowReferralWelcome === 'function') maybeShowReferralWelcome();
             if (typeof refreshLinkStatus === 'function') refreshLinkStatus();
         } else {
-            document.getElementById('loginBtn').style.display = '';
+            const loginBtns = document.getElementById('loginBtns');
+            if (loginBtns) loginBtns.style.display = '';
             document.getElementById('userPanel').style.display = 'none';
             updateAuthUI();
             if (typeof refreshAdminRatingIfVisible === 'function') refreshAdminRatingIfVisible();
@@ -102,6 +105,12 @@ async function solvePowChallenge(challenge) {
         }
     }
     throw new Error('Не удалось пройти антибот-проверку');
+}
+
+async function loginSs14() {
+    const ref = typeof getStoredReferralCode === 'function' ? getStoredReferralCode() : '';
+    const params = ref ? `?ref=${encodeURIComponent(ref)}` : '';
+    window.location.href = `${API_BASE}/login/ss14${params}`;
 }
 
 async function login() {

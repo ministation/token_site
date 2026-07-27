@@ -130,12 +130,16 @@ function renderReferralCard(info) {
     `;
 }
 
-function renderGameLinkCard(linked, ss14Enabled) {
+function renderGameLinkCard(linked, ss14Enabled, hasDiscord) {
     if (linked) {
+        const extra = hasDiscord === false
+            ? '<p class="game-link-note">Вы вошли через SS14. Discord можно привязать в игре.</p>'
+            : '';
         return `
             <div class="game-link-card game-link-card--ok">
                 <h3><i class="fa-solid fa-link"></i> Игровой аккаунт</h3>
-                <p>Discord привязан к SS14. Монетки и донат доступны.</p>
+                <p>SS14 привязан. Монетки и донат доступны.</p>
+                ${extra}
             </div>
         `;
     }
@@ -147,12 +151,21 @@ function renderGameLinkCard(linked, ss14Enabled) {
             </div>
         `;
     }
+    if (hasDiscord === false) {
+        return `
+            <div class="game-link-card game-link-card--ok">
+                <h3><img src="/static/ss14-icon.svg" alt="" class="login-ss14-icon" width="18" height="18"> Вход через SS14</h3>
+                <p>Вы авторизованы через аккаунт Wizard Den.</p>
+            </div>
+        `;
+    }
     return `
         <div class="game-link-card">
-            <h3><i class="fa-solid fa-rocket"></i> Привязать SS14</h3>
-            <p>Войдите через аккаунт Wizard Den, чтобы связать Discord с игровым персонажем.</p>
+            <h3><img src="/static/ss14-icon.svg" alt="" class="login-ss14-icon" width="18" height="18"> Привязать SS14</h3>
+            <p>Войдите через аккаунт Wizard Den, чтобы связать профиль с игрой.</p>
             <button type="button" class="btn-sm game-link-btn" onclick="startSs14Link()">
-                <i class="fa-solid fa-right-to-bracket"></i> Войти через SS14
+                <img src="/static/ss14-icon.svg" alt="" class="login-ss14-icon" width="16" height="16">
+                Войти через SS14
             </button>
         </div>
     `;
@@ -171,7 +184,7 @@ async function refreshLinkStatus() {
     try {
         const res = await fetch(`${API_BASE}/api/link/status`);
         const data = await res.json();
-        const html = renderGameLinkCard(data.linked, data.ss14_oauth_enabled);
+        const html = renderGameLinkCard(data.linked, data.ss14_oauth_enabled, data.has_discord);
         hosts.forEach(host => { host.innerHTML = html; });
     } catch (e) {}
 }

@@ -14,19 +14,30 @@ class ReferralApplyBody(BaseModel):
 
 @router.get("/me")
 async def referral_me(user: dict = Depends(get_current_user)):
-    return get_referral_info(user["discord_id"])
+    from app.services.auth_accounts import account_id_for_user
+    account_id = account_id_for_user(user)
+    if not account_id:
+        return {}
+    return get_referral_info(account_id)
 
 
 @router.post("/apply")
 async def referral_apply(body: ReferralApplyBody, user: dict = Depends(get_current_user)):
-    ok, message = await apply_referral_code(user["discord_id"], body.code)
+    from app.services.auth_accounts import account_id_for_user
+    account_id = account_id_for_user(user)
+    if not account_id:
+        raise HTTPException(status_code=400, detail="Аккаунт не найден")
+    ok, message = await apply_referral_code(account_id, body.code)
     if not ok:
         raise HTTPException(status_code=400, detail=message)
-    social_db.complete_referral_prompt(user["discord_id"])
-    return {"ok": True, "message": message, **get_referral_info(user["discord_id"])}
+    social_db.complete_referral_prompt(account_id)
+    return {"ok": True, "message": message, **get_referral_info(account_id)}
 
 
 @router.post("/skip")
 async def referral_skip(user: dict = Depends(get_current_user)):
-    social_db.complete_referral_prompt(user["discord_id"])
+    from app.services.auth_accounts import account_id_for_user
+    account_id = account_id_for_user(user)
+    if account_id:
+        social_db.complete_referral_prompt(account_id)
     return {"ok": True, "needs_prompt": False}

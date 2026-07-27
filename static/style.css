@@ -386,6 +386,38 @@ body {
     border-radius: var(--radius-sm);
 }
 
+.login-btns {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.login-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+}
+.login-btn--discord {
+    background: var(--discord);
+    color: #fff;
+    border-color: #3d46c9;
+    box-shadow: var(--shadow-btn-color);
+}
+.login-btn--discord:hover { background: #6b76ff; color: #fff; }
+.login-btn--ss14 {
+    background: #2867e0;
+    color: #fff;
+    border-color: #1f4eb0;
+    box-shadow: var(--shadow-btn-color);
+}
+.login-btn--ss14:hover { background: #3b7af0; color: #fff; }
+.login-ss14-icon {
+    display: block;
+    flex-shrink: 0;
+}
+.login-btn i { font-size: 1.05rem; }
+
 #loginBtn {
     background: var(--discord);
     color: #fff;

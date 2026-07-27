@@ -4,14 +4,18 @@ import aiohttp
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import RedirectResponse, HTMLResponse
 from app.config import ADMIN_DISCORD_IDS, DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, DISCORD_REDIRECT_URI, SITE_PUBLIC_URL
-from app.services.roles import apply_roles, ROLE_ADMIN
-from app.services.game_staff import sync_game_moderator_site_role
-from app.services.discord_badges import sync_member_badges
+from app.services.auth_session import apply_staff_flags, sync_roles_from_game
+from app.services.roles import apply_roles
 from app.core.sessions import (
     get_session, set_session, delete_session, generate_session_token, user_sessions
 )
 from app.services.bank import find_player_by_discord
 from app.services.game_link import link_discord_account
+from app.services.auth_accounts import (
+    account_id_for_user,
+    is_real_discord_id,
+    resolve_social_user,
+)
 from app.services.referral import apply_referral_code, ensure_referral_code
 from app.services.social import get_or_create_social_user
 from app.services.avatars import sync_discord_avatar_for_user, resolve_avatar_url
@@ -20,21 +24,11 @@ import database_social as social_db
 
 
 async def _sync_roles_from_game(session_data: dict) -> None:
-    discord_id = session_data.get("discord_id")
-    username = session_data.get("username", "")
-    if discord_id and social_db.get_social_user_by_discord_id(discord_id):
-        await sync_game_moderator_site_role(discord_id, username)
-        await sync_member_badges(discord_id, username)
+    await sync_roles_from_game(session_data)
 
 
 def _apply_staff_flags(session_data: dict) -> dict:
-    """Назначает флаги роли. В site_admins пишем только доверенные Discord ID из env."""
-    apply_roles(session_data)
-    discord_id = session_data.get("discord_id")
-    username = session_data.get("username", "")
-    if discord_id and str(discord_id) in ADMIN_DISCORD_IDS:
-        social_db.add_site_staff(discord_id, username, "config", ROLE_ADMIN)
-    return session_data
+    return apply_staff_flags(session_data)
 
 
 router = APIRouter(tags=["auth"])
@@ -140,6 +134,7 @@ async def callback(request: Request, code: str, state: str):
 
     session_token = generate_session_token()
     session_data = {
+        'auth_provider': 'discord',
         'discord_id': discord_id,
         'username': username,
         'created': datetime.datetime.now().isoformat()
@@ -225,79 +220,92 @@ async def api_me(request: Request):
     session = get_session(session_token)
     if not session:
         return {"authenticated": False}
-    from app.services.bank import find_player_by_discord
 
-    # Обновить привязку к игре, если появилась после входа
-    player = await find_player_by_discord(session['discord_id'])
-    if player:
-        session['player'] = player
-        get_or_create_social_user(
-            player_id=player['player_id'],
-            user_uuid=player['user_uuid'],
-            discord_id=session['discord_id'],
-            discord_username=session['username'],
-            discord_avatar=None,
-            game_nickname=player['last_seen_user_name']
-        )
-        from app.core.sessions import set_session
-        set_session(session_token, session)
+    discord_id = session.get("discord_id")
+    if is_real_discord_id(discord_id):
+        player = await find_player_by_discord(discord_id)
+        if player:
+            session["player"] = player
+            get_or_create_social_user(
+                player_id=player["player_id"],
+                user_uuid=player["user_uuid"],
+                discord_id=discord_id,
+                discord_username=session["username"],
+                discord_avatar=None,
+                game_nickname=player["last_seen_user_name"],
+            )
+            set_session(session_token, session)
+    elif session.get("ss14_user_id") and not session.get("player"):
+        from app.services.game_link import find_player_by_user_id
+        player = await find_player_by_user_id(session["ss14_user_id"])
+        if player:
+            session["player"] = player
+            set_session(session_token, session)
 
-    social = social_db.get_social_user_by_discord_id(session['discord_id'])
-    if not social:
-        player = session.get('player')
+    social = resolve_social_user(session)
+    if not social and session.get("discord_id"):
+        player = session.get("player")
         if player:
             get_or_create_social_user(
-                player_id=player['player_id'],
-                user_uuid=player['user_uuid'],
-                discord_id=session['discord_id'],
-                discord_username=session['username'],
+                player_id=player["player_id"],
+                user_uuid=player["user_uuid"],
+                discord_id=session["discord_id"],
+                discord_username=session["username"],
                 discord_avatar=None,
-                game_nickname=player['last_seen_user_name']
+                game_nickname=player.get("last_seen_user_name") or session["username"],
             )
-        else:
+        elif is_real_discord_id(session.get("discord_id")):
             get_or_create_social_user(
                 player_id=f"discord_{session['discord_id']}",
                 user_uuid=f"discord_{session['discord_id']}",
-                discord_id=session['discord_id'],
-                discord_username=session['username'],
+                discord_id=session["discord_id"],
+                discord_username=session["username"],
                 discord_avatar=None,
-                game_nickname=session['username']
+                game_nickname=session["username"],
             )
-        social = social_db.get_social_user_by_discord_id(session['discord_id'])
-    if social and not social.get("avatar_custom") and social.get("discord_avatar"):
+        social = resolve_social_user(session)
+
+    if social and is_real_discord_id(social.get("discord_id")) and not social.get("avatar_custom") and social.get("discord_avatar"):
         cached = await sync_discord_avatar_for_user(session["discord_id"], social.get("discord_avatar"))
         if cached:
-            social = social_db.get_social_user_by_discord_id(session['discord_id'])
+            social = resolve_social_user(session)
+
     result = {
         "authenticated": True,
-        "username": session['username'],
-        "discord_id": session['discord_id'],
-        "avatar": session.get('avatar'),
-        "player": session.get('player'),
+        "auth_provider": session.get("auth_provider", "discord" if is_real_discord_id(discord_id) else "ss14"),
+        "username": session.get("username"),
+        "discord_id": discord_id if is_real_discord_id(discord_id) else None,
+        "avatar": session.get("avatar"),
+        "player": session.get("player"),
+        "has_discord": is_real_discord_id(discord_id),
     }
     if social:
         result["social_id"] = social["player_id"]
         result["avatar"] = resolve_avatar_url(social)
         from app.services.presence import status_from_last_seen
         result["presence"] = status_from_last_seen(social.get("last_seen_at"))
+        result["display_name"] = social.get("game_nickname") or session.get("username")
     else:
         result["avatar"] = "/static/default_avatar.png"
         result["presence"] = "offline"
+        result["display_name"] = session.get("username")
+
     await _sync_roles_from_game(session)
     apply_roles(result)
-    # Постоянный staff в БД только по ADMIN_DISCORD_IDS (не по совпадению ника)
-    if session.get("discord_id") and str(session["discord_id"]) in ADMIN_DISCORD_IDS:
+
+    account_id = account_id_for_user(session)
+    if is_real_discord_id(session.get("discord_id")) and str(session["discord_id"]) in ADMIN_DISCORD_IDS:
         social_db.add_site_staff(
             session["discord_id"], session.get("username", ""), "config", ROLE_ADMIN
         )
 
     from app.services.referral import get_referral_info
     try:
-        result["referral"] = get_referral_info(session["discord_id"])
+        result["referral"] = get_referral_info(account_id) if account_id else None
     except Exception:
         result["referral"] = None
 
-    ban = get_active_ban(session.get("discord_id"))
+    ban = get_active_ban(session.get("discord_id") if is_real_discord_id(session.get("discord_id")) else None)
     if ban:
         delete_session(session_token)
         return {

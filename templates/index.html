@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="/static/js/theme.js"></script>
     <script src="/static/js/ambient.js" defer></script>
-    <link rel="stylesheet" href="/static/style.css?v=referral1">
+    <link rel="stylesheet" href="/static/style.css?v=referral2">
     <link rel="stylesheet" href="/static/chat-discord.css">
     <link rel="icon" type="image/png" href="/static/coin.png">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
@@ -37,10 +37,16 @@
                 <button type="button" class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Сменить тему">
                     <i class="fa-solid fa-moon"></i>
                 </button>
-                <button id="loginBtn" onclick="login()">
-                    <i class="fa-brands fa-discord"></i>
-                    Войти через Discord
-                </button>
+                <div id="loginBtns" class="login-btns">
+                    <button id="loginDiscordBtn" type="button" class="login-btn login-btn--discord" onclick="login()">
+                        <i class="fa-brands fa-discord"></i>
+                        Discord
+                    </button>
+                    <button id="loginSs14Btn" type="button" class="login-btn login-btn--ss14" onclick="loginSs14()">
+                        <img src="/static/ss14-icon.svg" alt="" class="login-ss14-icon" width="18" height="18">
+                        SS14
+                    </button>
+                </div>
                 <div id="userPanel" style="display:none;"></div>
             </div>
         </div>

@@ -1,6 +1,7 @@
 from fastapi import Request, HTTPException
 from app.core.sessions import get_session
 from app.db.database import get_pg_pool
+from app.services.auth_accounts import is_real_discord_id, resolve_social_user
 from app.services.roles import apply_roles
 from app.services.site_bans import get_active_ban
 from asyncpg import Pool
@@ -8,7 +9,7 @@ import database_social as social_db
 
 
 def _raise_if_site_banned(user: dict) -> None:
-    ban = get_active_ban(user.get("discord_id"))
+    ban = get_active_ban(user.get("discord_id") if is_real_discord_id(user.get("discord_id")) else None)
     if not ban:
         return
     reason = ban.get("reason") or "Нарушение правил"
@@ -33,7 +34,7 @@ async def get_current_user(request: Request) -> dict:
 async def get_current_player(request: Request) -> dict:
     user = await get_current_user(request)
     if 'player' not in user:
-        raise HTTPException(status_code=403, detail="Discord не привязан к игровому аккаунту")
+        raise HTTPException(status_code=403, detail="Игровой аккаунт не привязан")
     return user['player']
 
 
@@ -60,16 +61,16 @@ async def get_optional_user(request: Request) -> dict | None:
     if not session:
         return None
     user = apply_roles(session)
-    if get_active_ban(user.get("discord_id")):
+    if get_active_ban(user.get("discord_id") if is_real_discord_id(user.get("discord_id")) else None):
         return None
     return user
 
 
 async def get_current_social_user(request: Request) -> dict:
     user = await get_current_user(request)
-    social = social_db.get_social_user_by_discord_id(user['discord_id'])
+    social = resolve_social_user(user)
     if not social:
-        raise HTTPException(status_code=403, detail="Профиль не найден. Перезайдите через Discord.")
+        raise HTTPException(status_code=403, detail="Профиль не найден. Перезайдите на сайт.")
     return {**user, 'social': social, 'social_id': social['player_id']}
 
 
@@ -77,7 +78,7 @@ async def get_optional_social_user(request: Request) -> dict | None:
     user = await get_optional_user(request)
     if not user:
         return None
-    social = social_db.get_social_user_by_discord_id(user['discord_id'])
+    social = resolve_social_user(user)
     if not social:
         return None
     return {**user, 'social': social, 'social_id': social['player_id']}
