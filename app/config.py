@@ -106,7 +106,9 @@ ROBOKASSA_RECEIPT_ENABLED = os.getenv("ROBOKASSA_RECEIPT_ENABLED", "1").strip().
 # SS14 Wizard Den OAuth (привязка игрового аккаунта)
 SS14_OAUTH_CLIENT_ID = os.getenv("SS14_OAUTH_CLIENT_ID", "")
 SS14_OAUTH_CLIENT_SECRET = os.getenv("SS14_OAUTH_CLIENT_SECRET", "")
-SS14_OAUTH_REDIRECT_URI = os.getenv("SS14_OAUTH_REDIRECT_URI", f"{SITE_PUBLIC_URL}/api/ss14/callback")
+SS14_OAUTH_REDIRECT_URI = (
+    os.getenv("SS14_OAUTH_REDIRECT_URI") or f"{SITE_PUBLIC_URL}/api/ss14/callback"
+).strip().rstrip("/")
 SS14_OAUTH_AUTHORITY = os.getenv("SS14_OAUTH_AUTHORITY", "https://account.spacestation14.com")
 
 # Реферальная программа

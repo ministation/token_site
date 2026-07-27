@@ -96,10 +96,14 @@ async function loadProfile(playerId) {
                     <div><strong>Забанен на сайте.</strong> ${escapeHtml(p.site_ban_reason || 'Причина не указана')}</div>
                 </div>
             ` : ''}
-            ${isOwn && typeof renderReferralCard === 'function' && currentUser?.referral
-                ? renderReferralCard(currentUser.referral)
-                : ''}
-            ${isOwn ? `<div id="profileGameLinkCard"></div>` : ''}
+            ${isOwn ? `
+                <div class="profile-extra-blocks">
+                    ${typeof renderReferralCard === 'function' && currentUser?.referral
+                        ? renderReferralCard(currentUser.referral)
+                        : ''}
+                    <div id="profileGameLinkCard" class="game-link-slot"></div>
+                </div>
+            ` : ''}
             <div class="profile-bio-block" id="profileBioBlock">
                 ${p.bio
                     ? `<div class="profile-bio">${formatMessageContent(p.bio)}</div>`

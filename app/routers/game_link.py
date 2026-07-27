@@ -1,8 +1,6 @@
 import datetime
 import secrets
-from urllib.parse import urlencode
 
-import aiohttp
 from fastapi import APIRouter, Request, HTTPException, Depends
 from fastapi.responses import RedirectResponse, HTMLResponse
 
@@ -10,8 +8,6 @@ from app.config import (
     DISCORD_CLIENT_ID,
     DISCORD_REDIRECT_URI,
     SITE_PUBLIC_URL,
-    SS14_OAUTH_CLIENT_ID,
-    SS14_OAUTH_REDIRECT_URI,
 )
 from app.core.sessions import (
     generate_session_token,
@@ -32,7 +28,12 @@ from app.services.game_link import (
 from app.services.referral import apply_referral_code, ensure_referral_code
 from app.services.site_bans import get_active_ban
 from app.services.social import get_or_create_social_user
-from app.services.ss14_auth import SS14_AUTH_ENDPOINT, fetch_ss14_profile, ss14_oauth_enabled
+from app.services.ss14_auth import (
+    build_ss14_authorize_url,
+    fetch_ss14_profile,
+    ss14_oauth_enabled,
+    ss14_oauth_public_info,
+)
 from app.services.auth_session import apply_staff_flags, sync_roles_from_game
 import database_social as social_db
 
@@ -48,15 +49,8 @@ def _discord_oauth_url(state: str) -> str:
     )
 
 
-def _ss14_oauth_url(state: str) -> str:
-    params = urlencode({
-        "client_id": SS14_OAUTH_CLIENT_ID,
-        "redirect_uri": SS14_OAUTH_REDIRECT_URI,
-        "response_type": "code",
-        "scope": "openid profile",
-        "state": state,
-    })
-    return f"{SS14_AUTH_ENDPOINT}?{params}"
+def _ss14_oauth_url(state: str, nonce: str) -> str:
+    return build_ss14_authorize_url(state, nonce)
 
 
 def _auth_cookie_response(redirect_path: str, session_token: str) -> RedirectResponse:
@@ -154,15 +148,17 @@ async def ss14_login_start(request: Request, ref: str = ""):
             detail="Вход через SS14 временно недоступен.",
         )
     state = secrets.token_urlsafe(16)
+    nonce = secrets.token_urlsafe(16)
     state_data = {
         "created": datetime.datetime.now().isoformat(),
         "purpose": "ss14_login",
+        "nonce": nonce,
     }
     ref_code = (ref or request.query_params.get("ref") or "").strip().upper()
     if ref_code:
         state_data["referral_code"] = ref_code
     user_sessions[state] = state_data
-    return RedirectResponse(_ss14_oauth_url(state))
+    return RedirectResponse(_ss14_oauth_url(state, nonce))
 
 
 @router.get("/login/{user_id}")
@@ -213,13 +209,15 @@ async def ss14_link_start(request: Request, user: dict = Depends(get_current_use
         return RedirectResponse("/?ss14_linked=1")
 
     state = secrets.token_urlsafe(16)
+    nonce = secrets.token_urlsafe(16)
     user_sessions[state] = {
         "created": datetime.datetime.now().isoformat(),
         "purpose": "ss14_link",
         "discord_id": user["discord_id"],
         "session_token": request.cookies.get("session_token"),
+        "nonce": nonce,
     }
-    return RedirectResponse(_ss14_oauth_url(state))
+    return RedirectResponse(_ss14_oauth_url(state, nonce))
 
 
 @router.get("/api/ss14/callback")
@@ -232,9 +230,12 @@ async def ss14_callback(request: Request, code: str = "", state: str = "", error
     pending = user_sessions.pop(state)
     purpose = pending.get("purpose")
 
-    profile = await fetch_ss14_profile(code)
+    profile, token_err = await fetch_ss14_profile(code)
     if not profile:
-        return RedirectResponse("/?ss14_link_error=token")
+        err_code = token_err or "token"
+        if err_code in ("invalid_grant", "invalid_client"):
+            err_code = "oauth_config"
+        return RedirectResponse(f"/?ss14_link_error={err_code}")
 
     ss14_user_id = profile.get("sub")
     if not ss14_user_id:
@@ -311,4 +312,5 @@ async def auth_providers():
     return {
         "discord": True,
         "ss14": ss14_oauth_enabled(),
+        "ss14_setup": ss14_oauth_public_info(),
     }

@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="/static/js/theme.js"></script>
     <script src="/static/js/ambient.js" defer></script>
-    <link rel="stylesheet" href="/static/style.css?v=referral2">
+    <link rel="stylesheet" href="/static/style.css?v=referral4">
     <link rel="stylesheet" href="/static/chat-discord.css">
     <link rel="icon" type="image/png" href="/static/coin.png">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
@@ -38,13 +38,13 @@
                     <i class="fa-solid fa-moon"></i>
                 </button>
                 <div id="loginBtns" class="login-btns">
-                    <button id="loginDiscordBtn" type="button" class="login-btn login-btn--discord" onclick="login()">
-                        <i class="fa-brands fa-discord"></i>
-                        Discord
+                    <button id="loginDiscordBtn" type="button" class="login-btn login-btn--discord" onclick="login()" title="Авторизация через Discord">
+                        <i class="fa-brands fa-discord" aria-hidden="true"></i>
+                        <span class="login-btn-text">Войти через Discord</span>
                     </button>
-                    <button id="loginSs14Btn" type="button" class="login-btn login-btn--ss14" onclick="loginSs14()">
-                        <img src="/static/ss14-icon.svg" alt="" class="login-ss14-icon" width="18" height="18">
-                        SS14
+                    <button id="loginSs14Btn" type="button" class="login-btn login-btn--ss14" onclick="loginSs14()" title="Авторизация через аккаунт SS14">
+                        <img src="/static/ss14-logo.png" alt="SS14" class="login-ss14-logo" width="52" height="22">
+                        <span class="login-btn-text">Войти через SS14</span>
                     </button>
                 </div>
                 <div id="userPanel" style="display:none;"></div>
@@ -131,10 +131,17 @@
     <div id="referralModal" class="referral-modal" hidden>
         <div class="referral-modal-backdrop" onclick="skipReferralPrompt()"></div>
         <div class="referral-modal-card" role="dialog" aria-labelledby="referralModalTitle">
-            <h2 id="referralModalTitle"><i class="fa-solid fa-gift"></i> Добро пожаловать!</h2>
-            <p>Есть реферальный код друга? Введите его и получите <b>3 монеты</b>. Друг получит <b>5 монет</b>.</p>
-            <input type="text" id="referralCodeInput" placeholder="Реферальный код" maxlength="32" autocomplete="off">
-            <div id="referralApplyResult" class="referral-apply-result"></div>
+            <div class="referral-modal-head">
+                <h2 id="referralModalTitle"><i class="fa-solid fa-gift"></i> Добро пожаловать!</h2>
+                <p>Есть реферальный код друга? Введите его и получите <b>3 монеты</b>. Друг получит <b>5 монет</b>.</p>
+            </div>
+            <div class="referral-modal-body">
+                <label class="referral-field" for="referralCodeInput">
+                    <span>Реферальный код</span>
+                    <input type="text" id="referralCodeInput" placeholder="Например, ABC12XYZ" maxlength="32" autocomplete="off">
+                </label>
+                <div id="referralApplyResult" class="referral-apply-result" aria-live="polite"></div>
+            </div>
             <div class="referral-modal-actions">
                 <button type="button" onclick="submitReferralCode()">Применить</button>
                 <button type="button" class="btn-ghost" onclick="skipReferralPrompt()">Пропустить</button>

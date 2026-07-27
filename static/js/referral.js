@@ -103,7 +103,12 @@ function maybeShowReferralWelcome() {
     const ss14Err = params.get('ss14_link_error');
     if (ss14Err) {
         history.replaceState({}, '', location.pathname + location.hash);
-        alert(`Не удалось привязать SS14: ${decodeURIComponent(ss14Err)}`);
+        const messages = {
+            oauth_config: 'Ошибка настройки SS14 OAuth. Проверьте Client ID, Secret и callback URL в .env и в кабинете SS14.',
+            redirect_uri: 'Неверный callback URL. В OAuth-приложении SS14 должен быть указан: https://ministation.ru/api/ss14/callback',
+            access_denied: 'Авторизация SS14 отменена.',
+        };
+        alert(messages[ss14Err] || `Не удалось войти через SS14: ${decodeURIComponent(ss14Err)}`);
     }
 }
 
@@ -154,18 +159,18 @@ function renderGameLinkCard(linked, ss14Enabled, hasDiscord) {
     if (hasDiscord === false) {
         return `
             <div class="game-link-card game-link-card--ok">
-                <h3><img src="/static/ss14-icon.svg" alt="" class="login-ss14-icon" width="18" height="18"> Вход через SS14</h3>
+                <h3><img src="/static/ss14-logo.png" alt="SS14" class="login-ss14-logo" width="52" height="22"> Вход через SS14</h3>
                 <p>Вы авторизованы через аккаунт Wizard Den.</p>
             </div>
         `;
     }
     return `
         <div class="game-link-card">
-            <h3><img src="/static/ss14-icon.svg" alt="" class="login-ss14-icon" width="18" height="18"> Привязать SS14</h3>
+            <h3><img src="/static/ss14-logo.png" alt="SS14" class="login-ss14-logo" width="52" height="22"> Привязать SS14</h3>
             <p>Войдите через аккаунт Wizard Den, чтобы связать профиль с игрой.</p>
             <button type="button" class="btn-sm game-link-btn" onclick="startSs14Link()">
-                <img src="/static/ss14-icon.svg" alt="" class="login-ss14-icon" width="16" height="16">
-                Войти через SS14
+                <img src="/static/ss14-logo.png" alt="SS14" class="login-ss14-logo" width="48" height="20">
+                Авторизоваться через SS14
             </button>
         </div>
     `;

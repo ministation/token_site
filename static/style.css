@@ -386,17 +386,26 @@ body {
     border-radius: var(--radius-sm);
 }
 
-.login-btns {
+#userInfo .login-btns {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     flex-wrap: wrap;
 }
 .login-btn {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    justify-content: center;
+    gap: 10px;
+    min-height: 44px;
+    padding: 8px 14px;
     font-weight: 700;
+    white-space: nowrap;
+}
+.login-btn-text {
+    font-size: 0.72rem;
+    line-height: 1.2;
+    letter-spacing: 0.01em;
 }
 .login-btn--discord {
     background: var(--discord);
@@ -406,17 +415,36 @@ body {
 }
 .login-btn--discord:hover { background: #6b76ff; color: #fff; }
 .login-btn--ss14 {
-    background: #2867e0;
+    background: #0d0d0d;
     color: #fff;
-    border-color: #1f4eb0;
+    border-color: #2b2b2b;
     box-shadow: var(--shadow-btn-color);
 }
-.login-btn--ss14:hover { background: #3b7af0; color: #fff; }
-.login-ss14-icon {
+.login-btn--ss14:hover {
+    background: #1a1a1a;
+    color: #fff;
+    border-color: #444;
+}
+.login-ss14-logo {
     display: block;
     flex-shrink: 0;
+    width: auto;
+    height: 22px;
+    object-fit: contain;
 }
-.login-btn i { font-size: 1.05rem; }
+.login-btn i { font-size: 1.15rem; }
+.card--game-link > h2 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.card--game-link > h2 .login-ss14-logo {
+    height: 20px;
+}
+.game-link-card h3 .login-ss14-logo,
+.game-link-btn .login-ss14-logo {
+    height: 18px;
+}
 
 #loginBtn {
     background: var(--discord);
@@ -4595,7 +4623,27 @@ label.chat-tool-btn input[type="file"] {
         width: 38px;
         height: 38px;
     }
-    #loginBtn { order: 2; }
+    #loginBtn,
+    #userInfo .login-btns { order: 2; }
+    #userInfo .login-btns {
+        width: 100%;
+        justify-content: flex-end;
+        gap: 8px;
+    }
+    #userInfo .login-btn {
+        flex: 1 1 calc(50% - 4px);
+        min-width: 0;
+        min-height: 44px;
+        padding: 8px 10px;
+    }
+    #userInfo .login-btn-text {
+        font-size: 0.58rem;
+        white-space: normal;
+        text-align: left;
+    }
+    #userInfo .login-ss14-logo {
+        height: 18px;
+    }
     #userPanel {
         order: 3;
         width: 100%;
@@ -6824,7 +6872,7 @@ label.chat-tool-btn input[type="file"] {
     z-index: 1200;
     display: grid;
     place-items: center;
-    padding: 16px;
+    padding: 20px;
 }
 .referral-modal[hidden] { display: none !important; }
 .referral-modal-backdrop {
@@ -6838,18 +6886,49 @@ label.chat-tool-btn input[type="file"] {
     width: min(440px, 100%);
     background: var(--card);
     border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 22px;
+    border-radius: var(--radius);
+    padding: 24px;
     box-shadow: 0 18px 50px rgba(0, 0, 0, 0.25);
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+.referral-modal-head {
+    display: grid;
+    gap: 10px;
 }
 .referral-modal-card h2 {
-    margin: 0 0 10px;
-    font-size: 1.15rem;
+    margin: 0;
+    font-size: 1.05rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    line-height: 1.35;
 }
-.referral-modal-card p { margin: 0 0 14px; color: var(--muted); }
+.referral-modal-card p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.92rem;
+    line-height: 1.55;
+}
+.referral-modal-body {
+    display: grid;
+    gap: 12px;
+}
+.referral-field {
+    display: grid;
+    gap: 8px;
+}
+.referral-field > span {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
 .referral-modal-card input {
     width: 100%;
-    margin-bottom: 8px;
+    margin: 0;
     text-transform: uppercase;
     letter-spacing: 0.08em;
     font-weight: 700;
@@ -6858,52 +6937,137 @@ label.chat-tool-btn input[type="file"] {
     display: flex;
     gap: 10px;
     flex-wrap: wrap;
-    margin-top: 12px;
+    margin-top: 4px;
+}
+.referral-modal-actions button {
+    min-height: 42px;
+    flex: 1 1 140px;
 }
 .referral-apply-result {
-    min-height: 1.2em;
-    font-size: 0.9rem;
+    min-height: 1.25em;
+    font-size: 0.88rem;
     color: var(--success);
+    line-height: 1.4;
 }
+
+.profile-extra-blocks {
+    display: grid;
+    gap: 12px;
+    padding: 16px 20px 0;
+}
+.profile-extra-blocks .game-link-slot:empty {
+    display: none;
+}
+
 .referral-card,
 .game-link-card {
-    margin-top: 16px;
-    padding: 16px;
-    border-radius: 14px;
+    margin: 0;
+    padding: 16px 18px;
+    border-radius: var(--radius-sm);
     border: 1px solid var(--border);
-    background: color-mix(in srgb, var(--card) 90%, var(--accent) 10%);
+    background: color-mix(in srgb, var(--panel) 92%, var(--accent) 8%);
 }
 .game-link-card--ok {
     border-color: color-mix(in srgb, var(--success) 40%, var(--border));
 }
 .referral-card h3,
 .game-link-card h3 {
-    margin: 0 0 8px;
-    font-size: 1rem;
+    margin: 0 0 10px;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    line-height: 1.35;
 }
 .referral-hint,
 .referral-meta,
 .referral-link-preview,
-.game-link-card p {
-    margin: 0 0 8px;
+.game-link-card p,
+.game-link-note {
+    margin: 0 0 10px;
     color: var(--muted);
-    font-size: 0.9rem;
+    font-size: 0.88rem;
+    line-height: 1.5;
+}
+.referral-hint:last-child,
+.referral-meta:last-child,
+.referral-link-preview:last-child,
+.game-link-card p:last-child,
+.game-link-note:last-child {
+    margin-bottom: 0;
 }
 .referral-code-row {
     display: flex;
-    gap: 8px;
+    gap: 10px;
     flex-wrap: wrap;
     align-items: center;
-    margin: 10px 0;
+    margin: 12px 0;
 }
 .referral-code {
     display: inline-flex;
-    padding: 8px 12px;
-    border-radius: 10px;
+    align-items: center;
+    min-height: 40px;
+    padding: 8px 14px;
+    border-radius: var(--radius-sm);
     background: var(--bg);
     border: 1px dashed var(--border);
     font-weight: 800;
     letter-spacing: 0.12em;
 }
-.game-link-btn { margin-top: 8px; }
+.referral-link-preview {
+    word-break: break-all;
+    font-size: 0.8rem;
+    opacity: 0.9;
+}
+.game-link-btn {
+    margin-top: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 40px;
+}
+.game-link-slot > .game-link-card,
+.game-link-slot > .game-link-panel {
+    margin: 0;
+}
+.card--game-link .game-link-slot > .game-link-card,
+.card--game-link .game-link-slot > .game-link-panel {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    border-radius: 0;
+}
+.card--game-link .game-link-slot > .game-link-card h3,
+.card--game-link .game-link-slot > .game-link-panel h3 {
+    display: none;
+}
+.card--game-link .game-link-slot {
+    margin-top: 4px;
+}
 body.modal-open { overflow: hidden; }
+
+@media (max-width: 768px) {
+    .referral-modal {
+        padding: 16px;
+        align-items: end;
+    }
+    .referral-modal-card {
+        padding: 20px 18px;
+        gap: 16px;
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
+    }
+    .profile-extra-blocks {
+        padding: 14px 14px 0;
+    }
+    .referral-code-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .referral-code-row .btn-sm {
+        width: 100%;
+        justify-content: center;
+    }
+}
