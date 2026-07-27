@@ -415,15 +415,15 @@ body {
 }
 .login-btn--discord:hover { background: #6b76ff; color: #fff; }
 .login-btn--ss14 {
-    background: #0d0d0d;
-    color: #fff;
-    border-color: #2b2b2b;
-    box-shadow: var(--shadow-btn-color);
+    background: var(--panel-2);
+    color: var(--ink);
+    border-color: var(--border-strong);
+    box-shadow: var(--shadow-btn);
 }
 .login-btn--ss14:hover {
-    background: #1a1a1a;
-    color: #fff;
-    border-color: #444;
+    background: var(--panel-3);
+    color: var(--ink);
+    border-color: var(--border-strong);
 }
 .login-ss14-logo {
     display: block;
