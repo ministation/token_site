@@ -18,6 +18,8 @@ async function checkAuth() {
         currentUser = data;
 
         if (data.site_banned) {
+            const loginArea = document.getElementById('loginArea');
+            if (loginArea) loginArea.style.display = '';
             const loginBtns = document.getElementById('loginBtns');
             if (loginBtns) loginBtns.style.display = '';
             document.getElementById('userPanel').style.display = 'none';
@@ -28,6 +30,9 @@ async function checkAuth() {
         }
 
         if (data.authenticated) {
+            if (typeof markAuthenticatedOnce === 'function') markAuthenticatedOnce();
+            const loginArea = document.getElementById('loginArea');
+            if (loginArea) loginArea.style.display = 'none';
             const loginBtns = document.getElementById('loginBtns');
             if (loginBtns) loginBtns.style.display = 'none';
             const panel = document.getElementById('userPanel');
@@ -54,6 +59,8 @@ async function checkAuth() {
             if (typeof maybeShowReferralWelcome === 'function') maybeShowReferralWelcome();
             if (typeof refreshLinkStatus === 'function') refreshLinkStatus();
         } else {
+            const loginArea = document.getElementById('loginArea');
+            if (loginArea) loginArea.style.display = '';
             const loginBtns = document.getElementById('loginBtns');
             if (loginBtns) loginBtns.style.display = '';
             document.getElementById('userPanel').style.display = 'none';
@@ -107,13 +114,13 @@ async function solvePowChallenge(challenge) {
     throw new Error('Не удалось пройти антибот-проверку');
 }
 
-async function loginSs14() {
+async function loginSs14Direct() {
     const ref = typeof getStoredReferralCode === 'function' ? getStoredReferralCode() : '';
     const params = ref ? `?ref=${encodeURIComponent(ref)}` : '';
     window.location.href = `${API_BASE}/login/ss14${params}`;
 }
 
-async function login() {
+async function loginDirect() {
     try {
         const chRes = await fetch(`${API_BASE}/api/auth/challenge`);
         if (!chRes.ok) {

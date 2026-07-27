@@ -49,6 +49,11 @@
     --purple: #7a5cd6;
     --discord: #5865F2;
 
+    --ss14-btn-bg: #525a66;
+    --ss14-btn-border: #3d444e;
+    --ss14-btn-text: #f3f6fa;
+    --ss14-btn-hover: #454c57;
+
     --grad-accent: linear-gradient(135deg, #f5c518 0%, #f59e0b 48%, #ea580c 100%);
     --grad-hero: linear-gradient(135deg, #fde047 0%, #f59e0b 42%, #ea580c 100%);
     --grad-warm: linear-gradient(90deg, #f5c518 0%, #f59e0b 50%, #ea580c 100%);
@@ -98,6 +103,11 @@ html[data-theme="dark"] {
     --ban-job-soft: rgba(96, 165, 250, 0.14);
     --success: #38c273;
     --success-deep: #279a58;
+
+    --ss14-btn-bg: #2a3139;
+    --ss14-btn-border: #1c2128;
+    --ss14-btn-text: #e9eef9;
+    --ss14-btn-hover: #353d47;
 
     --grad-accent: linear-gradient(135deg, #ffd54f 0%, #ff9800 48%, #ff6d00 100%);
     --grad-hero: linear-gradient(135deg, #78350f 0%, #d97706 42%, #ea580c 100%);
@@ -386,6 +396,10 @@ body {
     border-radius: var(--radius-sm);
 }
 
+#userInfo .login-area {
+    display: flex;
+    align-items: center;
+}
 #userInfo .login-btns {
     display: flex;
     align-items: center;
@@ -415,15 +429,15 @@ body {
 }
 .login-btn--discord:hover { background: #6b76ff; color: #fff; }
 .login-btn--ss14 {
-    background: var(--panel-3);
-    color: var(--ink);
-    border-color: var(--border-strong);
-    box-shadow: var(--shadow-btn);
+    background: var(--ss14-btn-bg);
+    color: var(--ss14-btn-text);
+    border-color: var(--ss14-btn-border);
+    box-shadow: var(--shadow-btn-color);
 }
 .login-btn--ss14:hover {
-    background: color-mix(in srgb, var(--border-strong) 28%, var(--panel-3));
-    color: var(--ink);
-    border-color: var(--border-strong);
+    background: var(--ss14-btn-hover);
+    color: var(--ss14-btn-text);
+    border-color: var(--ss14-btn-border);
 }
 .login-ss14-logo {
     display: block;
@@ -4624,7 +4638,11 @@ label.chat-tool-btn input[type="file"] {
         height: 38px;
     }
     #loginBtn,
+    #userInfo .login-area,
     #userInfo .login-btns { order: 2; }
+    #userInfo .login-area {
+        width: 100%;
+    }
     #userInfo .login-btns {
         width: 100%;
         justify-content: flex-end;
@@ -6925,6 +6943,14 @@ label.chat-tool-btn input[type="file"] {
     color: var(--muted);
     text-transform: uppercase;
     letter-spacing: 0.04em;
+}
+.referral-optional {
+    font-style: normal;
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--muted);
+    opacity: 0.85;
 }
 .referral-modal-card input {
     width: 100%;

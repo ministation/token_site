@@ -1,0 +1,20 @@
+    <div id="referralModal" class="referral-modal" hidden data-mode="postauth">
+        <div class="referral-modal-backdrop" onclick="referralModalSkipClick()"></div>
+        <div class="referral-modal-card" role="dialog" aria-labelledby="referralModalTitle">
+            <div class="referral-modal-head">
+                <h2 id="referralModalTitle"><i class="fa-solid fa-gift"></i> Добро пожаловать!</h2>
+                <p id="referralModalDesc">Есть реферальный код друга? Введите его и получите <b>3 монеты</b>. Друг получит <b>5 монет</b>.</p>
+            </div>
+            <div class="referral-modal-body">
+                <label class="referral-field" for="referralCodeInput">
+                    <span>Реферальный код <em class="referral-optional">(необязательно)</em></span>
+                    <input type="text" id="referralCodeInput" placeholder="Например, ABC12XYZ" maxlength="32" autocomplete="off">
+                </label>
+                <div id="referralApplyResult" class="referral-apply-result" aria-live="polite"></div>
+            </div>
+            <div class="referral-modal-actions">
+                <button type="button" id="referralPrimaryBtn" onclick="referralModalPrimaryClick()">Применить</button>
+                <button type="button" id="referralSkipBtn" class="btn-ghost" onclick="referralModalSkipClick()">Пропустить</button>
+            </div>
+        </div>
+    </div>

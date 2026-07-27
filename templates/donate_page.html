@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="/static/js/theme.js"></script>
     <script src="/static/js/ambient.js" defer></script>
-    <link rel="stylesheet" href="/static/style.css?v=referral6">
+    <link rel="stylesheet" href="/static/style.css?v=referral9">
     <link rel="stylesheet" href="/static/chat-discord.css">
     <link rel="icon" type="image/png" href="/static/coin.png">
 </head>
@@ -36,15 +36,17 @@
                 <button type="button" class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Сменить тему">
                     <i class="fa-solid fa-moon"></i>
                 </button>
-                <div id="loginBtns" class="login-btns">
-                    <button id="loginDiscordBtn" type="button" class="login-btn login-btn--discord" onclick="loginForDonate('discord')" title="Авторизация через Discord">
-                        <i class="fa-brands fa-discord" aria-hidden="true"></i>
-                        <span class="login-btn-text">Войти через Discord</span>
-                    </button>
-                    <button id="loginSs14Btn" type="button" class="login-btn login-btn--ss14" onclick="loginForDonate('ss14')" title="Авторизация через аккаунт SS14">
-                        <img src="/static/ss14-logo.png" alt="SS14" class="login-ss14-logo" width="52" height="22">
-                        <span class="login-btn-text">Войти через SS14</span>
-                    </button>
+                <div id="loginArea" class="login-area">
+                    <div id="loginBtns" class="login-btns">
+                        <button id="loginDiscordBtn" type="button" class="login-btn login-btn--discord" onclick="requestLogin('discord')" title="Авторизация через Discord">
+                            <i class="fa-brands fa-discord" aria-hidden="true"></i>
+                            <span class="login-btn-text">Войти через Discord</span>
+                        </button>
+                        <button id="loginSs14Btn" type="button" class="login-btn login-btn--ss14" onclick="requestLogin('ss14')" title="Авторизация через аккаунт SS14">
+                            <img src="/static/ss14-logo.png" alt="SS14" class="login-ss14-logo" width="52" height="22">
+                            <span class="login-btn-text">Войти через SS14</span>
+                        </button>
+                    </div>
                 </div>
                 <div id="userPanel" style="display:none;"></div>
             </div>
@@ -97,6 +99,8 @@
     {% set footer_support = '/donate#support' %}
     {% set footer_support_onclick = "if (typeof showDonatePanel === 'function') { showDonatePanel('support'); return false; }" %}
     {% include 'partials/site_footer.html' %}
+
+    {% include 'partials/referral_modal.html' %}
 
     <script src="/static/js/common.js"></script>
     <script src="/static/js/auth.js"></script>
@@ -173,12 +177,16 @@
         }
 
         function loginForDonate(provider) {
+            if (typeof requestLogin === 'function') {
+                requestLogin(provider);
+                return;
+            }
             if (provider === 'ss14') {
-                if (typeof loginSs14 === 'function') loginSs14();
+                if (typeof loginSs14Direct === 'function') loginSs14Direct();
                 else window.location.href = '/login/ss14';
                 return;
             }
-            if (typeof login === 'function') login();
+            if (typeof loginDirect === 'function') loginDirect();
         }
 
         async function checkDonateAuth() {
@@ -187,6 +195,9 @@
                 const data = await res.json();
                 currentUser = data;
                 if (data.authenticated) {
+                    if (typeof markAuthenticatedOnce === 'function') markAuthenticatedOnce();
+                    const loginArea = document.getElementById('loginArea');
+                    if (loginArea) loginArea.style.display = 'none';
                     const loginBtns = document.getElementById('loginBtns');
                     if (loginBtns) loginBtns.style.display = 'none';
                     const panel = document.getElementById('userPanel');

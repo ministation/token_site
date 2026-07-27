@@ -104,7 +104,8 @@ async function claimCompensation() {
     if (!compensationState?.active) return;
 
     if (!currentUser?.authenticated) {
-        login();
+        if (typeof requestLogin === 'function') requestLogin('discord');
+        else if (typeof loginDirect === 'function') loginDirect();
         return;
     }
     if (!currentUser?.player) {

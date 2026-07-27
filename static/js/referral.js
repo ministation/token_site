@@ -1,3 +1,21 @@
+const REFERRAL_AUTH_ONCE_KEY = 'ms_auth_once';
+let pendingAuthProvider = null;
+let referralModalMode = 'postauth';
+
+function hasAuthenticatedBefore() {
+    try {
+        return localStorage.getItem(REFERRAL_AUTH_ONCE_KEY) === '1';
+    } catch (e) {
+        return false;
+    }
+}
+
+function markAuthenticatedOnce() {
+    try {
+        localStorage.setItem(REFERRAL_AUTH_ONCE_KEY, '1');
+    } catch (e) {}
+}
+
 function getStoredReferralCode() {
     const params = new URLSearchParams(location.search);
     const fromUrl = (params.get('ref') || '').trim().toUpperCase();
@@ -6,6 +24,109 @@ function getStoredReferralCode() {
         return fromUrl;
     }
     return (sessionStorage.getItem('pendingReferralCode') || '').trim().toUpperCase();
+}
+
+function shouldShowPreAuthReferralGate() {
+    if (hasAuthenticatedBefore()) return false;
+    const params = new URLSearchParams(location.search);
+    if (params.get('ref')) return false;
+    return true;
+}
+
+function requestLogin(provider) {
+    pendingAuthProvider = provider;
+    if (!shouldShowPreAuthReferralGate()) {
+        proceedLogin(provider);
+        return;
+    }
+    showPreAuthReferralModal(provider);
+}
+
+function proceedLogin(provider) {
+    if (provider === 'ss14') {
+        if (typeof loginSs14Direct === 'function') loginSs14Direct();
+        else window.location.href = `${API_BASE || ''}/login/ss14`;
+        return;
+    }
+    if (typeof loginDirect === 'function') loginDirect();
+}
+
+function providerLabel(provider) {
+    return provider === 'ss14' ? 'SS14' : 'Discord';
+}
+
+function updateReferralModalMode(mode, provider) {
+    referralModalMode = mode;
+    const modal = document.getElementById('referralModal');
+    if (modal) modal.dataset.mode = mode;
+
+    const title = document.getElementById('referralModalTitle');
+    const desc = document.getElementById('referralModalDesc');
+    const primaryBtn = document.getElementById('referralPrimaryBtn');
+    const skipBtn = document.getElementById('referralSkipBtn');
+
+    if (mode === 'preauth') {
+        if (title) title.innerHTML = '<i class="fa-solid fa-gift"></i> Реферальный код';
+        if (desc) {
+            desc.innerHTML = 'При первой регистрации можно указать код друга и получить <b>3 монеты</b>. Друг получит <b>5 монет</b>. Поле необязательное.';
+        }
+        if (primaryBtn) primaryBtn.textContent = `Продолжить через ${providerLabel(provider)}`;
+        if (skipBtn) skipBtn.textContent = 'Пропустить и войти';
+        return;
+    }
+
+    if (title) title.innerHTML = '<i class="fa-solid fa-gift"></i> Добро пожаловать!';
+    if (desc) {
+        desc.innerHTML = 'Есть реферальный код друга? Введите его и получите <b>3 монеты</b>. Друг получит <b>5 монет</b>.';
+    }
+    if (primaryBtn) primaryBtn.textContent = 'Применить';
+    if (skipBtn) skipBtn.textContent = 'Пропустить';
+}
+
+function showPreAuthReferralModal(provider) {
+    pendingAuthProvider = provider;
+    const modal = document.getElementById('referralModal');
+    if (!modal) {
+        proceedLogin(provider);
+        return;
+    }
+    updateReferralModalMode('preauth', provider);
+    const input = document.getElementById('referralCodeInput');
+    const result = document.getElementById('referralApplyResult');
+    if (input) input.value = '';
+    if (result) result.textContent = '';
+    modal.hidden = false;
+    document.body.classList.add('modal-open');
+    input?.focus();
+}
+
+function referralModalPrimaryClick() {
+    if (referralModalMode === 'preauth') confirmPreAuthReferral();
+    else submitReferralCode();
+}
+
+function referralModalSkipClick() {
+    if (referralModalMode === 'preauth') skipPreAuthReferral();
+    else skipReferralPrompt();
+}
+
+function confirmPreAuthReferral() {
+    const input = document.getElementById('referralCodeInput');
+    const code = (input?.value || '').trim().toUpperCase();
+    if (code) sessionStorage.setItem('pendingReferralCode', code);
+    else sessionStorage.removeItem('pendingReferralCode');
+    hideReferralModal();
+    const provider = pendingAuthProvider || 'discord';
+    pendingAuthProvider = null;
+    proceedLogin(provider);
+}
+
+function skipPreAuthReferral() {
+    sessionStorage.removeItem('pendingReferralCode');
+    hideReferralModal();
+    const provider = pendingAuthProvider || 'discord';
+    pendingAuthProvider = null;
+    proceedLogin(provider);
 }
 
 function referralInviteUrl(code) {
@@ -34,10 +155,11 @@ async function copyReferralCode(code) {
 }
 
 function showReferralModal() {
+    updateReferralModalMode('postauth');
     const modal = document.getElementById('referralModal');
     if (!modal) return;
     const input = document.getElementById('referralCodeInput');
-    const stored = typeof getStoredReferralCode === 'function' ? getStoredReferralCode() : '';
+    const stored = getStoredReferralCode();
     if (input && stored) input.value = stored;
     modal.hidden = false;
     document.body.classList.add('modal-open');
@@ -193,3 +315,13 @@ async function refreshLinkStatus() {
         hosts.forEach(host => { host.innerHTML = html; });
     } catch (e) {}
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    const input = document.getElementById('referralCodeInput');
+    input?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            referralModalPrimaryClick();
+        }
+    });
+});
