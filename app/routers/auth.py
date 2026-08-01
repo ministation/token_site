@@ -3,9 +3,16 @@ import secrets
 import aiohttp
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import RedirectResponse, HTMLResponse
-from app.config import ADMIN_DISCORD_IDS, DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, DISCORD_REDIRECT_URI, SITE_PUBLIC_URL
+from app.config import (
+    ADMIN_DISCORD_IDS,
+    DISCORD_CLIENT_ID,
+    DISCORD_CLIENT_SECRET,
+    DISCORD_REDIRECT_URI,
+    GAME_AUTH_SECRET,
+    SITE_PUBLIC_URL,
+)
 from app.services.auth_session import apply_staff_flags, sync_roles_from_game
-from app.services.roles import apply_roles
+from app.services.roles import ROLE_ADMIN, apply_roles
 from app.core.sessions import (
     get_session, set_session, delete_session, generate_session_token, user_sessions
 )
@@ -20,6 +27,7 @@ from app.services.referral import apply_referral_code, ensure_referral_code
 from app.services.social import get_or_create_social_user
 from app.services.avatars import sync_discord_avatar_for_user, resolve_avatar_url
 from app.services.site_bans import get_active_ban
+from app.services.game_auth_token import verify_site_login_token
 import database_social as social_db
 
 
@@ -198,6 +206,101 @@ async def callback(request: Request, code: str, state: str):
         httponly=True,
         samesite="lax",
         max_age=30 * 24 * 3600
+    )
+    return response
+
+
+@router.get("/api/auth/game")
+async def auth_from_game(request: Request, token: str = ""):
+    """Auto-login after SS14 Discord auth service links the account."""
+    from app.core.ratelimit import enforce_rate
+
+    enforce_rate(request, "game_auth", limit=20, window=60.0)
+    if not GAME_AUTH_SECRET:
+        raise HTTPException(status_code=503, detail="Game auth handoff is not configured")
+    if not token:
+        raise HTTPException(status_code=400, detail="Missing token")
+
+    try:
+        payload = verify_site_login_token(token, GAME_AUTH_SECRET, consume=True)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    discord_id = str(payload["discord_id"])
+    if not discord_id.isdigit():
+        raise HTTPException(status_code=400, detail="Invalid discord_id")
+    username = str(payload["username"])[:64]
+    avatar = payload.get("avatar")
+    ss14_user_id = payload.get("ss14_user_id")
+
+    if ss14_user_id:
+        ok, err = await link_discord_account(str(ss14_user_id), discord_id)
+        if not ok and err and "уже привязан" in err:
+            raise HTTPException(status_code=409, detail=err)
+
+    session_token = generate_session_token()
+    session_data = {
+        "auth_provider": "discord",
+        "discord_id": discord_id,
+        "username": username,
+        "created": datetime.datetime.now().isoformat(),
+    }
+    if ss14_user_id:
+        session_data["ss14_user_id"] = str(ss14_user_id)
+
+    player = await find_player_by_discord(discord_id)
+    created = False
+    if player:
+        _, created = get_or_create_social_user(
+            player_id=player["player_id"],
+            user_uuid=player["user_uuid"],
+            discord_id=discord_id,
+            discord_username=username,
+            discord_avatar=avatar,
+            game_nickname=player["last_seen_user_name"],
+            return_created=True,
+        )
+        session_data["player"] = player
+    else:
+        _, created = get_or_create_social_user(
+            player_id=f"discord_{discord_id}",
+            user_uuid=f"discord_{discord_id}",
+            discord_id=discord_id,
+            discord_username=username,
+            discord_avatar=avatar,
+            game_nickname=username,
+            return_created=True,
+        )
+
+    try:
+        ensure_referral_code(discord_id)
+    except Exception:
+        pass
+
+    if created:
+        session_data["needs_referral"] = True
+
+    cached_avatar = await sync_discord_avatar_for_user(discord_id, avatar)
+    session_data["avatar"] = cached_avatar or resolve_avatar_url(
+        social_db.get_social_user_by_discord_id(discord_id)
+    )
+
+    await _sync_roles_from_game(session_data)
+    _apply_staff_flags(session_data)
+
+    ban = get_active_ban(discord_id)
+    if ban:
+        return RedirectResponse("/?site_banned=1")
+
+    set_session(session_token, session_data)
+    response = RedirectResponse("/?welcome=1" if session_data.get("needs_referral") else "/")
+    response.set_cookie(
+        key="session_token",
+        value=session_token,
+        httponly=True,
+        samesite="lax",
+        secure=SITE_PUBLIC_URL.startswith("https://"),
+        max_age=30 * 24 * 3600,
     )
     return response
 

@@ -73,6 +73,9 @@ SELLER_STATUS = os.getenv("SELLER_STATUS", "Самозанятый")
 
 SITE_PUBLIC_URL = os.getenv("SITE_PUBLIC_URL", "https://ministation.ru").rstrip("/")
 
+# Shared secret with discord_auth_ss14 for auto-login after in-game Discord linking
+GAME_AUTH_SECRET = os.getenv("GAME_AUTH_SECRET", "").strip()
+
 # SS14: статус онлайна и адрес прямого подключения (лаунчер)
 GAME_STATUS_URL = os.getenv("GAME_STATUS_URL", "http://ss14.ministation.ru:1214/status").rstrip("/")
 GAME_CONNECT_ADDRESS = os.getenv("GAME_CONNECT_ADDRESS", "ss14://ss14.ministation.ru:1214")
