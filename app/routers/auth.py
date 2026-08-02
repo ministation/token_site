@@ -28,6 +28,7 @@ from app.services.social import get_or_create_social_user
 from app.services.avatars import sync_discord_avatar_for_user, resolve_avatar_url
 from app.services.site_bans import get_active_ban
 from app.services.game_auth_token import verify_site_login_token
+from app.services.discord_auth_roles import assign_authorized_roles
 import database_social as social_db
 
 
@@ -135,6 +136,7 @@ async def callback(request: Request, code: str, state: str):
                 discord_avatar=avatar,
                 game_nickname=player['last_seen_user_name'],
             )
+        await assign_authorized_roles(discord_id)
         return HTMLResponse(
             f"<h2>Готово!</h2><p>Discord успешно привязан к игровому аккаунту.</p>"
             f"<p><a href=\"{SITE_PUBLIC_URL}\">Перейти на сайт</a></p>",
@@ -192,6 +194,7 @@ async def callback(request: Request, code: str, state: str):
 
     await _sync_roles_from_game(session_data)
     _apply_staff_flags(session_data)
+    await assign_authorized_roles(discord_id)
 
     ban = get_active_ban(discord_id)
     if ban:
@@ -224,7 +227,14 @@ async def auth_from_game(request: Request, token: str = ""):
     try:
         payload = verify_site_login_token(token, GAME_AUTH_SECRET, consume=True)
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        # Double-open of the same handoff URL (back button / double redirect):
+        # if already logged in — just go home; otherwise soft-fail without JSON dump.
+        msg = str(exc)
+        if request.cookies.get("session_token") and get_session(request.cookies.get("session_token") or ""):
+            return RedirectResponse("/")
+        if "already used" in msg.lower() or "expired" in msg.lower():
+            return RedirectResponse("/?auth_error=1")
+        raise HTTPException(status_code=400, detail=msg) from exc
 
     discord_id = str(payload["discord_id"])
     if not discord_id.isdigit():
@@ -287,6 +297,7 @@ async def auth_from_game(request: Request, token: str = ""):
 
     await _sync_roles_from_game(session_data)
     _apply_staff_flags(session_data)
+    await assign_authorized_roles(discord_id)
 
     ban = get_active_ban(discord_id)
     if ban:

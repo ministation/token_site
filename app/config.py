@@ -36,6 +36,13 @@ MODERATOR_USERNAMES = [
 # Discord-сервер и роли для автоматических тэгов
 DISCORD_BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN", "")
 DISCORD_GUILD_ID = os.getenv("DISCORD_GUILD_ID", "")
+# Выдача роли «Авторизован» после входа на сайт (Mini + Oasis)
+# DISCORD_AUTH_ROLES=guild:role,guild:role  или раздельные переменные ниже
+DISCORD_AUTH_ROLES = os.getenv("DISCORD_AUTH_ROLES", "").strip()
+DISCORD_AUTH_ROLE_ID = os.getenv("DISCORD_AUTH_ROLE_ID", "").strip()
+DISCORD_GUILD2_ID = os.getenv("DISCORD_GUILD2_ID", "").strip()
+DISCORD_AUTH_ROLE_ID_2 = os.getenv("DISCORD_AUTH_ROLE_ID_2", "").strip()
+DISCORD_GUILD2_BOT_TOKEN = os.getenv("DISCORD_GUILD2_BOT_TOKEN", "").strip()
 CONTENT_MAKER_ROLE_IDS = [int(x.strip()) for x in os.getenv("CONTENT_MAKER_ROLE_IDS", "").split(",") if x.strip()]
 TIME_KEEPER_ROLE_IDS = [int(x.strip()) for x in os.getenv("TIME_KEEPER_ROLE_IDS", "").split(",") if x.strip()]
 CONTENT_MAKER_DISCORD_IDS = [x.strip() for x in os.getenv("CONTENT_MAKER_DISCORD_IDS", "").split(",") if x.strip()]
