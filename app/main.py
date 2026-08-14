@@ -68,6 +68,22 @@ async def track_page_visits(request: Request, call_next):
     return response
 
 
+async def _background_staff_sync():
+    """Тяжёлая синхронизация после старта — не блокирует приём HTTP."""
+    try:
+        from app.services.game_staff import sync_all_game_moderators_on_site
+        from app.services.discord_badges import sync_all_member_badges
+
+        synced = await sync_all_game_moderators_on_site()
+        if synced:
+            print(f"✅ Синхронизировано модераторов с игры: {synced}")
+        badge_synced = await sync_all_member_badges()
+        if badge_synced:
+            print(f"✅ Синхронизированы тэги Discord: {badge_synced} аккаунтов")
+    except Exception as e:
+        print(f"⚠️ Фоновая синхронизация staff/badges: {e}")
+
+
 @app.on_event("startup")
 async def startup():
     load_sessions()
@@ -86,16 +102,9 @@ async def startup():
     closed = await retire_deposits_and_loans()
     if closed:
         print(f"✅ Закрыто активных вкладов: {closed}")
-    from app.services.game_staff import sync_all_game_moderators_on_site
-    from app.services.discord_badges import sync_all_member_badges
-    synced = await sync_all_game_moderators_on_site()
-    if synced:
-        print(f"✅ Синхронизировано модераторов с игры: {synced}")
-    badge_synced = await sync_all_member_badges()
-    if badge_synced:
-        print(f"✅ Синхронизированы тэги Discord: {badge_synced} аккаунтов")
     print("✅ Подключено к PostgreSQL (игровая БД)")
     print("✅ SQLite для соцсети готова")
+    asyncio.create_task(_background_staff_sync())
     asyncio.create_task(collector_loop(interval=300))
 
 
