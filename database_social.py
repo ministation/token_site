@@ -2240,10 +2240,10 @@ def donation_stats(
     cursor.execute(
         """
         SELECT
-            SUM(CASE WHEN receipt_uuid IS NOT NULL AND receipt_uuid != '' THEN 1 ELSE 0 END) AS issued,
+            SUM(CASE WHEN receipt_pdf_url IS NOT NULL AND receipt_pdf_url != '' THEN 1 ELSE 0 END) AS issued,
             SUM(CASE WHEN receipt_status = 'error' THEN 1 ELSE 0 END) AS errors,
             SUM(CASE
-                WHEN (receipt_uuid IS NULL OR receipt_uuid = '')
+                WHEN (receipt_pdf_url IS NULL OR receipt_pdf_url = '')
                      AND COALESCE(receipt_status, '') != 'error'
                 THEN 1 ELSE 0 END) AS missing
         FROM donation_orders

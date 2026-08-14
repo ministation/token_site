@@ -278,8 +278,6 @@
     </div>
 
     <div id="adminDonationsTab" class="admin-tab-content" style="display:none;">
-        <p class="admin-hint">Ручные оплаты СБП. После подтверждения выдаются привилегии и (если настроен «Мой налог») чек НПД для самозанятости.</p>
-
         <h3 class="admin-stats-heading"><i class="fa-solid fa-chart-line"></i> Метрика донатов</h3>
         <div class="admin-inline-form admin-donate-metrics-form">
             <select id="adminDonatePeriod" onchange="onAdminDonatePeriodChange()">
@@ -293,10 +291,9 @@
             <input type="date" id="adminDonateFrom" hidden>
             <input type="date" id="adminDonateTo" hidden>
             <button type="button" class="btn-sm" onclick="loadAdminDonationStats()">
-                <i class="fa-solid fa-rotate"></i> Обновить метрику
+                <i class="fa-solid fa-rotate"></i> Обновить
             </button>
         </div>
-        <div id="adminDonateNalogStatus" class="admin-hint"></div>
         <div id="adminDonateStats" class="stats-grid admin-stats-grid"><p class="empty-state">Загрузка...</p></div>
         <div id="adminDonateBreakdown" class="admin-donate-breakdown"></div>
 

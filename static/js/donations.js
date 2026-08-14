@@ -598,17 +598,9 @@ function updateDonateCheckoutUI() {
     const tier = (donateCatalog?.tiers || []).find(t => t.id === selectedDonateTierId);
     const pack = (donateCatalog?.coin_packs || []).find(p => p.id === selectedDonatePackId);
     const item = tier || pack;
-    const mode = donateCatalog?.mode || '';
 
-    if (hint && mode === 'platega') {
-        hint.innerHTML = 'Оплачивая заказ, вы принимаете <a href="/#/offer">публичную оферту</a>. '
-            + 'Откроется безопасная страница оплаты (СБП / карта). После оплаты привилегии активируются автоматически.';
-    } else if (hint && mode === 'robokassa') {
-        hint.innerHTML = 'Оплачивая заказ, вы принимаете <a href="/#/offer">публичную оферту</a>. '
-            + 'Откроется безопасная страница оплаты (СБП / карта). После оплаты привилегии активируются автоматически.';
-    } else if (hint && mode === 'manual_sbp') {
-        hint.innerHTML = 'Оплачивая заказ, вы принимаете <a href="/#/offer">публичную оферту</a>. '
-            + 'Оплата по СБП: после перевода нажмите «Я оплатил» — заказ проверит администратор.';
+    if (hint) {
+        hint.innerHTML = 'Оплачивая заказ, вы принимаете <a href="/#/offer">публичную оферту</a>.';
     }
 
     if (!item) {
@@ -872,7 +864,7 @@ async function markDonationPaid() {
     } catch (e) {
         if (res) {
             res.className = 'result error';
-            res.textContent = e.message || 'Не удалось отправить статус';
+            res.textContent = e.message || 'Ошибка';
         }
         if (btn) {
             btn.disabled = false;
@@ -914,32 +906,14 @@ async function refreshDonateOrderStatus() {
             if (banner) {
                 banner.hidden = false;
                 banner.className = 'donate-pay-banner ok';
-                if ((data.product_type || '') === 'coins') {
-                    banner.textContent = data.fulfilled
-                        ? `Оплата получена: ${data.coins_amount || ''} монет зачислено.`
-                        : `Оплата получена (${data.amount_rub || ''} ₽). Монеты зачислятся автоматически.`;
-                } else {
-                    banner.textContent = data.fulfilled
-                        ? `Оплата получена: ${data.tier_name || 'подписка'} активирована, роль донатера выдана в Discord.`
-                        : `Оплата получена: ${data.tier_name || 'подписка'} активируется…`;
-                }
+                banner.textContent = 'Оплата получена';
             }
             const res = document.getElementById('donateWaitResult');
             if (res) {
                 res.className = 'result success';
-                if (data.receipt_pdf_url) {
-                    res.innerHTML = 'Готово! Привилегии выданы. Чек PDF отправлен в <a href="/#messages">личные сообщения</a> и доступен выше.';
-                    stopDonateStatusPoll();
-                } else if (data.receipt_status === 'error') {
-                    res.textContent = 'Готово! Привилегии выданы. Чек временно недоступен — напишите в поддержку.';
-                    stopDonateStatusPoll();
-                } else {
-                    res.textContent = 'Готово! Привилегии выданы. Формируем чек…';
-                    // продолжаем poll, пока не появится PDF
-                }
-            } else if (data.receipt_pdf_url) {
-                stopDonateStatusPoll();
+                res.textContent = '';
             }
+            if (data.receipt_pdf_url) stopDonateStatusPoll();
         }
     } catch (_) { /* ignore poll errors */ }
 }
@@ -964,10 +938,10 @@ async function handleDonateReturnQuery() {
             banner.hidden = false;
             if (paid === '1') {
                 banner.className = 'donate-pay-banner ok';
-                banner.textContent = 'Оплата прошла. Если привилегии не появились сразу — обновите страницу через минуту.';
+                banner.textContent = 'Оплата получена';
             } else {
                 banner.className = 'donate-pay-banner fail';
-                banner.textContent = 'Оплата не завершена. Попробуйте снова.';
+                banner.textContent = 'Оплата не завершена';
             }
         }
     }
@@ -992,15 +966,7 @@ async function handleDonateReturnQuery() {
         const st = data.status || '';
         if (st === 'confirmed' || result === 'success' || paid === '1') {
             banner.classList.add('ok');
-            if ((data.product_type || '') === 'coins') {
-                banner.textContent = data.fulfilled
-                    ? `Оплата получена: ${data.coins_amount || ''} монет зачислено.`
-                    : `Оплата получена (${data.amount_rub || ''} ₽).`;
-            } else {
-                banner.textContent = data.fulfilled
-                    ? `Оплата получена: ${data.tier_name || 'тариф'} — роль донатера в Discord (${data.amount_rub || ''} ₽).`
-                    : `Оплата получена: ${data.tier_name || 'тариф'} (${data.amount_rub || ''} ₽).`;
-            }
+            banner.textContent = 'Оплата получена';
             showDonateWaitPanel(data);
             showDonateReceipt(data);
             if (st !== 'confirmed' || !data.receipt_pdf_url) {
@@ -1012,14 +978,14 @@ async function handleDonateReturnQuery() {
             banner.hidden = true;
         } else if (st === 'canceled' || result === 'fail' || paid === '0') {
             banner.classList.add('fail');
-            banner.textContent = 'Оплата не завершена. Попробуйте снова.';
+            banner.textContent = 'Оплата не завершена';
         } else {
             currentDonateOrderId = order;
             startDonateStatusPoll();
-            banner.textContent = 'Ожидаем подтверждение оплаты…';
+            banner.textContent = 'Ожидание оплаты…';
         }
     } catch {
         banner.classList.add('fail');
-        banner.textContent = 'Не удалось проверить статус заказа.';
+        banner.textContent = 'Не удалось проверить статус';
     }
 }

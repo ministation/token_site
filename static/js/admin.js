@@ -1079,20 +1079,24 @@ async function loadAdminDonations() {
         }
         container.innerHTML = orders.map(o => {
             const canConfirm = o.status === 'awaiting_confirmation' || o.status === 'pending';
-            const canReceipt = o.status === 'confirmed' && !o.receipt_uuid;
-            const hasReceipt = !!o.receipt_uuid;
-            const receiptErr = o.receipt_status === 'error';
+            const canReceipt = o.status === 'confirmed' && !o.receipt_pdf_url;
+            const hasReceipt = !!o.receipt_pdf_url;
             let receiptHtml = '';
             if (hasReceipt) {
                 receiptHtml = `<a class="btn-sm" href="${escapeHtml(o.receipt_pdf_url || o.receipt_url || '#')}" target="_blank" rel="noopener">
-                    <i class="fa-solid fa-file-pdf"></i> Чек PDF</a>`;
-            } else if (canReceipt || receiptErr) {
-                receiptHtml = `<button type="button" class="btn-sm" onclick='adminIssueDonationReceipt(${JSON.stringify(o.transaction_id)})'>
-                    <i class="fa-solid fa-receipt"></i> ${receiptErr ? 'Повторить чек' : 'Выдать чек'}</button>`;
+                    <i class="fa-solid fa-file-pdf"></i> Чек</a>
+                    <label class="btn-sm admin-receipt-upload-btn">
+                        <i class="fa-solid fa-upload"></i> Заменить
+                        <input type="file" accept=".pdf,image/*" hidden
+                            onchange='adminUploadDonationReceipt(${JSON.stringify(o.transaction_id)}, this)'>
+                    </label>`;
+            } else if (canReceipt) {
+                receiptHtml = `<label class="btn-sm admin-receipt-upload-btn">
+                    <i class="fa-solid fa-upload"></i> Чек
+                    <input type="file" accept=".pdf,image/*" hidden
+                        onchange='adminUploadDonationReceipt(${JSON.stringify(o.transaction_id)}, this)'>
+                </label>`;
             }
-            const errLine = receiptErr && o.receipt_error
-                ? `<div class="admin-user-sub" style="color:var(--danger)">Чек: ${escapeHtml(o.receipt_error)}</div>`
-                : '';
             return `
             <div class="admin-user-row">
                 <div class="admin-user-info">
@@ -1107,7 +1111,6 @@ async function loadAdminDonations() {
                         · ${o.created_at ? new Date(o.created_at).toLocaleString('ru-RU') : ''}
                         · <code>${escapeHtml((o.transaction_id || '').slice(0, 8))}…</code>
                     </div>
-                    ${errLine}
                 </div>
                 <div class="admin-donate-row-actions">
                 ${canConfirm ? `
@@ -1136,7 +1139,6 @@ function onAdminDonatePeriodChange() {
 async function loadAdminDonationStats() {
     const box = document.getElementById('adminDonateStats');
     const breakdown = document.getElementById('adminDonateBreakdown');
-    const nalogEl = document.getElementById('adminDonateNalogStatus');
     if (!box) return;
     const period = document.getElementById('adminDonatePeriod')?.value || 'month';
     let qs = `?period=${encodeURIComponent(period)}`;
@@ -1152,11 +1154,6 @@ async function loadAdminDonationStats() {
     box.innerHTML = '<p class="empty-state">Загрузка...</p>';
     try {
         const s = await apiCall('GET', '/api/admin/donations/stats' + qs);
-        if (nalogEl) {
-            nalogEl.textContent = s.nalog?.configured
-                ? `Мой налог: подключен · авто-чек ${s.nalog.auto_receipt ? 'вкл' : 'выкл'} · ставка ${(Number(s.tax_rate) * 100).toFixed(0)}%`
-                : 'Мой налог: не настроен (задайте NALOG_INN и NALOG_PASSWORD в .env) — чеки можно будет выдавать после настройки';
-        }
         const fmt = (n) => Number(n || 0).toLocaleString('ru-RU');
         box.innerHTML = `
             <div class="stat-item"><div class="stat-value">${fmt(s.total_rub)} ₽</div><div class="stat-label">Выручка</div></div>
@@ -1164,7 +1161,7 @@ async function loadAdminDonationStats() {
             <div class="stat-item"><div class="stat-value">${fmt(s.unique_donors)}</div><div class="stat-label">Донатеров</div></div>
             <div class="stat-item"><div class="stat-value">${fmt(s.avg_check_rub)} ₽</div><div class="stat-label">Средний чек</div></div>
             <div class="stat-item"><div class="stat-value">${fmt(s.tax_estimate_rub)} ₽</div><div class="stat-label">НПД ~${(Number(s.tax_rate) * 100).toFixed(0)}%</div></div>
-            <div class="stat-item"><div class="stat-value">${fmt(s.receipts?.issued || 0)}</div><div class="stat-label">Чеков НПД</div></div>
+            <div class="stat-item"><div class="stat-value">${fmt(s.receipts?.issued || 0)}</div><div class="stat-label">Чеков</div></div>
         `;
         if (breakdown) {
             const items = (s.by_item || []).slice(0, 8).map(r =>
@@ -1191,8 +1188,6 @@ async function loadAdminDonationStats() {
                         <ul class="admin-donate-list">${days}</ul>
                     </div>
                 </div>
-                <p class="admin-hint">Период: ${escapeHtml(s.date_from)} — ${escapeHtml(s.date_to)}.
-                    Без чека: ${fmt(s.receipts?.missing || 0)}, ошибки чеков: ${fmt(s.receipts?.errors || 0)}.</p>
             `;
         }
     } catch (e) {
@@ -1201,7 +1196,7 @@ async function loadAdminDonationStats() {
 }
 
 async function adminConfirmDonation(txId) {
-    if (!confirm('Подтвердить оплату и выдать привилегии (роль Discord / монеты за пакет)?')) return;
+    if (!confirm('Подтвердить оплату?')) return;
     try {
         await apiCall('POST', `/api/admin/donations/${encodeURIComponent(txId)}/confirm`);
         loadAdminDonations();
@@ -1211,13 +1206,18 @@ async function adminConfirmDonation(txId) {
     }
 }
 
-async function adminIssueDonationReceipt(txId) {
-    if (!confirm('Создать чек в «Мой налог» по этой оплате?')) return;
+async function adminUploadDonationReceipt(txId, input) {
+    const file = input?.files?.[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('file', file);
     try {
-        await apiCall('POST', `/api/admin/donations/${encodeURIComponent(txId)}/receipt`, {});
+        await apiCall('POST', `/api/admin/donations/${encodeURIComponent(txId)}/receipt`, formData);
         loadAdminDonations();
         loadAdminDonationStats();
     } catch (e) {
         alert(e.message);
+    } finally {
+        if (input) input.value = '';
     }
 }

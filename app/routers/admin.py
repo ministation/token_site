@@ -618,26 +618,29 @@ async def admin_confirm_donation(transaction_id: str, request: Request):
 
 
 @router.post("/donations/{transaction_id}/receipt")
-async def admin_issue_donation_receipt(transaction_id: str, request: Request):
-    """Выдать / перевыдать чек НПД («Мой налог») по заказу."""
+async def admin_upload_donation_receipt(
+    transaction_id: str,
+    request: Request,
+    file: UploadFile = File(...),
+):
+    """Прикрепить чек (PDF/картинка) к заказу — покажется игроку и уйдёт в ЛС."""
     await get_current_admin(request)
     from app.services import donations as donations_svc
-    from app.services.donation_receipts import issue_receipt_for_order
+    from app.services.donation_receipts import attach_receipt_file
 
     order = social_db.get_donation_order_by_tx(transaction_id)
     if not order:
         raise HTTPException(status_code=404, detail="Заказ не найден")
-    force = False
+    raw = await file.read()
     try:
-        body = await request.json()
-        if isinstance(body, dict):
-            force = bool(body.get("force"))
-    except Exception:
-        pass
-    try:
-        order = await issue_receipt_for_order(order, force=force)
+        order = attach_receipt_file(
+            order,
+            file_bytes=raw,
+            filename=file.filename or "receipt.pdf",
+            send_pm=True,
+        )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Не удалось создать чек: {e}")
+        raise HTTPException(status_code=500, detail=f"Не удалось сохранить чек: {e}")
     return {"success": True, "order": donations_svc.serialize_order(order)}

@@ -526,7 +526,7 @@ def sbp_payment_info(amount_rub: int | None = None) -> dict:
         "qr": SBP_QR_PATH,
         "amount_rub": amount_rub,
         "amount_label": _rub_label(amount_rub) if amount_rub is not None else None,
-        "hint": "Отсканируйте QR в банковском приложении или откройте ссылку СБП. В комментарии укажите номер заказа.",
+        "hint": "В комментарии к переводу — номер заказа.",
     }
 
 
