@@ -25,7 +25,7 @@ from app.db.database import get_pg_pool
 from app.services import robokassa
 from app.services.bank import add_tokens
 from app.services.discord_sponsor_roles import assign_sponsor_role
-from app.services.mail import send_email, smtp_configured
+from app.services.mail import send_email_background, smtp_configured
 
 
 async def upsert_discord_sponsor(discord_id: str | int, sponsor_level: int) -> dict:
@@ -816,7 +816,7 @@ def _notify_admin_pending(order: dict) -> None:
         f"{admin_url}\n"
         f"Или API: POST /api/admin/donations/{tx}/confirm\n"
     )
-    send_email(subject=subject, body=body, to=DONATION_NOTIFY_EMAIL)
+    send_email_background(subject=subject, body=body, to=DONATION_NOTIFY_EMAIL)
 
 
 async def fetch_payment_status(transaction_id: str) -> dict:

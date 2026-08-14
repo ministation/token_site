@@ -1,6 +1,7 @@
-"""Простая отправка писем через SMTP."""
+"""Простая отправка писем через SMTP (без блокировки event loop)."""
 from __future__ import annotations
 
+import asyncio
 import logging
 import smtplib
 from email.message import EmailMessage
@@ -46,7 +47,8 @@ def send_email(
     msg["To"] = recipient
     msg.set_content(body)
     try:
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=25) as server:
+        # Короткий timeout: иначе при недоступном SMTP «висит» весь сайт
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=8) as server:
             if SMTP_USE_TLS:
                 server.starttls()
             server.login(SMTP_USER, SMTP_PASSWORD)
@@ -55,3 +57,22 @@ def send_email(
     except Exception:
         logger.exception("Не удалось отправить email на %s", recipient)
         return False
+
+
+def send_email_background(
+    *,
+    subject: str,
+    body: str,
+    to: str | None = None,
+) -> None:
+    """Ставит отправку в фон — не блокирует ответ API."""
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        send_email(subject=subject, body=body, to=to)
+        return
+
+    async def _run() -> None:
+        await asyncio.to_thread(send_email, subject=subject, body=body, to=to)
+
+    loop.create_task(_run())
