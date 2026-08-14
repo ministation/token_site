@@ -435,6 +435,20 @@ def _migrate_schema():
         cursor.execute("ALTER TABLE donation_orders ADD COLUMN game_user_uuid TEXT")
     if "fulfilled" not in don_cols:
         cursor.execute("ALTER TABLE donation_orders ADD COLUMN fulfilled INTEGER DEFAULT 0")
+    if "receipt_uuid" not in don_cols:
+        cursor.execute("ALTER TABLE donation_orders ADD COLUMN receipt_uuid TEXT")
+    if "receipt_url" not in don_cols:
+        cursor.execute("ALTER TABLE donation_orders ADD COLUMN receipt_url TEXT")
+    if "receipt_status" not in don_cols:
+        cursor.execute("ALTER TABLE donation_orders ADD COLUMN receipt_status TEXT")
+    if "receipt_error" not in don_cols:
+        cursor.execute("ALTER TABLE donation_orders ADD COLUMN receipt_error TEXT")
+    if "receipt_issued_at" not in don_cols:
+        cursor.execute("ALTER TABLE donation_orders ADD COLUMN receipt_issued_at TIMESTAMP")
+    if "receipt_pdf_url" not in don_cols:
+        cursor.execute("ALTER TABLE donation_orders ADD COLUMN receipt_pdf_url TEXT")
+    if "receipt_pm_sent" not in don_cols:
+        cursor.execute("ALTER TABLE donation_orders ADD COLUMN receipt_pm_sent INTEGER DEFAULT 0")
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS sponsorships (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -2032,6 +2046,13 @@ def update_donation_order(
     raw_callback: str | None = None,
     fulfilled: int | None = None,
     payload: str | None = None,
+    receipt_uuid: str | None = None,
+    receipt_url: str | None = None,
+    receipt_status: str | None = None,
+    receipt_error: str | None = None,
+    receipt_issued_at: str | None = None,
+    receipt_pdf_url: str | None = None,
+    receipt_pm_sent: int | None = None,
 ) -> bool:
     conn = get_db()
     cursor = conn.cursor()
@@ -2052,6 +2073,27 @@ def update_donation_order(
     if payload is not None:
         sets.append("payload = ?")
         params.append(payload)
+    if receipt_uuid is not None:
+        sets.append("receipt_uuid = ?")
+        params.append(receipt_uuid)
+    if receipt_url is not None:
+        sets.append("receipt_url = ?")
+        params.append(receipt_url)
+    if receipt_status is not None:
+        sets.append("receipt_status = ?")
+        params.append(receipt_status)
+    if receipt_error is not None:
+        sets.append("receipt_error = ?")
+        params.append(receipt_error)
+    if receipt_issued_at is not None:
+        sets.append("receipt_issued_at = ?")
+        params.append(receipt_issued_at)
+    if receipt_pdf_url is not None:
+        sets.append("receipt_pdf_url = ?")
+        params.append(receipt_pdf_url)
+    if receipt_pm_sent is not None:
+        sets.append("receipt_pm_sent = ?")
+        params.append(int(receipt_pm_sent))
     params.append(transaction_id)
     cursor.execute(
         f"UPDATE donation_orders SET {', '.join(sets)} WHERE transaction_id = ?",
@@ -2094,6 +2136,142 @@ def list_donation_orders(
     rows = [dict(r) for r in cursor.fetchall()]
     conn.close()
     return rows
+
+
+def donation_stats(
+    *,
+    date_from: str,
+    date_to: str,
+) -> dict:
+    """Метрики по confirmed-донатом за период [date_from, date_to] (UTC/локальные строки SQLite)."""
+    conn = get_db()
+    cursor = conn.cursor()
+    # inclusive day range via timestamps
+    start = f"{date_from} 00:00:00"
+    end = f"{date_to} 23:59:59"
+
+    cursor.execute(
+        """
+        SELECT
+            COUNT(*) AS orders_count,
+            COALESCE(SUM(amount_rub), 0) AS total_rub,
+            COUNT(DISTINCT CASE
+                WHEN discord_id IS NOT NULL AND discord_id != '' THEN discord_id
+                WHEN player_id IS NOT NULL AND player_id != '' THEN player_id
+                ELSE NULL
+            END) AS unique_donors
+        FROM donation_orders
+        WHERE status = 'confirmed'
+          AND datetime(created_at) >= datetime(?)
+          AND datetime(created_at) <= datetime(?)
+        """,
+        (start, end),
+    )
+    totals = dict(cursor.fetchone() or {})
+
+    cursor.execute(
+        """
+        SELECT product_type,
+               COUNT(*) AS cnt,
+               COALESCE(SUM(amount_rub), 0) AS rub
+        FROM donation_orders
+        WHERE status = 'confirmed'
+          AND datetime(created_at) >= datetime(?)
+          AND datetime(created_at) <= datetime(?)
+        GROUP BY product_type
+        ORDER BY rub DESC
+        """,
+        (start, end),
+    )
+    by_product = [dict(r) for r in cursor.fetchall()]
+
+    cursor.execute(
+        """
+        SELECT tier_id, tier_name,
+               COUNT(*) AS cnt,
+               COALESCE(SUM(amount_rub), 0) AS rub
+        FROM donation_orders
+        WHERE status = 'confirmed'
+          AND datetime(created_at) >= datetime(?)
+          AND datetime(created_at) <= datetime(?)
+        GROUP BY tier_id, tier_name
+        ORDER BY rub DESC
+        """,
+        (start, end),
+    )
+    by_item = [dict(r) for r in cursor.fetchall()]
+
+    cursor.execute(
+        """
+        SELECT
+            COALESCE(NULLIF(discord_id, ''), NULLIF(player_id, ''), 'unknown') AS donor_key,
+            MAX(contact) AS contact,
+            MAX(discord_id) AS discord_id,
+            COUNT(*) AS orders_count,
+            COALESCE(SUM(amount_rub), 0) AS total_rub
+        FROM donation_orders
+        WHERE status = 'confirmed'
+          AND datetime(created_at) >= datetime(?)
+          AND datetime(created_at) <= datetime(?)
+        GROUP BY donor_key
+        ORDER BY total_rub DESC
+        LIMIT 20
+        """,
+        (start, end),
+    )
+    top_donors = [dict(r) for r in cursor.fetchall()]
+
+    cursor.execute(
+        """
+        SELECT date(created_at) AS day,
+               COUNT(*) AS orders_count,
+               COALESCE(SUM(amount_rub), 0) AS total_rub
+        FROM donation_orders
+        WHERE status = 'confirmed'
+          AND datetime(created_at) >= datetime(?)
+          AND datetime(created_at) <= datetime(?)
+        GROUP BY date(created_at)
+        ORDER BY day ASC
+        """,
+        (start, end),
+    )
+    daily = [dict(r) for r in cursor.fetchall()]
+
+    cursor.execute(
+        """
+        SELECT
+            SUM(CASE WHEN receipt_uuid IS NOT NULL AND receipt_uuid != '' THEN 1 ELSE 0 END) AS issued,
+            SUM(CASE WHEN receipt_status = 'error' THEN 1 ELSE 0 END) AS errors,
+            SUM(CASE
+                WHEN (receipt_uuid IS NULL OR receipt_uuid = '')
+                     AND COALESCE(receipt_status, '') != 'error'
+                THEN 1 ELSE 0 END) AS missing
+        FROM donation_orders
+        WHERE status = 'confirmed'
+          AND datetime(created_at) >= datetime(?)
+          AND datetime(created_at) <= datetime(?)
+        """,
+        (start, end),
+    )
+    receipts = dict(cursor.fetchone() or {})
+
+    conn.close()
+    return {
+        "date_from": date_from,
+        "date_to": date_to,
+        "orders_count": int(totals.get("orders_count") or 0),
+        "total_rub": int(totals.get("total_rub") or 0),
+        "unique_donors": int(totals.get("unique_donors") or 0),
+        "by_product": by_product,
+        "by_item": by_item,
+        "top_donors": top_donors,
+        "daily": daily,
+        "receipts": {
+            "issued": int(receipts.get("issued") or 0),
+            "errors": int(receipts.get("errors") or 0),
+            "missing": int(receipts.get("missing") or 0),
+        },
+    }
 
 
 def ensure_donation_discounts_table():

@@ -807,10 +807,26 @@ function showDonateWaitPanel(data) {
             ? '<i class="fa-solid fa-hourglass-half"></i> Ожидание платежа'
             : '<i class="fa-solid fa-check"></i> Я оплатил';
     }
+    showDonateReceipt(data);
     const res = document.getElementById('donateWaitResult');
     if (res) { res.className = 'result'; res.textContent = ''; }
     history.replaceState({}, '', `/donate?order=${encodeURIComponent(data.transaction_id)}&wait=1`);
     startDonateStatusPoll();
+}
+
+function showDonateReceipt(data) {
+    const row = document.getElementById('donateWaitReceiptRow');
+    const link = document.getElementById('donateWaitReceiptLink');
+    const pdf = data?.receipt_pdf_url || data?.receipt_url || '';
+    if (!row || !link) return;
+    if (pdf) {
+        row.hidden = false;
+        link.href = pdf;
+        link.textContent = data?.receipt_pdf_url ? 'Скачать PDF' : 'Открыть чек';
+    } else {
+        row.hidden = true;
+        link.href = '#';
+    }
 }
 
 function hideDonateWaitPanel() {
@@ -820,6 +836,7 @@ function hideDonateWaitPanel() {
     const shop = document.getElementById('donateShopMain');
     if (wait) wait.hidden = true;
     if (shop) shop.hidden = false;
+    showDonateReceipt(null);
     history.replaceState({}, '', '/donate');
 }
 
@@ -892,7 +909,7 @@ async function refreshDonateOrderStatus() {
                 : '<i class="fa-solid fa-hourglass-half"></i> Ожидание платежа';
         }
         if (data.status === 'confirmed') {
-            stopDonateStatusPoll();
+            showDonateReceipt(data);
             const banner = document.getElementById('donatePayStatus');
             if (banner) {
                 banner.hidden = false;
@@ -910,7 +927,18 @@ async function refreshDonateOrderStatus() {
             const res = document.getElementById('donateWaitResult');
             if (res) {
                 res.className = 'result success';
-                res.textContent = 'Готово! Привилегии выданы.';
+                if (data.receipt_pdf_url) {
+                    res.innerHTML = 'Готово! Привилегии выданы. Чек PDF отправлен в <a href="/#messages">личные сообщения</a> и доступен выше.';
+                    stopDonateStatusPoll();
+                } else if (data.receipt_status === 'error') {
+                    res.textContent = 'Готово! Привилегии выданы. Чек временно недоступен — напишите в поддержку.';
+                    stopDonateStatusPoll();
+                } else {
+                    res.textContent = 'Готово! Привилегии выданы. Формируем чек…';
+                    // продолжаем poll, пока не появится PDF
+                }
+            } else if (data.receipt_pdf_url) {
+                stopDonateStatusPoll();
             }
         }
     } catch (_) { /* ignore poll errors */ }
@@ -973,8 +1001,9 @@ async function handleDonateReturnQuery() {
                     ? `Оплата получена: ${data.tier_name || 'тариф'} — роль донатера в Discord (${data.amount_rub || ''} ₽).`
                     : `Оплата получена: ${data.tier_name || 'тариф'} (${data.amount_rub || ''} ₽).`;
             }
-            if (st !== 'confirmed') {
-                // Result URL мог ещё не успеть — опрашиваем
+            showDonateWaitPanel(data);
+            showDonateReceipt(data);
+            if (st !== 'confirmed' || !data.receipt_pdf_url) {
                 currentDonateOrderId = order;
                 startDonateStatusPoll();
             }

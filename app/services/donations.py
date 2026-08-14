@@ -772,6 +772,9 @@ async def apply_robokassa_result(params: dict[str, Any]) -> str:
     try:
         order = social_db.get_donation_order_by_tx(tx_id)
         await fulfill_order_if_needed(order)
+        order = social_db.get_donation_order_by_tx(tx_id)
+        from app.services.donation_receipts import maybe_auto_issue_receipt
+        await maybe_auto_issue_receipt(order)
     except Exception:
         pass
     return f"OK{inv_id}"
@@ -903,7 +906,10 @@ async def confirm_order_manual(transaction_id: str, *, admin_name: str = "") -> 
         ),
     )
     order = social_db.get_donation_order_by_tx(transaction_id)
-    return await fulfill_order_if_needed(order) or order
+    order = await fulfill_order_if_needed(order) or order
+    from app.services.donation_receipts import maybe_auto_issue_receipt
+    order = await maybe_auto_issue_receipt(order) or order
+    return order
 
 
 async def apply_callback(payload: dict) -> dict:
@@ -950,6 +956,8 @@ async def apply_callback(payload: dict) -> dict:
     if status == "confirmed":
         try:
             order = await fulfill_order_if_needed(order) or order
+            from app.services.donation_receipts import maybe_auto_issue_receipt
+            order = await maybe_auto_issue_receipt(order) or order
         except Exception:
             pass
     return {"ok": True, "transaction_id": tx_id, "status": status, "order": order}
@@ -1014,5 +1022,13 @@ def serialize_order(order: dict) -> dict:
         "player_id": order.get("player_id"),
         "fulfilled": bool(order.get("fulfilled")),
         "created_at": order.get("created_at"),
+        "updated_at": order.get("updated_at"),
+        "receipt_uuid": order.get("receipt_uuid") or "",
+        "receipt_url": order.get("receipt_url") or "",
+        "receipt_pdf_url": order.get("receipt_pdf_url") or "",
+        "receipt_status": order.get("receipt_status") or "",
+        "receipt_error": order.get("receipt_error") or "",
+        "receipt_issued_at": order.get("receipt_issued_at"),
+        "receipt_pm_sent": bool(order.get("receipt_pm_sent")),
         "sbp": None,
     }

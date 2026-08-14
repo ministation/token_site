@@ -119,6 +119,11 @@ async def donation_status(transaction_id: str):
             order = await donations_svc.fulfill_order_if_needed(order) or order
         except Exception:
             pass
+        try:
+            from app.services.donation_receipts import maybe_auto_issue_receipt
+            order = await maybe_auto_issue_receipt(order) or order
+        except Exception:
+            pass
     data = donations_svc.serialize_order(order)
     data["remote"] = remote
     return data

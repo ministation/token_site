@@ -4452,6 +4452,41 @@ label.chat-tool-btn input[type="file"] {
 .admin-user-info, .admin-post-body { flex: 1; min-width: 0; }
 .admin-user-name, .admin-post-meta { font-weight: 700; font-size: 0.9rem; }
 .admin-user-sub { font-size: 0.78rem; color: var(--muted); }
+.admin-donate-row-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: stretch;
+    flex-shrink: 0;
+}
+.admin-donate-cols {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin: 8px 0 12px;
+}
+.admin-donate-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+.admin-donate-list li {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+    align-items: baseline;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.82rem;
+}
+.admin-donate-list li span { flex: 1; min-width: 0; color: var(--ink); }
+.admin-donate-list li strong { color: var(--gold); }
+.admin-donate-list li em { color: var(--muted); font-style: normal; font-size: 0.75rem; }
+.admin-donate-metrics-form input[type="date"] {
+    flex: 0 1 auto;
+    min-width: 140px;
+    margin-bottom: 0;
+}
 .admin-post-text {
     margin-top: 6px;
     font-size: 0.88rem;
@@ -5876,6 +5911,25 @@ label.chat-tool-btn input[type="file"] {
     font-size: 0.92rem;
 }
 .donate-wait-row span { color: var(--muted); }
+.pm-file-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--panel-2);
+    color: var(--ink);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+.pm-file-link:hover {
+    border-color: var(--border-strong);
+    color: var(--ink);
+}
+.pm-file-link i { color: #c0392b; font-size: 1.1rem; }
 .donate-wait-link {
     display: inline-flex;
     align-items: center;

@@ -187,3 +187,15 @@ SMTP_FROM = os.getenv("SMTP_FROM", "") or SMTP_USER or DONATION_NOTIFY_EMAIL
 SMTP_USE_TLS = os.getenv("SMTP_USE_TLS", "1").strip().lower() not in ("0", "false", "no")
 MANUAL_SBP_ENABLED = os.getenv("MANUAL_SBP_ENABLED", "1").strip().lower() not in ("0", "false", "no")
 SPONSORSHIP_DAYS = int(os.getenv("SPONSORSHIP_DAYS", "30"))
+
+# Самозанятость / «Мой налог» (чеки НПД)
+NALOG_INN = os.getenv("NALOG_INN", "").strip()
+NALOG_PASSWORD = os.getenv("NALOG_PASSWORD", "")
+NALOG_DEVICE_ID = os.getenv("NALOG_DEVICE_ID", "").strip()
+NALOG_SESSION_FILE = os.getenv("NALOG_SESSION_FILE", "data/nalog_session.json")
+NALOG_AUTO_RECEIPT = os.getenv("NALOG_AUTO_RECEIPT", "1").strip().lower() not in ("0", "false", "no")
+NALOG_TAX_RATE = float(os.getenv("NALOG_TAX_RATE", "0.04"))
+NALOG_SERVICE_NAME = os.getenv(
+    "NALOG_SERVICE_NAME",
+    "Добровольная поддержка проекта Мини-станция ({product})",
+)

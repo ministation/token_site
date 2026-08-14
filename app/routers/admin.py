@@ -556,6 +556,51 @@ async def admin_list_donations(
     return [donations_svc.serialize_order(o) for o in orders]
 
 
+@router.get("/donations/stats")
+async def admin_donation_stats(
+    request: Request,
+    period: str = Query("month"),
+    date_from: str = Query(""),
+    date_to: str = Query(""),
+):
+    """Метрика донатов: заработок, донатеры, чеки НПД за период."""
+    await get_current_admin(request)
+    from datetime import date, timedelta
+
+    from app.config import NALOG_TAX_RATE
+    from app.services.donation_receipts import nalog_status_payload
+
+    today = date.today()
+    p = (period or "month").strip().lower()
+    if date_from and date_to:
+        d_from, d_to = date_from.strip()[:10], date_to.strip()[:10]
+    elif p == "day":
+        d_from = d_to = today.isoformat()
+    elif p == "week":
+        d_from = (today - timedelta(days=6)).isoformat()
+        d_to = today.isoformat()
+    elif p == "year":
+        d_from = today.replace(month=1, day=1).isoformat()
+        d_to = today.isoformat()
+    elif p == "all":
+        d_from = "2020-01-01"
+        d_to = today.isoformat()
+    else:
+        # month
+        d_from = today.replace(day=1).isoformat()
+        d_to = today.isoformat()
+
+    stats = social_db.donation_stats(date_from=d_from, date_to=d_to)
+    rate = float(NALOG_TAX_RATE or 0.04)
+    total = int(stats.get("total_rub") or 0)
+    stats["period"] = p if not (date_from and date_to) else "custom"
+    stats["tax_rate"] = rate
+    stats["tax_estimate_rub"] = round(total * rate, 2)
+    stats["avg_check_rub"] = round(total / stats["orders_count"], 2) if stats["orders_count"] else 0
+    stats["nalog"] = nalog_status_payload()
+    return stats
+
+
 @router.post("/donations/{transaction_id}/confirm")
 async def admin_confirm_donation(transaction_id: str, request: Request):
     admin = await get_current_admin(request)
@@ -569,4 +614,30 @@ async def admin_confirm_donation(transaction_id: str, request: Request):
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Не удалось выдать награду: {e}")
+    return {"success": True, "order": donations_svc.serialize_order(order)}
+
+
+@router.post("/donations/{transaction_id}/receipt")
+async def admin_issue_donation_receipt(transaction_id: str, request: Request):
+    """Выдать / перевыдать чек НПД («Мой налог») по заказу."""
+    await get_current_admin(request)
+    from app.services import donations as donations_svc
+    from app.services.donation_receipts import issue_receipt_for_order
+
+    order = social_db.get_donation_order_by_tx(transaction_id)
+    if not order:
+        raise HTTPException(status_code=404, detail="Заказ не найден")
+    force = False
+    try:
+        body = await request.json()
+        if isinstance(body, dict):
+            force = bool(body.get("force"))
+    except Exception:
+        pass
+    try:
+        order = await issue_receipt_for_order(order, force=force)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Не удалось создать чек: {e}")
     return {"success": True, "order": donations_svc.serialize_order(order)}

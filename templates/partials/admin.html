@@ -278,7 +278,29 @@
     </div>
 
     <div id="adminDonationsTab" class="admin-tab-content" style="display:none;">
-        <p class="admin-hint">Ручные оплаты СБП. Проверьте перевод в банке и нажмите «Оплата подтверждена» — тогда выдадутся спонсорство (роль Discord) или монеты за пакет.</p>
+        <p class="admin-hint">Ручные оплаты СБП. После подтверждения выдаются привилегии и (если настроен «Мой налог») чек НПД для самозанятости.</p>
+
+        <h3 class="admin-stats-heading"><i class="fa-solid fa-chart-line"></i> Метрика донатов</h3>
+        <div class="admin-inline-form admin-donate-metrics-form">
+            <select id="adminDonatePeriod" onchange="onAdminDonatePeriodChange()">
+                <option value="day">Сегодня</option>
+                <option value="week">7 дней</option>
+                <option value="month" selected>Этот месяц</option>
+                <option value="year">Этот год</option>
+                <option value="all">Всё время</option>
+                <option value="custom">Свои даты</option>
+            </select>
+            <input type="date" id="adminDonateFrom" hidden>
+            <input type="date" id="adminDonateTo" hidden>
+            <button type="button" class="btn-sm" onclick="loadAdminDonationStats()">
+                <i class="fa-solid fa-rotate"></i> Обновить метрику
+            </button>
+        </div>
+        <div id="adminDonateNalogStatus" class="admin-hint"></div>
+        <div id="adminDonateStats" class="stats-grid admin-stats-grid"><p class="empty-state">Загрузка...</p></div>
+        <div id="adminDonateBreakdown" class="admin-donate-breakdown"></div>
+
+        <h3 class="admin-stats-heading"><i class="fa-solid fa-receipt"></i> Заказы</h3>
         <div class="admin-inline-form">
             <select id="adminDonationsStatus" onchange="loadAdminDonations()">
                 <option value="awaiting_confirmation" selected>Ожидают подтверждения</option>

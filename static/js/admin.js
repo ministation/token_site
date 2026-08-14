@@ -30,7 +30,10 @@ function showAdminTab(tab, btn) {
     if (tab === 'compensation') loadAdminCompensation();
     if (tab === 'game') initGameModerationTab();
     if (tab === 'playtime' && typeof initPlaytimeTransfer === 'function') initPlaytimeTransfer();
-    if (tab === 'donations') loadAdminDonations();
+    if (tab === 'donations') {
+        loadAdminDonationStats();
+        loadAdminDonations();
+    }
     if (tab === 'admins') loadAdminList();
 }
 
@@ -1076,12 +1079,27 @@ async function loadAdminDonations() {
         }
         container.innerHTML = orders.map(o => {
             const canConfirm = o.status === 'awaiting_confirmation' || o.status === 'pending';
+            const canReceipt = o.status === 'confirmed' && !o.receipt_uuid;
+            const hasReceipt = !!o.receipt_uuid;
+            const receiptErr = o.receipt_status === 'error';
+            let receiptHtml = '';
+            if (hasReceipt) {
+                receiptHtml = `<a class="btn-sm" href="${escapeHtml(o.receipt_pdf_url || o.receipt_url || '#')}" target="_blank" rel="noopener">
+                    <i class="fa-solid fa-file-pdf"></i> Чек PDF</a>`;
+            } else if (canReceipt || receiptErr) {
+                receiptHtml = `<button type="button" class="btn-sm" onclick='adminIssueDonationReceipt(${JSON.stringify(o.transaction_id)})'>
+                    <i class="fa-solid fa-receipt"></i> ${receiptErr ? 'Повторить чек' : 'Выдать чек'}</button>`;
+            }
+            const errLine = receiptErr && o.receipt_error
+                ? `<div class="admin-user-sub" style="color:var(--danger)">Чек: ${escapeHtml(o.receipt_error)}</div>`
+                : '';
             return `
             <div class="admin-user-row">
                 <div class="admin-user-info">
                     <div class="admin-user-name">${escapeHtml(o.tier_name || '')} · ${o.amount_rub || 0} ₽
                         <span class="admin-badge">${escapeHtml(o.status || '')}</span>
                         ${o.fulfilled ? '<span class="admin-badge">OK</span>' : ''}
+                        ${hasReceipt ? '<span class="admin-badge">чек</span>' : ''}
                     </div>
                     <div class="admin-user-sub">
                         ${escapeHtml(o.product_type || '')}
@@ -1089,15 +1107,96 @@ async function loadAdminDonations() {
                         · ${o.created_at ? new Date(o.created_at).toLocaleString('ru-RU') : ''}
                         · <code>${escapeHtml((o.transaction_id || '').slice(0, 8))}…</code>
                     </div>
+                    ${errLine}
                 </div>
+                <div class="admin-donate-row-actions">
                 ${canConfirm ? `
                     <button type="button" class="btn-sm" onclick='adminConfirmDonation(${JSON.stringify(o.transaction_id)})'>
                         <i class="fa-solid fa-check"></i> Оплата подтверждена
                     </button>` : ''}
+                ${receiptHtml}
+                </div>
             </div>`;
         }).join('');
     } catch (e) {
         container.innerHTML = `<p class="error">${escapeHtml(e.message)}</p>`;
+    }
+}
+
+function onAdminDonatePeriodChange() {
+    const period = document.getElementById('adminDonatePeriod')?.value || 'month';
+    const custom = period === 'custom';
+    const from = document.getElementById('adminDonateFrom');
+    const to = document.getElementById('adminDonateTo');
+    if (from) from.hidden = !custom;
+    if (to) to.hidden = !custom;
+    if (!custom) loadAdminDonationStats();
+}
+
+async function loadAdminDonationStats() {
+    const box = document.getElementById('adminDonateStats');
+    const breakdown = document.getElementById('adminDonateBreakdown');
+    const nalogEl = document.getElementById('adminDonateNalogStatus');
+    if (!box) return;
+    const period = document.getElementById('adminDonatePeriod')?.value || 'month';
+    let qs = `?period=${encodeURIComponent(period)}`;
+    if (period === 'custom') {
+        const from = document.getElementById('adminDonateFrom')?.value || '';
+        const to = document.getElementById('adminDonateTo')?.value || '';
+        if (!from || !to) {
+            box.innerHTML = '<p class="empty-state">Укажите даты</p>';
+            return;
+        }
+        qs = `?date_from=${encodeURIComponent(from)}&date_to=${encodeURIComponent(to)}`;
+    }
+    box.innerHTML = '<p class="empty-state">Загрузка...</p>';
+    try {
+        const s = await apiCall('GET', '/api/admin/donations/stats' + qs);
+        if (nalogEl) {
+            nalogEl.textContent = s.nalog?.configured
+                ? `Мой налог: подключен · авто-чек ${s.nalog.auto_receipt ? 'вкл' : 'выкл'} · ставка ${(Number(s.tax_rate) * 100).toFixed(0)}%`
+                : 'Мой налог: не настроен (задайте NALOG_INN и NALOG_PASSWORD в .env) — чеки можно будет выдавать после настройки';
+        }
+        const fmt = (n) => Number(n || 0).toLocaleString('ru-RU');
+        box.innerHTML = `
+            <div class="stat-item"><div class="stat-value">${fmt(s.total_rub)} ₽</div><div class="stat-label">Выручка</div></div>
+            <div class="stat-item"><div class="stat-value">${fmt(s.orders_count)}</div><div class="stat-label">Оплат</div></div>
+            <div class="stat-item"><div class="stat-value">${fmt(s.unique_donors)}</div><div class="stat-label">Донатеров</div></div>
+            <div class="stat-item"><div class="stat-value">${fmt(s.avg_check_rub)} ₽</div><div class="stat-label">Средний чек</div></div>
+            <div class="stat-item"><div class="stat-value">${fmt(s.tax_estimate_rub)} ₽</div><div class="stat-label">НПД ~${(Number(s.tax_rate) * 100).toFixed(0)}%</div></div>
+            <div class="stat-item"><div class="stat-value">${fmt(s.receipts?.issued || 0)}</div><div class="stat-label">Чеков НПД</div></div>
+        `;
+        if (breakdown) {
+            const items = (s.by_item || []).slice(0, 8).map(r =>
+                `<li><span>${escapeHtml(r.tier_name || '—')}</span><strong>${fmt(r.rub)} ₽</strong> <em>(${fmt(r.cnt)})</em></li>`
+            ).join('') || '<li class="empty-state">Нет данных</li>';
+            const donors = (s.top_donors || []).slice(0, 8).map(r =>
+                `<li><span>${escapeHtml(r.contact || r.discord_id || r.donor_key || '—')}</span><strong>${fmt(r.total_rub)} ₽</strong> <em>(${fmt(r.orders_count)})</em></li>`
+            ).join('') || '<li class="empty-state">Нет данных</li>';
+            const days = (s.daily || []).slice(-14).map(r =>
+                `<li><span>${escapeHtml(r.day || '')}</span><strong>${fmt(r.total_rub)} ₽</strong> <em>(${fmt(r.orders_count)})</em></li>`
+            ).join('') || '<li class="empty-state">Нет данных</li>';
+            breakdown.innerHTML = `
+                <div class="admin-donate-cols">
+                    <div>
+                        <h4 class="admin-stats-heading">По товарам</h4>
+                        <ul class="admin-donate-list">${items}</ul>
+                    </div>
+                    <div>
+                        <h4 class="admin-stats-heading">Топ донатеров</h4>
+                        <ul class="admin-donate-list">${donors}</ul>
+                    </div>
+                    <div>
+                        <h4 class="admin-stats-heading">По дням</h4>
+                        <ul class="admin-donate-list">${days}</ul>
+                    </div>
+                </div>
+                <p class="admin-hint">Период: ${escapeHtml(s.date_from)} — ${escapeHtml(s.date_to)}.
+                    Без чека: ${fmt(s.receipts?.missing || 0)}, ошибки чеков: ${fmt(s.receipts?.errors || 0)}.</p>
+            `;
+        }
+    } catch (e) {
+        box.innerHTML = `<p class="error">${escapeHtml(e.message)}</p>`;
     }
 }
 
@@ -1106,6 +1205,18 @@ async function adminConfirmDonation(txId) {
     try {
         await apiCall('POST', `/api/admin/donations/${encodeURIComponent(txId)}/confirm`);
         loadAdminDonations();
+        loadAdminDonationStats();
+    } catch (e) {
+        alert(e.message);
+    }
+}
+
+async function adminIssueDonationReceipt(txId) {
+    if (!confirm('Создать чек в «Мой налог» по этой оплате?')) return;
+    try {
+        await apiCall('POST', `/api/admin/donations/${encodeURIComponent(txId)}/receipt`, {});
+        loadAdminDonations();
+        loadAdminDonationStats();
     } catch (e) {
         alert(e.message);
     }

@@ -23,6 +23,13 @@ function formatMessageContent(text) {
 
 function renderChatImage(url, className = 'chat-msg-image') {
     if (!url) return '';
+    const lower = String(url).toLowerCase().split('?')[0];
+    if (lower.endsWith('.pdf')) {
+        return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener" class="pm-file-link" download>
+            <i class="fa-solid fa-file-pdf" aria-hidden="true"></i>
+            <span>Скачать PDF</span>
+        </a>`;
+    }
     return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener" class="chat-msg-image-link">
         <img src="${escapeHtml(url)}" class="${className}" alt="Изображение" loading="lazy">
     </a>`;

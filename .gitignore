@@ -30,3 +30,5 @@ env/
 data/goob-tree.json
 data/goob_jobs/
 data/test_job.yml
+data/nalog_session.json
+data/nalog_device_id.txt
