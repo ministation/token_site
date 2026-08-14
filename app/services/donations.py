@@ -24,6 +24,7 @@ from app.config import (
 from app.db.database import get_pg_pool
 from app.services import robokassa
 from app.services.bank import add_tokens
+from app.services.discord_sponsor_roles import assign_sponsor_role
 from app.services.mail import send_email, smtp_configured
 
 
@@ -508,7 +509,8 @@ def _prepare_product(
             "product_type": "tier",
             "tier_db_id": int(raw["id"]),
             "tier_name": raw["name"],
-            "coins_amount": int(raw.get("coins") or 0),
+            # Монеты за подписку сайтом не выдаём — роль Discord + discord_sponsor
+            "coins_amount": 0,
             "amount_rub": int(item["price_rub"]),
             "base_amount_rub": int(item["base_price_rub"]),
             "discount": item.get("discount"),
@@ -831,7 +833,11 @@ async def fetch_payment_status(transaction_id: str) -> dict:
 
 
 async def fulfill_order_if_needed(order: dict | None) -> dict | None:
-    """Идемпотентно выдаёт спонсорство и/или монеты за confirmed заказ."""
+    """Идемпотентно выдаёт спонсорство (роль Discord + уровень в БД) и/или монеты.
+
+    Подписка (tier): discord_sponsor + Discord-роль донатера, монеты НЕ начисляются.
+    Пакет монет (coins): только начисление монет на игровой аккаунт.
+    """
     if not order:
         return order
     if order.get("status") != "confirmed":
@@ -858,20 +864,19 @@ async def fulfill_order_if_needed(order: dict | None) -> dict | None:
         if product_type == "tier":
             discord_id = order.get("discord_id") or ""
             if not discord_id:
-                # попытка из player_id вида discord_<id>
                 pid = str(order.get("player_id") or "")
                 if pid.startswith("discord_"):
                     discord_id = pid.replace("discord_", "", 1)
             if not discord_id:
                 social_db.update_donation_order(tx_id, fulfilled=0)
-                raise ValueError("Нет Discord ID — нельзя выдать спонсорство в игровой БД")
+                raise ValueError("Нет Discord ID — нельзя выдать спонсорство")
             tier_level = int(order.get("tier_id") or 0)
             if tier_level < 1 or tier_level > 5:
                 social_db.update_donation_order(tx_id, fulfilled=0)
                 raise ValueError("Некорректный уровень спонсорства")
             await upsert_discord_sponsor(discord_id, tier_level)
-            if coins > 0 and game_uuid and not str(game_uuid).startswith("discord_"):
-                await add_tokens(str(game_uuid), coins)
+            # Роль донатера в Discord; монеты за подписку сайтом не выдаём
+            await assign_sponsor_role(discord_id, tier_level)
         elif product_type == "coins":
             if not game_uuid or str(game_uuid).startswith("discord_") or coins <= 0:
                 social_db.update_donation_order(tx_id, fulfilled=0)

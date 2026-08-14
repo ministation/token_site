@@ -58,6 +58,30 @@ TIME_KEEPER_USERNAMES = [
     if x.strip()
 ]
 
+# Discord-роли спонсоров: level:role_id (как в token_bot)
+# После оплаты подписки сайт выдаёт роль, монеты за подписку не начисляет.
+def _parse_level_role_map(raw: str) -> dict[int, int]:
+    out: dict[int, int] = {}
+    for part in (raw or "").split(","):
+        part = part.strip()
+        if not part or ":" not in part:
+            continue
+        level_s, role_s = part.split(":", 1)
+        try:
+            out[int(level_s.strip())] = int(role_s.strip())
+        except ValueError:
+            continue
+    return out
+
+
+SPONSOR_ROLE_IDS = _parse_level_role_map(
+    os.getenv(
+        "SPONSOR_ROLE_IDS",
+        "1:1350474782482628700,2:1352353230964916274,3:1352359474685415505,"
+        "4:1452826150954074253,5:1358872737673646130",
+    )
+)
+
 # Банк (вклады и займы отключены)
 
 # Лотерея и переводы

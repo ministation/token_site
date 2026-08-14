@@ -1102,7 +1102,7 @@ async function loadAdminDonations() {
 }
 
 async function adminConfirmDonation(txId) {
-    if (!confirm('Подтвердить оплату и выдать привилегии/монеты?')) return;
+    if (!confirm('Подтвердить оплату и выдать привилегии (роль Discord / монеты за пакет)?')) return;
     try {
         await apiCall('POST', `/api/admin/donations/${encodeURIComponent(txId)}/confirm`);
         loadAdminDonations();

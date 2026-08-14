@@ -902,7 +902,9 @@ async function refreshDonateOrderStatus() {
                         ? `Оплата получена: ${data.coins_amount || ''} монет зачислено.`
                         : `Оплата получена (${data.amount_rub || ''} ₽). Монеты зачислятся автоматически.`;
                 } else {
-                    banner.textContent = `Оплата получена: ${data.tier_name || 'подписка'} активирована.`;
+                    banner.textContent = data.fulfilled
+                        ? `Оплата получена: ${data.tier_name || 'подписка'} активирована, роль донатера выдана в Discord.`
+                        : `Оплата получена: ${data.tier_name || 'подписка'} активируется…`;
                 }
             }
             const res = document.getElementById('donateWaitResult');
@@ -967,7 +969,9 @@ async function handleDonateReturnQuery() {
                     ? `Оплата получена: ${data.coins_amount || ''} монет зачислено.`
                     : `Оплата получена (${data.amount_rub || ''} ₽).`;
             } else {
-                banner.textContent = `Оплата получена: ${data.tier_name || 'тариф'} (${data.amount_rub || ''} ₽).`;
+                banner.textContent = data.fulfilled
+                    ? `Оплата получена: ${data.tier_name || 'тариф'} — роль донатера в Discord (${data.amount_rub || ''} ₽).`
+                    : `Оплата получена: ${data.tier_name || 'тариф'} (${data.amount_rub || ''} ₽).`;
             }
             if (st !== 'confirmed') {
                 // Result URL мог ещё не успеть — опрашиваем
