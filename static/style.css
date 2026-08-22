@@ -4435,10 +4435,17 @@ label.chat-tool-btn input[type="file"] {
     letter-spacing: 0.04em;
 }
 .admin-metric-block {
-    margin-bottom: 10px;
+    margin-bottom: 14px;
 }
 .admin-metric-block .collapsible-header {
     margin-top: 0;
+}
+.admin-metric-block .collapsible-body {
+    margin-top: 12px;
+    padding: 0 2px 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 .admin-metric-header {
     font-size: 0.62rem;
@@ -4449,11 +4456,13 @@ label.chat-tool-btn input[type="file"] {
 .admin-metric-kpis {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 8px;
-    margin-bottom: 10px;
+    gap: 10px;
+    margin: 0;
+    width: 100%;
+    box-sizing: border-box;
 }
 .admin-metric-kpis .stat-item {
-    padding: 10px 8px;
+    padding: 12px 10px;
 }
 .admin-metric-kpis .stat-value {
     font-size: 0.95rem;
@@ -4463,16 +4472,17 @@ label.chat-tool-btn input[type="file"] {
     font-size: 0.62rem;
 }
 .admin-metric-kpis--mw {
-    margin-top: 2px;
+    margin-top: 0;
 }
 .admin-metric-chart-wrap {
-    height: 148px;
+    height: 168px;
     min-width: 0;
     max-width: 100%;
+    box-sizing: border-box;
     background: var(--panel-2);
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
-    padding: 8px 6px 4px;
+    padding: 12px 12px 8px;
 }
 .admin-metric-chart-wrap canvas {
     width: 100% !important;

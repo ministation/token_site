@@ -1194,6 +1194,18 @@ def record_wiki_visit(path: str, visitor_key: str) -> None:
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute(
+        """
+        SELECT 1 FROM wiki_visits
+        WHERE visitor_key = ?
+          AND visited_at >= datetime('now', '-8 seconds')
+        LIMIT 1
+        """,
+        (visitor_key,),
+    )
+    if cursor.fetchone():
+        conn.close()
+        return
+    cursor.execute(
         "INSERT INTO wiki_visits (path, visitor_key) VALUES (?, ?)",
         (path, visitor_key),
     )
