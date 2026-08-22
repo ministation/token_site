@@ -199,3 +199,6 @@ NALOG_SERVICE_NAME = os.getenv(
     "NALOG_SERVICE_NAME",
     "Добровольная поддержка проекта Мини-станция ({product})",
 )
+
+# Секрет для приёма событий с Robust.Cdn (заголовок X-Cdn-Metrics-Secret)
+CDN_METRICS_SECRET = os.getenv("CDN_METRICS_SECRET", "").strip()

@@ -6,6 +6,7 @@ from app.services.referral import get_global_referral_metrics
 async def get_site_statistics() -> dict:
     social = social_db.get_site_stats()
     visits = social_db.get_visit_stats()
+    cdn = social_db.get_cdn_stats()
     referral = get_global_referral_metrics()
     try:
         game_stats = await get_total_stats()
@@ -14,6 +15,7 @@ async def get_site_statistics() -> dict:
     return {
         "social": social,
         "visits": visits,
+        "cdn": cdn,
         "referral": referral,
         "game": game_stats,
     }

@@ -205,6 +205,7 @@ async function loadAdminStats() {
         const data = await apiCall('GET', '/api/admin/stats');
         const s = data.social || {};
         const v = data.visits || {};
+        const c = data.cdn || {};
         const g = data.game || {};
         const r = data.referral || {};
         const dailyRows = (v.daily || []).map(d => `
@@ -212,6 +213,13 @@ async function loadAdminStats() {
                 <td>${escapeHtml(d.day || '')}</td>
                 <td>${d.visits ?? 0}</td>
                 <td>${d.visitors ?? 0}</td>
+            </tr>
+        `).join('');
+        const cdnDailyRows = (c.daily || []).map(d => `
+            <tr>
+                <td>${escapeHtml(d.day || '')}</td>
+                <td>${d.page_visits ?? 0}</td>
+                <td>${d.downloads ?? 0}</td>
             </tr>
         `).join('');
         container.innerHTML = `
@@ -229,6 +237,23 @@ async function loadAdminStats() {
                 <table class="admin-visits-table">
                     <thead><tr><th>День (МСК)</th><th>Просмотры</th><th>Уникальные</th></tr></thead>
                     <tbody>${dailyRows}</tbody>
+                </table>
+            </div>` : ''}
+            <h3 class="admin-stats-heading"><i class="fa-solid fa-cloud"></i> Готовые билды</h3>
+            <div class="stats-grid admin-stats-grid admin-visits-grid">
+                <div class="stat-item"><div class="stat-value">${c.page_visits_today ?? 0}</div><div class="stat-label">Просмотров страницы сегодня</div></div>
+                <div class="stat-item"><div class="stat-value">${c.page_visitors_today ?? 0}</div><div class="stat-label">Уникальных сегодня</div></div>
+                <div class="stat-item"><div class="stat-value">${c.page_visits_7d ?? 0}</div><div class="stat-label">Просмотров за 7 дней</div></div>
+                <div class="stat-item"><div class="stat-value">${c.page_visits_total ?? 0}</div><div class="stat-label">Просмотров всего</div></div>
+                <div class="stat-item"><div class="stat-value">${c.downloads_today ?? 0}</div><div class="stat-label">Скачиваний сегодня</div></div>
+                <div class="stat-item"><div class="stat-value">${c.downloads_7d ?? 0}</div><div class="stat-label">Скачиваний за 7 дней</div></div>
+                <div class="stat-item"><div class="stat-value">${c.downloads_total ?? 0}</div><div class="stat-label">Скачиваний всего</div></div>
+            </div>
+            ${cdnDailyRows ? `
+            <div class="admin-visits-table-wrap table-scroll">
+                <table class="admin-visits-table">
+                    <thead><tr><th>День (МСК)</th><th>Просмотры</th><th>Скачивания</th></tr></thead>
+                    <tbody>${cdnDailyRows}</tbody>
                 </table>
             </div>` : ''}
             <h3 class="admin-stats-heading"><i class="fa-solid fa-user-group"></i> Реферальная программа</h3>

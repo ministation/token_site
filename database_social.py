@@ -304,6 +304,25 @@ def _migrate_schema():
         CREATE INDEX IF NOT EXISTS idx_site_visits_key ON site_visits(visitor_key)
     """)
     cursor.execute("""
+        CREATE TABLE IF NOT EXISTS cdn_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            event_type TEXT NOT NULL,
+            fork TEXT NOT NULL,
+            path TEXT,
+            version TEXT,
+            platform TEXT,
+            visitor_key TEXT,
+            bytes_sent INTEGER,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_cdn_events_at ON cdn_events(created_at)
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_cdn_events_type ON cdn_events(event_type)
+    """)
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS rating_removal_log (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             rating_id INTEGER NOT NULL,
@@ -1135,6 +1154,81 @@ def get_visit_stats() -> Dict:
                COUNT(DISTINCT visitor_key) AS visitors
         FROM site_visits
         WHERE visited_at >= datetime('now', '-7 days')
+        GROUP BY day
+        ORDER BY day DESC
+    """)
+    stats["daily"] = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    return stats
+
+
+def record_cdn_event(
+    event_type: str,
+    fork: str,
+    *,
+    path: str | None = None,
+    version: str | None = None,
+    platform: str | None = None,
+    visitor_key: str | None = None,
+    bytes_sent: int | None = None,
+) -> None:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        INSERT INTO cdn_events (event_type, fork, path, version, platform, visitor_key, bytes_sent)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        """,
+        (event_type, fork, path, version, platform, visitor_key, bytes_sent),
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_cdn_stats() -> Dict:
+    conn = get_db()
+    cursor = conn.cursor()
+    stats: Dict = {}
+
+    def _count(where: str = "", params: tuple = ()) -> int:
+        cursor.execute(f"SELECT COUNT(*) FROM cdn_events {where}", params)
+        return cursor.fetchone()[0]
+
+    def _distinct_visitors(where: str = "", params: tuple = ()) -> int:
+        clause = where if where else "WHERE visitor_key IS NOT NULL"
+        if where and "visitor_key" not in where:
+            clause = f"{where} AND visitor_key IS NOT NULL"
+        cursor.execute(f"SELECT COUNT(DISTINCT visitor_key) FROM cdn_events {clause}", params)
+        return cursor.fetchone()[0]
+
+    stats["page_visits_total"] = _count("WHERE event_type = 'page_visit'")
+    stats["page_visits_today"] = _count(
+        "WHERE event_type = 'page_visit' AND date(created_at, '+3 hours') = date('now', '+3 hours')"
+    )
+    stats["page_visitors_today"] = _distinct_visitors(
+        "WHERE event_type = 'page_visit' AND date(created_at, '+3 hours') = date('now', '+3 hours')"
+    )
+    stats["page_visits_7d"] = _count(
+        "WHERE event_type = 'page_visit' AND created_at >= datetime('now', '-7 days')"
+    )
+    stats["page_visitors_7d"] = _distinct_visitors(
+        "WHERE event_type = 'page_visit' AND created_at >= datetime('now', '-7 days')"
+    )
+
+    stats["downloads_total"] = _count("WHERE event_type = 'server_download'")
+    stats["downloads_today"] = _count(
+        "WHERE event_type = 'server_download' AND date(created_at, '+3 hours') = date('now', '+3 hours')"
+    )
+    stats["downloads_7d"] = _count(
+        "WHERE event_type = 'server_download' AND created_at >= datetime('now', '-7 days')"
+    )
+
+    cursor.execute("""
+        SELECT date(created_at, '+3 hours') AS day,
+               SUM(CASE WHEN event_type = 'page_visit' THEN 1 ELSE 0 END) AS page_visits,
+               SUM(CASE WHEN event_type = 'server_download' THEN 1 ELSE 0 END) AS downloads
+        FROM cdn_events
+        WHERE created_at >= datetime('now', '-7 days')
         GROUP BY day
         ORDER BY day DESC
     """)
