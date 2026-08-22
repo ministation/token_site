@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="/static/js/theme.js"></script>
     <script src="/static/js/ambient.js" defer></script>
-    <link rel="stylesheet" href="/static/style.css?v=metrics2">
+    <link rel="stylesheet" href="/static/style.css?v=metrics3">
     <link rel="stylesheet" href="/static/chat-discord.css">
     <link rel="icon" type="image/png" href="/static/coin.png">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
@@ -150,7 +150,7 @@
     <script src="/static/js/chat.js"></script>
     <script src="/static/js/inventory.js"></script>
     <script src="/static/js/playtime.js"></script>
-    <script src="/static/js/admin.js?v=metrics2"></script>
+    <script src="/static/js/admin.js?v=metrics3"></script>
     <script src="/static/js/support.js"></script>
     <script src="/static/script.js"></script>
 
@@ -172,7 +172,10 @@
             if (badge) badge.classList.toggle('offline', !online);
 
             const nameEl = document.getElementById('statusName');
-            if (nameEl) nameEl.textContent = data.name || 'Мини-станция';
+            if (nameEl) {
+                const raw = String(data.name || 'Мини-станция');
+                nameEl.textContent = raw.replace(/[\p{Extended_Pictographic}\uFE0F\u200D]/gu, '').replace(/\s+/g, ' ').trim() || 'Мини-станция';
+            }
 
             const players = data.players || 0;
             const maxPlayers = data.max_players || 100;
