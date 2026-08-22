@@ -256,6 +256,20 @@ def _migrate_schema():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS wiki_visits (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            path TEXT NOT NULL,
+            visitor_key TEXT NOT NULL,
+            visited_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_wiki_visits_at ON wiki_visits(visited_at)
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_wiki_visits_key ON wiki_visits(visitor_key)
+    """)
     post_cols = _table_columns(cursor, "posts")
     if "category" not in post_cols:
         cursor.execute("ALTER TABLE posts ADD COLUMN category TEXT DEFAULT 'forum'")
@@ -302,6 +316,20 @@ def _migrate_schema():
     """)
     cursor.execute("""
         CREATE INDEX IF NOT EXISTS idx_site_visits_key ON site_visits(visitor_key)
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS wiki_visits (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            path TEXT NOT NULL,
+            visitor_key TEXT NOT NULL,
+            visited_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_wiki_visits_at ON wiki_visits(visited_at)
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_wiki_visits_key ON wiki_visits(visitor_key)
     """)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS cdn_events (
@@ -1153,6 +1181,59 @@ def get_visit_stats() -> Dict:
                COUNT(*) AS visits,
                COUNT(DISTINCT visitor_key) AS visitors
         FROM site_visits
+        WHERE visited_at >= datetime('now', '-7 days')
+        GROUP BY day
+        ORDER BY day DESC
+    """)
+    stats["daily"] = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    return stats
+
+
+def record_wiki_visit(path: str, visitor_key: str) -> None:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO wiki_visits (path, visitor_key) VALUES (?, ?)",
+        (path, visitor_key),
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_wiki_stats() -> Dict:
+    conn = get_db()
+    cursor = conn.cursor()
+    stats: Dict = {}
+    cursor.execute("SELECT COUNT(*) FROM wiki_visits")
+    stats["visits_total"] = cursor.fetchone()[0]
+    cursor.execute("SELECT COUNT(DISTINCT visitor_key) FROM wiki_visits")
+    stats["visitors_total"] = cursor.fetchone()[0]
+    cursor.execute("""
+        SELECT COUNT(*) FROM wiki_visits
+        WHERE date(visited_at, '+3 hours') = date('now', '+3 hours')
+    """)
+    stats["visits_today"] = cursor.fetchone()[0]
+    cursor.execute("""
+        SELECT COUNT(DISTINCT visitor_key) FROM wiki_visits
+        WHERE date(visited_at, '+3 hours') = date('now', '+3 hours')
+    """)
+    stats["visitors_today"] = cursor.fetchone()[0]
+    cursor.execute("""
+        SELECT COUNT(*) FROM wiki_visits
+        WHERE visited_at >= datetime('now', '-7 days')
+    """)
+    stats["visits_7d"] = cursor.fetchone()[0]
+    cursor.execute("""
+        SELECT COUNT(DISTINCT visitor_key) FROM wiki_visits
+        WHERE visited_at >= datetime('now', '-7 days')
+    """)
+    stats["visitors_7d"] = cursor.fetchone()[0]
+    cursor.execute("""
+        SELECT date(visited_at, '+3 hours') AS day,
+               COUNT(*) AS visits,
+               COUNT(DISTINCT visitor_key) AS visitors
+        FROM wiki_visits
         WHERE visited_at >= datetime('now', '-7 days')
         GROUP BY day
         ORDER BY day DESC

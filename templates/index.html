@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="/static/js/theme.js"></script>
     <script src="/static/js/ambient.js" defer></script>
-    <link rel="stylesheet" href="/static/style.css?v=referral9">
+    <link rel="stylesheet" href="/static/style.css?v=metrics2">
     <link rel="stylesheet" href="/static/chat-discord.css">
     <link rel="icon" type="image/png" href="/static/coin.png">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
@@ -150,7 +150,7 @@
     <script src="/static/js/chat.js"></script>
     <script src="/static/js/inventory.js"></script>
     <script src="/static/js/playtime.js"></script>
-    <script src="/static/js/admin.js"></script>
+    <script src="/static/js/admin.js?v=metrics2"></script>
     <script src="/static/js/support.js"></script>
     <script src="/static/script.js"></script>
 
@@ -194,7 +194,9 @@
             const connectEl = document.getElementById('statusConnect');
             if (connectEl && data.connect) {
                 connectEl.dataset.addr = data.connect;
-                connectEl.textContent = data.connect;
+                const full = connectEl.querySelector('.connect-addr-full');
+                if (full) full.textContent = data.connect;
+                else connectEl.textContent = data.connect;
             }
 
             const percent = Math.min(100, (players / maxPlayers) * 100);
@@ -207,6 +209,23 @@
             const fill = document.getElementById('progressFill');
             if (fill) fill.style.width = percent + '%';
         } catch (e) {}
+    }
+
+    function copyServerConnect(btn) {
+        const addr = btn.dataset.addr || '';
+        const full = btn.querySelector('.connect-addr-full');
+        const short = btn.querySelector('.connect-addr-short');
+        const restore = () => {
+            if (full) full.textContent = addr;
+            if (short) short.textContent = 'Копировать адрес';
+            if (!full && !short) btn.textContent = addr;
+        };
+        navigator.clipboard.writeText(addr).then(() => {
+            if (full) full.textContent = 'Скопировано';
+            if (short) short.textContent = 'Скопировано';
+            if (!full && !short) btn.textContent = 'Скопировано';
+            setTimeout(restore, 1200);
+        }).catch(() => {});
     }
 
     loadServerStatus();

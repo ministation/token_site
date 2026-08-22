@@ -198,6 +198,147 @@ async function deleteAdminHelpRating(ratingId) {
     }
 }
 
+const ADMIN_METRIC_STATE_KEY = 'adminMetricOpen';
+const adminMetricCharts = {};
+
+function getAdminMetricOpen(id, fallback) {
+    try {
+        const raw = sessionStorage.getItem(ADMIN_METRIC_STATE_KEY);
+        if (!raw) return fallback;
+        const map = JSON.parse(raw);
+        if (typeof map[id] === 'boolean') return map[id];
+    } catch (e) {}
+    return fallback;
+}
+
+function setAdminMetricOpen(id, open) {
+    try {
+        const map = JSON.parse(sessionStorage.getItem(ADMIN_METRIC_STATE_KEY) || '{}');
+        map[id] = open;
+        sessionStorage.setItem(ADMIN_METRIC_STATE_KEY, JSON.stringify(map));
+    } catch (e) {}
+}
+
+function toggleAdminMetric(btn) {
+    const section = btn.closest('.collapsible-section');
+    if (!section) return;
+    const collapsed = section.classList.toggle('collapsed');
+    btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+    const id = section.dataset.metric;
+    if (id) setAdminMetricOpen(id, !collapsed);
+}
+
+function adminMetricKpis(items) {
+    return `<div class="admin-metric-kpis">${items.map(item => `
+        <div class="stat-item">
+            <div class="stat-value">${item.value ?? 0}</div>
+            <div class="stat-label">${item.label}</div>
+        </div>`).join('')}</div>`;
+}
+
+function destroyAdminMetricCharts() {
+    Object.keys(adminMetricCharts).forEach(id => {
+        try { adminMetricCharts[id].destroy(); } catch (e) {}
+        delete adminMetricCharts[id];
+    });
+}
+
+function mskDateKey(offsetDays) {
+    const now = new Date();
+    const msk = new Date(now.getTime() + 3 * 3600 * 1000);
+    msk.setUTCDate(msk.getUTCDate() + offsetDays);
+    return msk.toISOString().slice(0, 10);
+}
+
+function fillDailySeries(daily, visitKey, uniqueKey) {
+    const byDay = {};
+    (daily || []).forEach(d => {
+        if (d && d.day) byDay[d.day] = d;
+    });
+    const labels = [];
+    const visits = [];
+    const uniques = [];
+    for (let i = 6; i >= 0; i--) {
+        const key = mskDateKey(-i);
+        labels.push(key.slice(5).replace('-', '.'));
+        const row = byDay[key] || {};
+        visits.push(Number(row[visitKey] || 0));
+        uniques.push(Number(row[uniqueKey] || 0));
+    }
+    return { labels, visits, uniques };
+}
+
+function renderAdminTrendChart(canvasId, labels, series) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas || typeof Chart === 'undefined') return;
+    if (adminMetricCharts[canvasId]) {
+        try { adminMetricCharts[canvasId].destroy(); } catch (e) {}
+    }
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const ctx = canvas.getContext('2d');
+    adminMetricCharts[canvasId] = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: series.map((s, idx) => ({
+                label: s.label,
+                data: s.data,
+                borderColor: s.color,
+                backgroundColor: s.fill,
+                borderWidth: 2,
+                borderDash: s.dashed ? [5, 4] : [],
+                pointRadius: 3,
+                pointHoverRadius: 5,
+                pointStyle: idx === 0 ? 'circle' : 'rectRot',
+                tension: 0.3,
+                fill: false,
+            })),
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: reduceMotion ? false : { duration: 220 },
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: {
+                    display: true,
+                    labels: { boxWidth: 12, font: { size: 11 }, usePointStyle: true },
+                },
+                tooltip: { enabled: true },
+            },
+            scales: {
+                x: {
+                    ticks: { maxRotation: 0, font: { size: 10 }, color: cssVar('--muted') },
+                    grid: { color: cssVar('--chart-grid') },
+                },
+                y: {
+                    beginAtZero: true,
+                    ticks: { precision: 0, font: { size: 10 }, color: cssVar('--muted') },
+                    grid: { color: cssVar('--chart-grid') },
+                },
+            },
+        },
+    });
+}
+
+function renderAdminMetricSection({ id, icon, title, open, kpis, chartId, extra = '' }) {
+    const expanded = getAdminMetricOpen(id, open);
+    return `
+        <section class="admin-metric-block collapsible-section ${expanded ? '' : 'collapsed'}" data-metric="${id}">
+            <button type="button" class="collapsible-header admin-metric-header" onclick="toggleAdminMetric(this)" aria-expanded="${expanded ? 'true' : 'false'}">
+                <span><i class="${icon}"></i> ${title}</span>
+                <span class="collapsible-chevron-wrap" aria-hidden="true">
+                    <i class="fa-solid fa-chevron-down collapsible-chevron"></i>
+                </span>
+            </button>
+            <div class="collapsible-body">
+                ${adminMetricKpis(kpis)}
+                ${chartId ? `<div class="admin-metric-chart-wrap"><canvas id="${chartId}" aria-label="График за 7 дней"></canvas></div>` : ''}
+                ${extra}
+            </div>
+        </section>`;
+}
+
 async function loadAdminStats() {
     const container = document.getElementById('adminStatsContent');
     if (!container) return;
@@ -205,78 +346,105 @@ async function loadAdminStats() {
         const data = await apiCall('GET', '/api/admin/stats');
         const s = data.social || {};
         const v = data.visits || {};
+        const w = data.wiki || {};
+        const mw = w.mw || {};
         const c = data.cdn || {};
         const g = data.game || {};
         const r = data.referral || {};
-        const dailyRows = (v.daily || []).map(d => `
-            <tr>
-                <td>${escapeHtml(d.day || '')}</td>
-                <td>${d.visits ?? 0}</td>
-                <td>${d.visitors ?? 0}</td>
-            </tr>
-        `).join('');
-        const cdnDailyRows = (c.daily || []).map(d => `
-            <tr>
-                <td>${escapeHtml(d.day || '')}</td>
-                <td>${d.page_visits ?? 0}</td>
-                <td>${d.downloads ?? 0}</td>
-            </tr>
-        `).join('');
-        container.innerHTML = `
-            <h3 class="admin-stats-heading"><i class="fa-solid fa-chart-simple"></i> Посещения сайта</h3>
-            <div class="stats-grid admin-stats-grid admin-visits-grid">
-                <div class="stat-item"><div class="stat-value">${v.visits_today ?? 0}</div><div class="stat-label">Просмотров сегодня</div></div>
-                <div class="stat-item"><div class="stat-value">${v.visitors_today ?? 0}</div><div class="stat-label">Уникальных сегодня</div></div>
-                <div class="stat-item"><div class="stat-value">${v.visits_7d ?? 0}</div><div class="stat-label">Просмотров за 7 дней</div></div>
-                <div class="stat-item"><div class="stat-value">${v.visitors_7d ?? 0}</div><div class="stat-label">Уникальных за 7 дней</div></div>
-                <div class="stat-item"><div class="stat-value">${v.visits_total ?? 0}</div><div class="stat-label">Просмотров всего</div></div>
-                <div class="stat-item"><div class="stat-value">${v.visitors_total ?? 0}</div><div class="stat-label">Уникальных всего</div></div>
-            </div>
-            ${dailyRows ? `
-            <div class="admin-visits-table-wrap table-scroll">
-                <table class="admin-visits-table">
-                    <thead><tr><th>День (МСК)</th><th>Просмотры</th><th>Уникальные</th></tr></thead>
-                    <tbody>${dailyRows}</tbody>
-                </table>
-            </div>` : ''}
-            <h3 class="admin-stats-heading"><i class="fa-solid fa-cloud"></i> Готовые билды</h3>
-            <div class="stats-grid admin-stats-grid admin-visits-grid">
-                <div class="stat-item"><div class="stat-value">${c.page_visits_today ?? 0}</div><div class="stat-label">Просмотров страницы сегодня</div></div>
-                <div class="stat-item"><div class="stat-value">${c.page_visitors_today ?? 0}</div><div class="stat-label">Уникальных сегодня</div></div>
-                <div class="stat-item"><div class="stat-value">${c.page_visits_7d ?? 0}</div><div class="stat-label">Просмотров за 7 дней</div></div>
-                <div class="stat-item"><div class="stat-value">${c.page_visits_total ?? 0}</div><div class="stat-label">Просмотров всего</div></div>
-                <div class="stat-item"><div class="stat-value">${c.downloads_today ?? 0}</div><div class="stat-label">Скачиваний сегодня</div></div>
-                <div class="stat-item"><div class="stat-value">${c.downloads_7d ?? 0}</div><div class="stat-label">Скачиваний за 7 дней</div></div>
-                <div class="stat-item"><div class="stat-value">${c.downloads_total ?? 0}</div><div class="stat-label">Скачиваний всего</div></div>
-            </div>
-            ${cdnDailyRows ? `
-            <div class="admin-visits-table-wrap table-scroll">
-                <table class="admin-visits-table">
-                    <thead><tr><th>День (МСК)</th><th>Просмотры</th><th>Скачивания</th></tr></thead>
-                    <tbody>${cdnDailyRows}</tbody>
-                </table>
-            </div>` : ''}
-            <h3 class="admin-stats-heading"><i class="fa-solid fa-user-group"></i> Реферальная программа</h3>
-            <div class="stats-grid admin-stats-grid">
-                <div class="stat-item"><div class="stat-value">${r.referrals_total ?? 0}</div><div class="stat-label">Друзей приглашено</div></div>
-                <div class="stat-item"><div class="stat-value">${r.referrers_active ?? 0}</div><div class="stat-label">Активных рефереров</div></div>
-                <div class="stat-item"><div class="stat-value">${r.coins_distributed ?? 0}</div><div class="stat-label">Монет раздано</div></div>
-                <div class="stat-item"><div class="stat-value">${r.coins_to_referrers ?? 0}</div><div class="stat-label">Пригласившим (+${r.referrer_reward ?? 5})</div></div>
-                <div class="stat-item"><div class="stat-value">${r.coins_to_referees ?? 0}</div><div class="stat-label">Новым игрокам (+${r.referee_reward ?? 3})</div></div>
-                ${(r.pending_coins ?? 0) > 0 ? `<div class="stat-item"><div class="stat-value">${r.pending_coins}</div><div class="stat-label">В очереди (без привязки)</div></div>` : ''}
-            </div>
-            <h3 class="admin-stats-heading"><i class="fa-solid fa-database"></i> Платформа</h3>
-            <div class="stats-grid admin-stats-grid">
-                <div class="stat-item"><div class="stat-value">${s.users ?? 0}</div><div class="stat-label">Пользователей</div></div>
-                <div class="stat-item"><div class="stat-value">${s.posts ?? 0}</div><div class="stat-label">Постов</div></div>
-                <div class="stat-item"><div class="stat-value">${s.comments ?? 0}</div><div class="stat-label">Комментариев</div></div>
-                <div class="stat-item"><div class="stat-value">${s.private_messages ?? 0}</div><div class="stat-label">Личных сообщений</div></div>
-                <div class="stat-item"><div class="stat-value">${s.chat_messages ?? 0}</div><div class="stat-label">Сообщений в чате</div></div>
-                <div class="stat-item"><div class="stat-value">${s.admins ?? 0}</div><div class="stat-label">Админов</div></div>
-                <div class="stat-item"><div class="stat-value">${g.total_players ?? 0}</div><div class="stat-label">Игроков (БД)</div></div>
-                <div class="stat-item"><div class="stat-value">${g.total_tokens ?? 0}</div><div class="stat-label">Монет в обороте</div></div>
-            </div>`;
+        destroyAdminMetricCharts();
+        const wikiMwKpis = (mw.articles || mw.pages || mw.users) ? `
+            <div class="admin-metric-kpis admin-metric-kpis--mw">
+                <div class="stat-item"><div class="stat-value">${mw.articles ?? 0}</div><div class="stat-label">Статей</div></div>
+                <div class="stat-item"><div class="stat-value">${mw.pages ?? 0}</div><div class="stat-label">Страниц</div></div>
+                <div class="stat-item"><div class="stat-value">${mw.edits ?? 0}</div><div class="stat-label">Правок</div></div>
+                <div class="stat-item"><div class="stat-value">${mw.users ?? 0}</div><div class="stat-label">Учётных записей</div></div>
+            </div>` : '';
+        container.innerHTML = [
+            renderAdminMetricSection({
+                id: 'visits',
+                icon: 'fa-solid fa-chart-simple',
+                title: 'Посещения сайта',
+                open: true,
+                chartId: 'adminVisitsChart',
+                kpis: [
+                    { value: v.visits_today ?? 0, label: 'Сегодня' },
+                    { value: v.visitors_today ?? 0, label: 'Уник. сегодня' },
+                    { value: v.visits_7d ?? 0, label: 'За 7 дней' },
+                    { value: v.visits_total ?? 0, label: 'Всего' },
+                ],
+            }),
+            renderAdminMetricSection({
+                id: 'wiki',
+                icon: 'fa-solid fa-book',
+                title: 'Вики',
+                open: true,
+                chartId: 'adminWikiChart',
+                kpis: [
+                    { value: w.visits_today ?? 0, label: 'Сегодня' },
+                    { value: w.visitors_today ?? 0, label: 'Уник. сегодня' },
+                    { value: w.visits_7d ?? 0, label: 'За 7 дней' },
+                    { value: w.visits_total ?? 0, label: 'Всего' },
+                ],
+                extra: wikiMwKpis,
+            }),
+            renderAdminMetricSection({
+                id: 'cdn',
+                icon: 'fa-solid fa-cloud',
+                title: 'Готовые билды',
+                open: false,
+                chartId: 'adminCdnChart',
+                kpis: [
+                    { value: c.page_visits_today ?? 0, label: 'Просмотры сегодня' },
+                    { value: c.downloads_today ?? 0, label: 'Скачивания сегодня' },
+                    { value: c.downloads_7d ?? 0, label: 'Скачивания / 7д' },
+                    { value: c.downloads_total ?? 0, label: 'Скачивания всего' },
+                ],
+            }),
+            renderAdminMetricSection({
+                id: 'referral',
+                icon: 'fa-solid fa-user-group',
+                title: 'Реферальная программа',
+                open: false,
+                kpis: [
+                    { value: r.referrals_total ?? 0, label: 'Друзей приглашено' },
+                    { value: r.referrers_active ?? 0, label: 'Активных рефереров' },
+                    { value: r.coins_distributed ?? 0, label: 'Монет раздано' },
+                    { value: r.coins_to_referrers ?? 0, label: `Пригласившим (+${r.referrer_reward ?? 5})` },
+                ],
+            }),
+            renderAdminMetricSection({
+                id: 'platform',
+                icon: 'fa-solid fa-database',
+                title: 'Платформа',
+                open: false,
+                kpis: [
+                    { value: s.users ?? 0, label: 'Пользователей' },
+                    { value: s.posts ?? 0, label: 'Постов' },
+                    { value: g.total_players ?? 0, label: 'Игроков (БД)' },
+                    { value: g.total_tokens ?? 0, label: 'Монет в обороте' },
+                ],
+            }),
+        ].join('');
+
+        const visitSeries = fillDailySeries(v.daily, 'visits', 'visitors');
+        const wikiSeries = fillDailySeries(w.daily, 'visits', 'visitors');
+        const cdnSeries = fillDailySeries(c.daily, 'page_visits', 'downloads');
+        const ink = cssVar('--link') || '#3d6ea8';
+        const ok = cssVar('--success') || '#1f9a55';
+        renderAdminTrendChart('adminVisitsChart', visitSeries.labels, [
+            { label: 'Просмотры', data: visitSeries.visits, color: ink, dashed: false },
+            { label: 'Уникальные', data: visitSeries.uniques, color: ok, dashed: true },
+        ]);
+        renderAdminTrendChart('adminWikiChart', wikiSeries.labels, [
+            { label: 'Просмотры', data: wikiSeries.visits, color: ink, dashed: false },
+            { label: 'Уникальные', data: wikiSeries.uniques, color: ok, dashed: true },
+        ]);
+        renderAdminTrendChart('adminCdnChart', cdnSeries.labels, [
+            { label: 'Просмотры', data: cdnSeries.visits, color: ink, dashed: false },
+            { label: 'Скачивания', data: cdnSeries.uniques, color: ok, dashed: true },
+        ]);
     } catch (e) {
+        destroyAdminMetricCharts();
         container.innerHTML = `<p class="error">${escapeHtml(e.message)}</p>`;
     }
 }

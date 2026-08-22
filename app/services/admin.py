@@ -1,11 +1,43 @@
+import aiohttp
+
 import database_social as social_db
+from app.config import WIKI_PUBLIC_URL
 from app.services.bank import get_total_stats
 from app.services.referral import get_global_referral_metrics
+
+
+async def fetch_wiki_mediawiki_stats() -> dict:
+    url = f"{WIKI_PUBLIC_URL}/api.php"
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                url,
+                params={
+                    "action": "query",
+                    "meta": "siteinfo",
+                    "siprop": "statistics",
+                    "format": "json",
+                },
+                timeout=aiohttp.ClientTimeout(total=4),
+            ) as resp:
+                if resp.status != 200:
+                    return {}
+                data = await resp.json()
+                return (data.get("query") or {}).get("statistics") or {}
+    except Exception:
+        return {}
 
 
 async def get_site_statistics() -> dict:
     social = social_db.get_site_stats()
     visits = social_db.get_visit_stats()
+    try:
+        wiki = social_db.get_wiki_stats()
+    except Exception:
+        wiki = {}
+    wiki_mw = await fetch_wiki_mediawiki_stats()
+    if wiki_mw:
+        wiki = {**wiki, "mw": wiki_mw}
     cdn = social_db.get_cdn_stats()
     referral = get_global_referral_metrics()
     try:
@@ -15,6 +47,7 @@ async def get_site_statistics() -> dict:
     return {
         "social": social,
         "visits": visits,
+        "wiki": wiki,
         "cdn": cdn,
         "referral": referral,
         "game": game_stats,

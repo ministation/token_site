@@ -103,6 +103,15 @@ SELLER_INN = os.getenv("SELLER_INN", "773475132921")
 SELLER_STATUS = os.getenv("SELLER_STATUS", "Самозанятый")
 
 SITE_PUBLIC_URL = os.getenv("SITE_PUBLIC_URL", "https://ministation.ru").rstrip("/")
+WIKI_PUBLIC_URL = os.getenv("WIKI_PUBLIC_URL", "https://wiki.ministation.ru").rstrip("/")
+WIKI_VISIT_ORIGINS = tuple(
+    x.strip().rstrip("/")
+    for x in os.getenv(
+        "WIKI_VISIT_ORIGINS",
+        "https://wiki.ministation.ru,http://wiki.ministation.ru,http://127.0.0.1:3000,http://localhost:3000",
+    ).split(",")
+    if x.strip()
+)
 
 # Shared secret with discord_auth_ss14 for auto-login after in-game Discord linking
 GAME_AUTH_SECRET = os.getenv("GAME_AUTH_SECRET", "").strip()

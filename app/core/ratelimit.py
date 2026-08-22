@@ -163,6 +163,7 @@ _API_RULES: list[tuple[str, set[str], int, float, bool]] = [
     ("/api/social/posts/", {"POST"}, 40, 60.0, True),  # likes/comments
     ("/api/support/tickets", {"POST"}, 8, 60.0, True),
     ("/api/auth/challenge", {"GET"}, 20, 60.0, False),
+    ("/api/wiki/visit", {"POST"}, 40, 60.0, False),
     ("/login", {"GET"}, 10, 60.0, False),
     ("/callback", {"GET"}, 20, 60.0, False),
 ]

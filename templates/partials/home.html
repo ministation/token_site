@@ -99,8 +99,11 @@
                     <span class="detail-label">Прямое подключение</span>
                     <button type="button" class="detail-value server-connect-addr" id="statusConnect"
                             title="Нажмите, чтобы скопировать"
-                            onclick="navigator.clipboard.writeText(this.dataset.addr || this.textContent).then(() => { const t = this.textContent; this.textContent = 'Скопировано'; setTimeout(() => this.textContent = t, 1200); }).catch(() => {})"
-                            data-addr="ss14://ss14.ministation.ru:1214">ss14://ss14.ministation.ru:1214</button>
+                            onclick="copyServerConnect(this)"
+                            data-addr="ss14://ss14.ministation.ru:1214">
+                        <span class="connect-addr-full">ss14://ss14.ministation.ru:1214</span>
+                        <span class="connect-addr-short">Копировать адрес</span>
+                    </button>
                 </div>
             </div>
         </div>

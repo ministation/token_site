@@ -2947,6 +2947,9 @@ html[data-theme="dark"] .status-meta {
     margin-bottom: 16px;
     padding: 0 !important;
     overflow: hidden;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
 }
 .server-widget-header {
     display: flex;
@@ -2956,6 +2959,7 @@ html[data-theme="dark"] .status-meta {
     padding: 14px 18px;
     background: var(--grad-hero);
     color: #fff;
+    min-width: 0;
 }
 .server-status-badge {
     display: inline-flex;
@@ -2976,9 +2980,16 @@ html[data-theme="dark"] .status-meta {
     font-family: var(--font-pixel);
     font-size: 0.65rem;
     text-align: right;
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    line-height: 1.45;
 }
 .server-connect-addr {
-    display: inline;
+    display: block;
+    width: 100%;
+    max-width: 100%;
     margin: 0;
     padding: 0;
     border: 0;
@@ -2989,17 +3000,24 @@ html[data-theme="dark"] .status-meta {
     font-size: 0.82em;
     text-align: left;
     cursor: pointer;
-    word-break: break-all;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    white-space: normal;
+    line-height: 1.35;
 }
+.connect-addr-short { display: none; }
 .server-connect-addr:hover {
     text-decoration: underline;
 }
 .server-widget-body {
     display: grid;
-    grid-template-columns: auto 1fr;
+    grid-template-columns: minmax(0, auto) minmax(0, 1fr);
     gap: 20px;
     padding: 20px 18px;
     align-items: center;
+    min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
 }
 .server-players-ring {
     position: relative;
@@ -3061,6 +3079,13 @@ html[data-theme="dark"] .status-meta {
     display: flex;
     flex-direction: column;
     gap: 12px;
+    min-width: 0;
+    max-width: 100%;
+}
+.server-detail,
+.server-detail > div {
+    min-width: 0;
+    max-width: 100%;
 }
 .server-detail {
     display: flex;
@@ -4409,6 +4434,50 @@ label.chat-tool-btn input[type="file"] {
     text-transform: uppercase;
     letter-spacing: 0.04em;
 }
+.admin-metric-block {
+    margin-bottom: 10px;
+}
+.admin-metric-block .collapsible-header {
+    margin-top: 0;
+}
+.admin-metric-header {
+    font-size: 0.62rem;
+}
+.admin-metric-header span:first-child {
+    overflow-wrap: anywhere;
+}
+.admin-metric-kpis {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 10px;
+}
+.admin-metric-kpis .stat-item {
+    padding: 10px 8px;
+}
+.admin-metric-kpis .stat-value {
+    font-size: 0.95rem;
+    line-height: 1.25;
+}
+.admin-metric-kpis .stat-label {
+    font-size: 0.62rem;
+}
+.admin-metric-kpis--mw {
+    margin-top: 2px;
+}
+.admin-metric-chart-wrap {
+    height: 148px;
+    min-width: 0;
+    max-width: 100%;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 8px 6px 4px;
+}
+.admin-metric-chart-wrap canvas {
+    width: 100% !important;
+    height: 100% !important;
+}
 .admin-list-item {
     display: flex;
     align-items: center;
@@ -4806,6 +4875,7 @@ label.chat-tool-btn input[type="file"] {
     .server-widget-name {
         text-align: center;
         width: 100%;
+        font-size: 0.52rem;
     }
     .server-status-badge {
         align-self: center;
@@ -4814,17 +4884,21 @@ label.chat-tool-btn input[type="file"] {
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 18px;
+        gap: 16px;
         padding: 16px;
+        width: 100%;
+        max-width: 100%;
     }
     .server-players-ring {
-        width: 132px;
-        height: 132px;
+        width: 104px;
+        height: 104px;
     }
     .players-ring {
-        width: 132px;
-        height: 132px;
+        width: 104px;
+        height: 104px;
     }
+    .connect-addr-full { display: none; }
+    .connect-addr-short { display: inline; }
     .server-widget-details {
         display: grid;
         grid-template-columns: 1fr;
@@ -4882,6 +4956,7 @@ label.chat-tool-btn input[type="file"] {
 @media (max-width: 640px) {
     .admin-stats-grid,
     .admin-visits-grid,
+    .admin-metric-kpis,
     .stats-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 8px;
@@ -4954,6 +5029,7 @@ label.chat-tool-btn input[type="file"] {
 @media (max-width: 380px) {
     .admin-stats-grid,
     .admin-visits-grid,
+    .admin-metric-kpis,
     .stats-grid {
         grid-template-columns: 1fr;
     }
