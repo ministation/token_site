@@ -4,6 +4,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader
+from starlette.middleware.gzip import GZipMiddleware
 
 from app.routers import auth, bank, social, chat, pages, messages, bans, online, stats, inventory, admin, playtime, compensation, presence, support, donations, referral, game_link, cdn_metrics, wiki_metrics
 from app.db.database import get_pg_pool, close_pg_pool
@@ -14,9 +15,10 @@ import database_social as social_db
 
 app = FastAPI(title="SS14 Token Bank & Social")
 app.mount("/static", StaticFiles(directory="static"), name="static")
+app.add_middleware(GZipMiddleware, minimum_size=500)
 
 # Единое окружение Jinja2 для всех шаблонов
-env = Environment(loader=FileSystemLoader("templates"), auto_reload=True)
+env = Environment(loader=FileSystemLoader("templates"), auto_reload=False)
 app.state.templates_env = env
 
 
@@ -65,6 +67,20 @@ async def track_page_visits(request: Request, call_next):
             social_db.record_site_visit(request.url.path, _visitor_key(request), discord_id)
         except Exception:
             pass
+    return response
+
+
+@app.middleware("http")
+async def cache_headers(request: Request, call_next):
+    response = await call_next(request)
+    path = request.url.path
+    if path.startswith("/static"):
+        if path.endswith((".woff", ".woff2", ".ttf", ".png", ".jpg", ".jpeg", ".webp", ".gif", ".ico")):
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        else:
+            response.headers["Cache-Control"] = "public, max-age=3600, must-revalidate"
+    else:
+        response.headers["Cache-Control"] = "no-cache"
     return response
 
 
